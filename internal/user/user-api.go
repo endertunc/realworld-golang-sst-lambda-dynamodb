@@ -1,116 +1,68 @@
 package user
 
 import (
-	"encoding/json"
-	"fmt"
-	"net/http"
-	"realworld-aws-lambda-dynamodb-golang/internal/api"
-	"realworld-aws-lambda-dynamodb-golang/internal/errutil"
+	"context"
+	"github.com/google/uuid"
+	"realworld-aws-lambda-dynamodb-golang/internal/domain"
+	"realworld-aws-lambda-dynamodb-golang/internal/domain/dto"
 )
 
 type UserApi struct {
 	UserService UserServiceInterface
 }
 
-//func (ua UserApi) Login(ctx context.Context, request api.LoginRequestObject) (api.LoginResponseObject, error) {
-//	token, user, err := ua.UserService.LoginUser(ctx, request.Body.User.Email, request.Body.User.Password)
-//	if err != nil {
-//		// ToDo log error...
-//		//invalidPasswordError := &domain.InvalidPasswordError{}
-//		//if errors.As(err, &invalidPasswordError) {
-//		//	return api.Login401Response{}, nil
-//		//}
-//		//
-//		//userNotFoundError := &domain.UserNotFoundError{}
-//		//if errors.As(err, &userNotFoundError) {
-//		//	return api.Login401Response{}, nil
-//		//}
-//
-//		return api.Login422JSONResponse{
-//			GenericErrorJSONResponse: api.ToGenericErrorResponse(err),
-//		}, nil
-//	}
-//
-//	// ToDo find a way to convert *T to nullable.Nullable[T]
-//	bio := nullable.NewNullNullable[string]()
-//	if user.Bio != nil {
-//		bio = nullable.NewNullableWithValue[string](*user.Bio)
-//	}
-//
-//	// ToDo find a way to convert *T to nullable.Nullable[T]
-//	image := nullable.NewNullNullable[string]()
-//	if user.Image != nil {
-//		image = nullable.NewNullableWithValue[string](*user.Image)
-//	}
-//
-//	userDTO := api.User{
-//		Bio:      bio,
-//		Email:    user.Email,
-//		Image:    image,
-//		Token:    string(*token),
-//		Username: user.Username,
-//	}
-//
-//	return api.Login200JSONResponse{
-//		UserResponseJSONResponse: api.UserResponseJSONResponse{
-//			User: userDTO,
-//		},
-//	}, nil
-//
-//}
+type UserService struct {
+	UserRepository  UserRepositoryInterface
+	FollowerService FollowerServiceInterface
+}
 
-func (ua UserApi) GetProfileByUsername(w http.ResponseWriter, r *http.Request, username string) {
+func (s UserService) GetUserByEmail(c context.Context, email string) (domain.User, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (ua UserApi) GetTags(w http.ResponseWriter, r *http.Request) {
-	//TODO implement me
-	panic("implement me")
+type UserServiceInterface interface {
+	LoginUser(c context.Context, email, plainTextPassword string) (*domain.Token, *domain.User, error)
+	RegisterUser(c context.Context, email, username, plainTextPassword string) (*domain.Token, *domain.User, error)
+	GetCurrentUser(c context.Context, userID uuid.UUID) (*domain.Token, *domain.User, error)
+	GetUserProfile(c context.Context, loggedInUserId *uuid.UUID, profileUsername string) (domain.User, bool, error)
+	GetUserByEmail(c context.Context, email string) (domain.User, error)
 }
 
-func (ua UserApi) GetCurrentUser(w http.ResponseWriter, r *http.Request) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (ua UserApi) UpdateCurrentUser(w http.ResponseWriter, r *http.Request) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (ua UserApi) CreateUser(w http.ResponseWriter, r *http.Request) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (ua UserApi) Login(w http.ResponseWriter, r *http.Request) {
-	loginJSONRequestBody := api.LoginJSONRequestBody{}
-	decoder := json.NewDecoder(r.Body)
-	err := decoder.Decode(&loginJSONRequestBody)
+func (ua UserApi) LoginUser(context context.Context, loginRequestBodyDTO dto.LoginRequestBodyDTO) (dto.UserResponseBodyDTO, error) {
+	loginUser := loginRequestBodyDTO.User
+	token, user, err := ua.UserService.LoginUser(context, loginUser.Email, loginUser.Password)
 	if err != nil {
-		cause := fmt.Errorf("user-api.login - error decoding request body: %w", err)
-		errutil.WriteToResponse(errutil.BadRequestError("error decoding request body", cause), w)
-		return
+		return dto.UserResponseBodyDTO{}, err
 	}
-	// ToDo validate login request body!!!
-	loginUser := loginJSONRequestBody.User
-	token, user, err := ua.UserService.LoginUser(r.Context(), loginUser.Email, loginUser.Password)
+	return dto.ToUserResponseBodyDTO(*user, *token), nil
+}
+
+func (ua UserApi) RegisterUser(context context.Context, newUserRequestBodyDTO dto.NewUserRequestBodyDTO) (dto.UserResponseBodyDTO, error) {
+	newUser := newUserRequestBodyDTO.User
+	token, user, err := ua.UserService.RegisterUser(context, newUser.Email, newUser.Username, newUser.Password)
 	if err != nil {
-		errutil.WriteToResponse(err, w)
-		return
+		return dto.UserResponseBodyDTO{}, err
 	}
-	userDTO := api.User{
-		Email:    user.Email,
-		Username: user.Username,
-		Token:    string(*token),
-		Bio:      user.Bio,
-		Image:    user.Image,
-	}
-	err = json.NewEncoder(w).Encode(api.UserResponse{User: userDTO})
+	return dto.ToUserResponseBodyDTO(*user, *token), nil
+}
+
+func (ua UserApi) GetCurrentUser(context context.Context, userID uuid.UUID) (dto.UserResponseBodyDTO, error) {
+	token, user, err := ua.UserService.GetCurrentUser(context, userID)
 	if err != nil {
-		cause := fmt.Errorf("user-api.login - error encoding response body: %w", err)
-		errutil.WriteToResponse(errutil.InternalError(cause), w)
-		return
+		return dto.UserResponseBodyDTO{}, err
 	}
+	return dto.ToUserResponseBodyDTO(*user, *token), nil
+}
+
+func (ua UserApi) GetUserByEmail(c context.Context, email string) (domain.User, error) {
+	return ua.UserService.GetUserByEmail(c, email)
+}
+
+func (ua UserApi) GetUserProfile(context context.Context, loggedInUserId *uuid.UUID, profileUsername string) (dto.ProfileResponseBodyDTO, error) {
+	user, isFollowing, err := ua.UserService.GetUserProfile(context, loggedInUserId, profileUsername)
+	if err != nil {
+		return dto.ProfileResponseBodyDTO{}, err
+	}
+	return dto.ToProfileResponseBodyDTO(user, isFollowing), nil
 }

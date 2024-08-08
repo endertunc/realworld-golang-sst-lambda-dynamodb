@@ -19,7 +19,6 @@ func NewDynamoDBStore(ctx context.Context) *DynamoDBStore {
 	}
 
 	client := dynamodb.NewFromConfig(cfg)
-
 	return &DynamoDBStore{
 		Client: client,
 	}
