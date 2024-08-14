@@ -15,7 +15,7 @@ type DynamoDBStore struct {
 func NewDynamoDBStore(ctx context.Context) *DynamoDBStore {
 	cfg, err := config.LoadDefaultConfig(ctx)
 	if err != nil {
-		log.Fatalf("unable to load SDK config, %v", err)
+		log.Fatalf("error loading AWS configuration: %v", err)
 	}
 
 	client := dynamodb.NewFromConfig(cfg)

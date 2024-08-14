@@ -14,6 +14,7 @@ type UserRepositoryInterface interface {
 	FindUserByUsername(c context.Context, username string) (domain.User, error)
 	FindUserById(c context.Context, userId uuid.UUID) (domain.User, error)
 	InsertNewUser(c context.Context, newUser domain.User) (domain.User, error)
+	FindUserListByUserIDs(c context.Context, userIds []uuid.UUID) ([]domain.User, error)
 }
 
 func (s UserService) LoginUser(c context.Context, email, plainTextPassword string) (*domain.Token, *domain.User, error) {
@@ -51,18 +52,18 @@ func (s UserService) RegisterUser(c context.Context, email, username, plainTextP
 	return token, &user, nil
 }
 
-func (s UserService) GetCurrentUser(c context.Context, userId uuid.UUID) (*domain.Token, *domain.User, error) {
+func (s UserService) GetCurrentUser(c context.Context, userId uuid.UUID) (domain.Token, domain.User, error) {
 	user, err := s.UserRepository.FindUserById(c, userId)
 	if err != nil {
-		return nil, nil, err
+		return "", domain.User{}, err
 	}
 
 	token, err := security.GenerateToken(userId)
 	if err != nil {
-		return nil, nil, err
+		return "", domain.User{}, err
 	}
 
-	return token, &user, nil
+	return *token, user, nil
 }
 
 func (s UserService) GetUserProfile(c context.Context, loggedInUserId *uuid.UUID, username string) (domain.User, bool, error) {
@@ -80,4 +81,12 @@ func (s UserService) GetUserProfile(c context.Context, loggedInUserId *uuid.UUID
 		}
 		return user, isFollowing, nil
 	}
+}
+
+func (s UserService) GetUserListByUserIDs(c context.Context, userIds []uuid.UUID) ([]domain.User, error) {
+	users, err := s.UserRepository.FindUserListByUserIDs(c, userIds)
+	if err != nil {
+		return nil, err
+	}
+	return users, nil
 }

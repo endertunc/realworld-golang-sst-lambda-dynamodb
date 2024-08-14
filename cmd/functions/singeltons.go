@@ -9,4 +9,5 @@ var (
 	FollowerService    = user.FollowerService{FollowerRepository: FollowerRepository, UserService: UserService}
 	FollowerApi        = user.FollowerApi{FollowerService: FollowerService}
 	UserApi            = user.UserApi{UserService: UserService}
+	ArticleApi         = user.ArticleApi{UserService: UserService}
 )

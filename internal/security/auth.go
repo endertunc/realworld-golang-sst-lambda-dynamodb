@@ -87,8 +87,8 @@ func getLoggedInUserFromHeader(authorizationHeader string) (uuid.UUID, *events.A
 	authorizationHeader = strings.TrimSpace(authorizationHeader)
 	if authorizationHeader == "" {
 		return uuid.Nil, &events.APIGatewayProxyResponse{
-			StatusCode: http.StatusUnauthorized, //
-			Body:       "authorization header is empty",
+			StatusCode: http.StatusUnauthorized,
+			Body:       "authorization header is empty", // ToDo @ender this is not a json tho...
 			Headers:    map[string]string{"Content-Type": "application/json"},
 		}
 	}

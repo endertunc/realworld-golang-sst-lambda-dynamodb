@@ -17,9 +17,9 @@ type FollowerService struct {
 }
 
 type FollowerServiceInterface interface {
-	IsFollowing(c context.Context, loggedInUser uuid.UUID, followerUser uuid.UUID) (bool, error)
-	Follow(c context.Context, loggedInUser uuid.UUID, followerUsername string) (domain.User, bool, error)
-	UnFollow(c context.Context, loggedInUser uuid.UUID, followerUsername string) (domain.User, bool, error)
+	IsFollowing(c context.Context, follower, followee uuid.UUID) (bool, error)
+	Follow(c context.Context, follower uuid.UUID, followeeUsername string) (domain.User, bool, error)
+	UnFollow(c context.Context, follower uuid.UUID, followeeUsername string) (domain.User, bool, error)
 }
 
 func (fa FollowerApi) UnfollowUserByUsername(ctx context.Context, loggedInUser uuid.UUID, followerUsername string) (dto.ProfileResponseBodyDTO, error) {

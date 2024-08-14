@@ -24,9 +24,10 @@ func (s UserService) GetUserByEmail(c context.Context, email string) (domain.Use
 type UserServiceInterface interface {
 	LoginUser(c context.Context, email, plainTextPassword string) (*domain.Token, *domain.User, error)
 	RegisterUser(c context.Context, email, username, plainTextPassword string) (*domain.Token, *domain.User, error)
-	GetCurrentUser(c context.Context, userID uuid.UUID) (*domain.Token, *domain.User, error)
+	GetCurrentUser(c context.Context, userID uuid.UUID) (domain.Token, domain.User, error)
 	GetUserProfile(c context.Context, loggedInUserId *uuid.UUID, profileUsername string) (domain.User, bool, error)
 	GetUserByEmail(c context.Context, email string) (domain.User, error)
+	GetUserListByUserIDs(c context.Context, userIds []uuid.UUID) ([]domain.User, error)
 }
 
 func (ua UserApi) LoginUser(context context.Context, loginRequestBodyDTO dto.LoginRequestBodyDTO) (dto.UserResponseBodyDTO, error) {
@@ -52,7 +53,7 @@ func (ua UserApi) GetCurrentUser(context context.Context, userID uuid.UUID) (dto
 	if err != nil {
 		return dto.UserResponseBodyDTO{}, err
 	}
-	return dto.ToUserResponseBodyDTO(*user, *token), nil
+	return dto.ToUserResponseBodyDTO(user, token), nil
 }
 
 func (ua UserApi) GetUserByEmail(c context.Context, email string) (domain.User, error) {

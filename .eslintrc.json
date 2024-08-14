@@ -1,0 +1,53 @@
+{
+  "root": true,
+  "parser": "@typescript-eslint/parser",
+  "plugins": ["@typescript-eslint", "prettier", "import"],
+  "extends": [
+    "eslint:recommended",
+    "plugin:@typescript-eslint/recommended",
+    "plugin:json/recommended",
+    "plugin:import/recommended",
+    "plugin:import/typescript"
+  ],
+  "rules": {
+    "prettier/prettier": "error",
+    "@typescript-eslint/consistent-type-imports": "warn",
+    "import/newline-after-import": "warn",
+    "import/no-unresolved": ["warn", { "ignore": ["\\/protoModels\\/generated\\/", "\\.\\.\\/generated\\/"] }],
+    "import/no-useless-path-segments": ["warn", { "noUselessIndex": true }],
+    "import/no-self-import": "warn",
+    "import/no-cycle": "warn",
+    "import/first": "warn",
+    "import/order": [
+      "warn",
+      {
+        "groups": ["builtin", "external", "internal", "parent", "sibling", "index", "object", "unknown", "type"],
+        "pathGroups": [
+          {
+            "pattern": "@{shell,shell-recharge,newmotion}/**",
+            "group": "internal",
+            "position": "before"
+          }
+        ],
+        "pathGroupsExcludedImportTypes": ["builtin", "type"],
+        "alphabetize": {
+          "order": "asc"
+        },
+        "warnOnUnassignedImports": true,
+        "newlines-between": "never"
+      }
+    ],
+    "lines-between-class-members": ["warn", "always", { "exceptAfterSingleLine": true }],
+    "@typescript-eslint/no-explicit-any": "error",
+    "sort-imports": ["warn", { "ignoreDeclarationSort": true }],
+    "spaced-comment": ["warn", "always"],
+    "complexity": ["warn", 15]
+  },
+  "settings": {
+    "import/resolver": {
+      "typescript": {
+        "alwaysTryTypes": true
+      }
+    }
+  }
+}

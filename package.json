@@ -1,0 +1,45 @@
+{
+  "name": "my-sst-app",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "dotenv -- cross-var sst dev --stage %STAGE% | pino-pretty",
+    "build": "dotenv -- cross-var sst build --stage %STAGE%",
+    "deploy": "dotenv -- cross-var sst deploy --stage %STAGE%",
+    "remove": "dotenv -- cross-var sst remove --stage %STAGE%",
+    "typecheck": "tsc --noEmit",
+    "lint": "npx eslint .",
+    "lint:fix": "npx eslint . --fix"
+  },
+  "devDependencies": {
+    "@tsconfig/node18": "18.2.4",
+    "@typescript-eslint/eslint-plugin": "5.62.0",
+    "@typescript-eslint/parser": "5.62.0",
+    "@types/node": "18.19.44",
+    "aws-cdk-lib": "2.142.1",
+    "constructs": "10.3.0",
+    "sst": "2.43.4",
+    "typescript": "5.5.4",
+    "dotenv": "16.4.5",
+    "dotenv-cli": "7.4.2",
+    "cross-var": "1.1.0",
+    "pino-pretty": "11.2.2",
+    "prettier": "2.8.8",
+    "eslint": "8.57.0",
+    "eslint-import-resolver-typescript": "3.6.1",
+    "eslint-plugin-import": "2.29.1",
+    "eslint-plugin-json": "3.1.0",
+    "eslint-plugin-prettier": "4.2.1"
+  },
+  "dependencies": {
+    "dotenv": "16.4.5"
+  },
+  "workspaces": [],
+  "packageManager": "pnpm@9.7.0",
+  "prettier": {
+    "tabWidth": 2,
+    "printWidth": 120,
+    "trailingComma": "none"
+  }
+}
