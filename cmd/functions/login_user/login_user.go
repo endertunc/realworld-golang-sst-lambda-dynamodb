@@ -2,36 +2,30 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"github.com/aws/aws-lambda-go/lambda"
 	"realworld-aws-lambda-dynamodb-golang/cmd/functions"
+	"realworld-aws-lambda-dynamodb-golang/internal/api"
 	"realworld-aws-lambda-dynamodb-golang/internal/domain/dto"
-	"realworld-aws-lambda-dynamodb-golang/internal/errutil"
 )
 import "github.com/aws/aws-lambda-go/events"
 
+const handlerName = "LoginUserHandler"
+
 func Handler(context context.Context, request events.APIGatewayProxyRequest) events.APIGatewayProxyResponse {
 
-	loginRequestDTO := dto.LoginRequestBodyDTO{}
-	err := json.Unmarshal([]byte(request.Body), &loginRequestDTO)
-	if err != nil {
-		cause := errutil.ErrJsonDecode.Errorf("LoginHandler - error decoding request body: %w", err)
-		return errutil.ToAPIGatewayProxyResponse(context, cause)
+	loginRequestBodyDTO, errResponse := api.ParseBodyAs[dto.LoginRequestBodyDTO](context, request, handlerName)
+
+	if errResponse != nil {
+		return *errResponse
 	}
 
-	result, err := functions.UserApi.LoginUser(context, loginRequestDTO)
+	result, err := functions.UserApi.LoginUser(context, *loginRequestBodyDTO)
 
-	jsonResult, err := json.Marshal(result)
 	if err != nil {
-		cause := errutil.ErrJsonEncode.Errorf("LoginHandler - error encoding response body: %w", err)
-		return errutil.ToAPIGatewayProxyResponse(context, errutil.ErrJsonEncode.Errorf(
-			"LoginHandler - error encoding response body: %w", cause))
+		return api.ToErrorAPIGatewayProxyResponse(context, err, handlerName)
 	}
-	return events.APIGatewayProxyResponse{
-		StatusCode: 200,
-		Body:       string(jsonResult),
-		Headers:    map[string]string{"Content-Type": "application/json"},
-	}
+
+	return api.ToSuccessAPIGatewayProxyResponse(context, result, handlerName)
 }
 
 //// create enum

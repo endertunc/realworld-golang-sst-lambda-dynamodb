@@ -95,7 +95,12 @@ func (e AppError) Errorf(format string, args ...any) AppError {
 //	}
 //}
 
+func ErrPathParamMissing(operation, message string) AppError {
+	return BadRequestError(operation, message)
+}
+
 // ToAPIGatewayProxyResponse ToDo @ender this function should log the errors
+// ToDo @ender this function and api.ToErrorAPIGatewayProxyResponse are doing the same thing
 func ToAPIGatewayProxyResponse(context context.Context, error error) events.APIGatewayProxyResponse {
 	// ToDo log AppErr
 	var appErr *AppError
