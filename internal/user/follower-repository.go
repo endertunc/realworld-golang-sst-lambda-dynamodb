@@ -17,6 +17,8 @@ type DynamodbFollowerRepository struct {
 	db database.DynamoDBStore
 }
 
+var _ FollowerRepositoryInterface = (*DynamodbFollowerRepository)(nil)
+
 type DynamodbFollowerItem struct {
 	Follower uuid.UUID `dynamodbav:"follower"`
 	Followee uuid.UUID `dynamodbav:"followee"`

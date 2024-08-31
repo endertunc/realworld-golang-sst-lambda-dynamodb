@@ -12,13 +12,7 @@ type UserApi struct {
 }
 
 type UserService struct {
-	UserRepository  UserRepositoryInterface
-	FollowerService FollowerServiceInterface
-}
-
-func (s UserService) GetUserByEmail(c context.Context, email string) (domain.User, error) {
-	//TODO implement me
-	panic("implement me")
+	UserRepository UserRepositoryInterface
 }
 
 type UserServiceInterface interface {
@@ -28,6 +22,13 @@ type UserServiceInterface interface {
 	GetUserProfile(c context.Context, loggedInUserId *uuid.UUID, profileUsername string) (domain.User, bool, error)
 	GetUserByEmail(c context.Context, email string) (domain.User, error)
 	GetUserListByUserIDs(c context.Context, userIds []uuid.UUID) ([]domain.User, error)
+}
+
+var _ UserServiceInterface = UserService{}
+
+func (s UserService) GetUserByEmail(c context.Context, email string) (domain.User, error) {
+	//TODO implement me
+	panic("implement me")
 }
 
 func (ua UserApi) LoginUser(context context.Context, loginRequestBodyDTO dto.LoginRequestBodyDTO) (dto.UserResponseBodyDTO, error) {

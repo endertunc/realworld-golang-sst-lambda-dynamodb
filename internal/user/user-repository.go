@@ -14,10 +14,17 @@ import (
 )
 
 const userTable = "user"
-const userEmailGSIName = "user_email_gsi"
+const userEmailGSI = "user_email_gsi"
 
 type DynamodbUserRepository struct {
 	db database.DynamoDBStore
+}
+
+var _ UserRepositoryInterface = DynamodbUserRepository{}
+
+func (s DynamodbUserRepository) FindUserListByUserIDs(c context.Context, userIds []uuid.UUID) ([]domain.User, error) {
+	//TODO implement me
+	panic("implement me")
 }
 
 type DynamodbUserItem struct {
@@ -31,16 +38,17 @@ type DynamodbUserItem struct {
 	UpdatedAt      time.Time `dynamodbav:"updated_at,unixtime"`
 }
 
+var _ UserRepositoryInterface = (*DynamodbUserRepository)(nil)
+
 func (s DynamodbUserRepository) FindUserByEmail(c context.Context, email string) (domain.User, error) {
 	response, err := s.db.Client.Query(c, &dynamodb.QueryInput{
 		TableName:              aws.String(userTable),
-		IndexName:              aws.String(userEmailGSIName),
+		IndexName:              aws.String(userEmailGSI),
 		KeyConditionExpression: aws.String("PK = :email"),
 		ExpressionAttributeValues: map[string]ddbtypes.AttributeValue{
 			":email": &ddbtypes.AttributeValueMemberS{Value: email},
 		},
 		Select: ddbtypes.SelectAllAttributes,
-		Limit:  aws.Int32(1),
 	})
 	user := domain.User{}
 	if err != nil {

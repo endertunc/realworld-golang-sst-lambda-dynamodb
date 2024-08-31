@@ -4,7 +4,7 @@ import "realworld-aws-lambda-dynamodb-golang/internal/user"
 
 var (
 	UserRepository     = user.DynamodbUserRepository{}
-	UserService        = user.UserService{UserRepository: UserRepository, FollowerService: FollowerService}
+	UserService        = user.UserService{UserRepository: UserRepository}
 	FollowerRepository = user.DynamodbFollowerRepository{}
 	FollowerService    = user.FollowerService{FollowerRepository: FollowerRepository, UserService: UserService}
 	FollowerApi        = user.FollowerApi{FollowerService: FollowerService}

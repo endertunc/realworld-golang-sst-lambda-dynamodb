@@ -1,0 +1,9 @@
+{
+  "availability-zones:account=980921730379:region=eu-west-1": [
+    "eu-west-1a",
+    "eu-west-1b",
+    "eu-west-1c"
+  ],
+  "ami:account=980921730379:filters.image-type.0=machine:filters.name.0=fck-nat-al2023-*-arm64-ebs:filters.state.0=available:owners.0=568608671756:region=eu-west-1": "ami-0f9f15428c9ec17db",
+  "ami:account=980921730379:filters.image-type.0=machine:filters.name.0=fck-nat-al2023-*-x86_64-ebs:filters.state.0=available:owners.0=568608671756:region=eu-west-1": "ami-085252d6cf1b51097"
+}

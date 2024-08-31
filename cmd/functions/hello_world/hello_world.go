@@ -2,17 +2,26 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	ddbtypes "github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
+	"github.com/google/uuid"
 	"github.com/opensearch-project/opensearch-go/v4"
 	"github.com/opensearch-project/opensearch-go/v4/opensearchapi"
 	requestsigner "github.com/opensearch-project/opensearch-go/v4/signer/awsv2"
+
 	"io"
 	"log"
 	"net/http"
+	"realworld-aws-lambda-dynamodb-golang/internal/domain"
 	"strings"
+	"time"
 )
 
 // e.g. https://opensearch-domain.region.com or Amazon OpenSearch Serverless endpoint
@@ -27,7 +36,9 @@ func localTest() (events.APIGatewayProxyResponse, error) {
 	//fmt.Println(os.Getenv("AWS_SECRET_ACCESS_KEY"))
 	//fmt.Println(os.Getenv("AWS_SESSION_TOKEN"))
 
-	endpoint := "https://ka9ehtys9fgwac4oju9g.eu-west-1.aoss.amazonaws.com"
+	//endpoint := "https://ka9ehtys9fgwac4oju9g.eu-west-1.aoss.amazonaws.com"
+	endpoint := "https://search-realworldopense-p4kuwp4thqur-foz5vt5hhkbk2wb67jr5hlcabi.eu-west-1.es.amazonaws.com"
+	//endpoint := "https://localhost:9200"
 	//endpoint := os.Getenv("OPENSEARCH_ENDPOINT")
 	fmt.Println("OPENSEARCH_ENDPOINT from environment is", endpoint)
 
@@ -69,7 +80,7 @@ func localTest() (events.APIGatewayProxyResponse, error) {
 	}
 
 	// Create an AWS request Signer and load AWS configuration using default config folder or env vars.
-	signer, err := requestsigner.NewSignerWithService(awsCfg, "aoss") // Use "aoss" for Amazon OpenSearch Serverless
+	signer, err := requestsigner.NewSignerWithService(awsCfg, "es") // Use "aoss" for Amazon OpenSearch Serverless
 	if err != nil {
 		log.Println("Error creating request signer:", err)
 		log.Fatal(err)
@@ -79,11 +90,15 @@ func localTest() (events.APIGatewayProxyResponse, error) {
 	client, err := opensearchapi.NewClient(
 		opensearchapi.Config{
 			Client: opensearch.Config{
+				//Transport: &http.Transport{
+				//	TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+				//},
 				Addresses: []string{endpoint},
 				Signer:    signer,
 			},
 		},
 	)
+
 	if err != nil {
 		log.Println("Error creating OpenSearch client:", err)
 		log.Fatal(err)
@@ -91,38 +106,123 @@ func localTest() (events.APIGatewayProxyResponse, error) {
 
 	indexName := "go-test-index"
 
-	// Define index mapping.
-	mapping := strings.NewReader(`{
+	indexCreateTest := true
+	indexCountTest := false
+	indexGetTest := false
+	documentGetAllTest := false
+
+	if documentGetAllTest {
+		allDocs, err := client.Search(ctx, &opensearchapi.SearchReq{
+			Indices: []string{"article"},
+			Body:    strings.NewReader(`{"query": {"match_all": {}}}`),
+		})
+		if err != nil {
+			log.Println("Error get all docs: ", err)
+			log.Fatal(err)
+		}
+		marshal, _ := json.MarshalIndent(allDocs, "", "    ")
+		fmt.Println("all docs: %#v", string(marshal))
+	}
+
+	if indexGetTest {
+		settings := true
+		indicesCount, err := client.Indices.Get(ctx, opensearchapi.IndicesGetReq{Indices: []string{"article"}, Params: opensearchapi.IndicesGetParams{
+			FlatSettings:    &settings,
+			IncludeDefaults: &settings,
+			Pretty:          true,
+			Human:           true,
+			ErrorTrace:      true,
+		}})
+		if err != nil {
+			log.Println("Error get index: ", err)
+			log.Fatal(err)
+		}
+		marshal, _ := json.MarshalIndent(indicesCount, "", "    ")
+		fmt.Println("index: %#v", string(marshal))
+	}
+
+	if indexCountTest {
+		indicesCount, err := client.Indices.Count(ctx, &opensearchapi.IndicesCountReq{Indices: []string{"article"}})
+		if err != nil {
+			log.Println("Error counting index: ", err)
+			log.Fatal(err)
+		}
+		marshal, _ := json.Marshal(indicesCount)
+		fmt.Println("index: count %#v", string(marshal))
+	}
+
+	if indexCreateTest {
+
+		// Define index mapping.
+		mapping := strings.NewReader(`{
 	 "settings": {
 	   "index": {
-	        "number_of_shards": 4
+	        "number_of_shards": 1
 	        }
 	      }
 	 }`)
 
-	// Create an index with non-default settings.
-	createResp, err := client.Indices.Create(
-		ctx,
-		opensearchapi.IndicesCreateReq{
-			Index: indexName,
-			Body:  mapping,
-		},
-	)
-	if err != nil {
-		log.Println("Error creating index: ", err)
-		log.Fatal(err)
+		// Create an index with non-default settings.
+		createResp, err := client.Indices.Create(
+			ctx,
+			opensearchapi.IndicesCreateReq{
+				Index: indexName,
+				Body:  mapping,
+			},
+		)
+		if err != nil {
+			log.Println("Error creating index: ", err)
+			log.Fatal(err)
+		}
+
+		fmt.Println("created index: %s", createResp.Index)
+
+		delResp, err := client.Indices.Delete(ctx, opensearchapi.IndicesDeleteReq{Indices: []string{indexName}})
+		if err != nil {
+			log.Println("Error deleting index: ", err)
+			log.Fatal(err)
+		}
+
+		fmt.Println("deleted index: %#v", delResp.Acknowledged)
 	}
 
-	fmt.Println("created index: %s", createResp.Index)
+	if true {
 
-	delResp, err := client.Indices.Delete(ctx, opensearchapi.IndicesDeleteReq{Indices: []string{indexName}})
-	if err != nil {
-		log.Println("Error deleting index: ", err)
-		log.Fatal(err)
+		dynamodbClient := dynamodb.NewFromConfig(awsCfg)
+
+		articleAttributes, err := attributevalue.MarshalMap(domain.Article{
+			Id:             uuid.New(),
+			Title:          "abc",
+			Slug:           "dfc",
+			Description:    "string null",
+			Body:           "string NaN",
+			TagList:        []string{"tag1", "tag2"},
+			FavoritesCount: 2,
+			AuthorId:       uuid.New(),
+			CreatedAt:      time.Now(),
+			UpdatedAt:      time.Now(),
+		})
+
+		if err != nil {
+			log.Println("Error marshaling article index: ", err)
+			log.Fatal(err)
+		}
+		articleAttributes["pk"] = &ddbtypes.AttributeValueMemberS{Value: uuid.New().String()}
+
+		input := &dynamodb.PutItemInput{
+			TableName: aws.String("article"),
+			Item:      articleAttributes,
+		}
+
+		out, err := dynamodbClient.PutItem(ctx, input)
+
+		if err != nil {
+			log.Println("Error adding article: ", err)
+			log.Fatal(err)
+		}
+
+		fmt.Println("Added article to DynamoDB: %#v", out)
 	}
-
-	fmt.Println("deleted index: %#v", delResp.Acknowledged)
-
 	return events.APIGatewayProxyResponse{
 		Body:       "Atta boy! See the logs!!!",
 		StatusCode: 200,

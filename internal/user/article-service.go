@@ -13,12 +13,13 @@ type ArticleRepositoryInterface interface {
 	FindArticleBySlug(c context.Context, email string) (domain.Article, error)
 	FindArticleById(c context.Context, articleId uuid.UUID) (domain.Article, error)
 	CreateArticle(c context.Context, article domain.Article) (domain.Article, error)
+	DeleteArticleById(c context.Context, articleId uuid.UUID) error
+
 	UnfavoriteArticle(c context.Context, loggedInUserId uuid.UUID, articleId uuid.UUID) error
 	FavoriteArticle(c context.Context, loggedInUserId uuid.UUID, articleId uuid.UUID) error
 	DeleteCommentByArticleIdAndCommentId(c context.Context, loggedInUserId uuid.UUID, articleId uuid.UUID, commentId uuid.UUID) error
 	GetCommentsByArticleId(c context.Context, articleId uuid.UUID) ([]domain.Comment, error)
 	CreateComment(c context.Context, comment domain.Comment) error
-	DeleteArticleById(c context.Context, articleId uuid.UUID) error
 }
 
 func (as ArticleService) GetArticle(c context.Context, slug string) (domain.Article, error) {

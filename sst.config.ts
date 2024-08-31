@@ -1,6 +1,6 @@
 import { APIStack } from "./stacks/APIStack";
 import { DynamoDBStack } from "./stacks/DynamoDBStack";
-import { OpenSearchServerlessStack } from "./stacks/OpenSearchServerlessStack";
+import { OpenSearchStack } from "./stacks/OpenSearchStack";
 import { VPCStack } from "./stacks/VPCStack";
 import type { SSTConfig } from "sst";
 
@@ -12,10 +12,10 @@ export default {
     };
   },
 
-  stacks(app) {
+  async stacks(app) {
     app.stack(VPCStack);
     app.stack(DynamoDBStack);
+    await app.stack(OpenSearchStack);
     app.stack(APIStack);
-    app.stack(OpenSearchServerlessStack);
   }
 } satisfies SSTConfig;

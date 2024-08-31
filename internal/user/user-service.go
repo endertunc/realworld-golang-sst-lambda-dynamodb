@@ -66,6 +66,8 @@ func (s UserService) GetCurrentUser(c context.Context, userId uuid.UUID) (domain
 	return *token, user, nil
 }
 
+// ToDo @ender - this should move to a profile service so we can use both userservice and profile service...
+// or API layer should just call the userservice and profile service separately since this is purely needed for the API...
 func (s UserService) GetUserProfile(c context.Context, loggedInUserId *uuid.UUID, username string) (domain.User, bool, error) {
 	user, err := s.UserRepository.FindUserByUsername(c, username)
 	if err != nil {
@@ -75,12 +77,18 @@ func (s UserService) GetUserProfile(c context.Context, loggedInUserId *uuid.UUID
 	if loggedInUserId == nil {
 		return user, false, nil
 	} else {
-		isFollowing, err := s.FollowerService.IsFollowing(c, *loggedInUserId, user.Id)
+		// ToDo @ender we need to fix this...
+		//isFollowing, err := s.FollowerService.IsFollowing(c, *loggedInUserId, user.Id)
+		isFollowing, err := fakeIsFollowing(c, *loggedInUserId, user.Id)
 		if err != nil {
 			return domain.User{}, false, err
 		}
 		return user, isFollowing, nil
 	}
+}
+
+func fakeIsFollowing(c context.Context, follower, followee uuid.UUID) (bool, error) {
+	return false, nil
 }
 
 func (s UserService) GetUserListByUserIDs(c context.Context, userIds []uuid.UUID) ([]domain.User, error) {

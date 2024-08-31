@@ -2,10 +2,12 @@ import * as iam from "aws-cdk-lib/aws-iam";
 import * as opensearchserverless from "aws-cdk-lib/aws-opensearchserverless";
 import { use } from "sst/constructs";
 import { APIStack } from "./APIStack";
+import { VPCStack } from "./VPCStack";
 import type { StackContext } from "sst/constructs";
 
 export function OpenSearchServerlessStack({ stack }: StackContext) {
   const { roleArn } = use(APIStack);
+  const { vpc, privateSubnets, publicSubnets, securityGroupId } = use(VPCStack);
   const oss = new opensearchserverless.CfnCollection(stack, "real-world-article-collection", {
     name: "article",
     type: "SEARCH"
@@ -13,19 +15,33 @@ export function OpenSearchServerlessStack({ stack }: StackContext) {
 
   const dashboardAccessRole = "AWSReservedSSO_AdministratorAccess_ed5e5518843fe6b0";
 
+  const ossVPCEndpoint = new opensearchserverless.CfnVpcEndpoint(stack, "rw-oss-vpc-endpoint-id", {
+    name: "rw-oss-vpc-endpoint-name",
+    vpcId: vpc.vpcId,
+    securityGroupIds: [securityGroupId],
+    subnetIds: [
+      // ...privateSubnets.map((subnetId) => subnetId.subnetId),
+      ...publicSubnets.map((subnetId) => subnetId.subnetId)
+    ]
+  });
+
   const ossNetworkSecurityPolicy = new opensearchserverless.CfnSecurityPolicy(stack, "rw-oss-network-policy", {
     name: "rw-oss-network-policy",
     type: "network",
     policy: JSON.stringify([
       {
         Rules: [
-          { ResourceType: "collection", Resource: ["collection/article"] },
-          { ResourceType: "dashboard", Resource: ["collection/article"] }
+          { ResourceType: "collection", Resource: ["collection/*"] },
+          { ResourceType: "dashboard", Resource: ["collection/*"] }
         ],
-        AllowFromPublic: true
+        AllowFromPublic: false,
+        SourceVPCEs: [ossVPCEndpoint.attrId]
       }
     ])
   });
+
+  ossNetworkSecurityPolicy.addDependency(ossVPCEndpoint);
+  oss.addDependency(ossNetworkSecurityPolicy);
 
   const ossEncryptionSecurityPolicy = new opensearchserverless.CfnSecurityPolicy(stack, "rw-oss-encryption-policy", {
     name: "rw-oss-encryption-policy",
@@ -63,7 +79,6 @@ export function OpenSearchServerlessStack({ stack }: StackContext) {
     ])
   });
 
-  oss.addDependency(ossNetworkSecurityPolicy);
   oss.addDependency(ossEncryptionSecurityPolicy);
   oss.addDependency(ossDataAccessPolicy);
 

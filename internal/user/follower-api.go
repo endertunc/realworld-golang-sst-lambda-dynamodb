@@ -22,6 +22,8 @@ type FollowerServiceInterface interface {
 	UnFollow(c context.Context, follower uuid.UUID, followeeUsername string) (domain.User, bool, error)
 }
 
+var _ FollowerServiceInterface = FollowerService{}
+
 func (fa FollowerApi) UnfollowUserByUsername(ctx context.Context, loggedInUser uuid.UUID, followerUsername string) (dto.ProfileResponseBodyDTO, error) {
 	user, isFollowing, err := fa.FollowerService.UnFollow(ctx, loggedInUser, followerUsername)
 	if err != nil {
