@@ -67,7 +67,7 @@ func TestCommentOnNonExistentArticle(t *testing.T) {
 			Comment: comment,
 		}
 
-		respBody := errutil.GenericError{}
+		respBody := errutil.SimpleError{}
 		test.MakeAuthenticatedRequestAndParseResponse(t, reqBody, "POST",
 			"/api/articles/non-existent-article/comments",
 			http.StatusNotFound, &respBody, token)

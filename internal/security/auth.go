@@ -142,7 +142,7 @@ func getLoggedInUserFromHeader(ctx context.Context, authorizationHeader string) 
 
 // ToDo @ender this is a duplicate of the one in api/response-helpers. We can't reference it due to the cyclic dependency
 func toSimpleError(ctx context.Context, statusCode int, message string) events.APIGatewayProxyResponse {
-	body, err := json.Marshal(errutil.GenericError{Message: message})
+	body, err := json.Marshal(errutil.SimpleError{Message: message})
 	if err != nil {
 		slog.ErrorContext(ctx, "error encoding response body", slog.Any("error", err))
 		return events.APIGatewayProxyResponse{

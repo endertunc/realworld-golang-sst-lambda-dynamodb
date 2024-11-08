@@ -46,7 +46,7 @@ func TestFollowNonExistentUser(t *testing.T) {
 
 		// Try to follow non-existent user
 		nonExistentUsername := "non-existent-user"
-		var respBody errutil.GenericError
+		var respBody errutil.SimpleError
 		test.MakeAuthenticatedRequestAndParseResponse(t, nil, "POST", fmt.Sprintf("/api/profiles/%s/follow", nonExistentUsername), http.StatusNotFound, &respBody, token)
 		assert.Equal(t, "user not found", respBody.Message)
 	})
@@ -58,7 +58,7 @@ func TestFollowYourself(t *testing.T) {
 		user, token := test.CreateAndLoginUser(t, test.DefaultNewUserRequestUserDto)
 
 		// Try to follow yourself
-		var respBody errutil.GenericError
+		var respBody errutil.SimpleError
 		test.MakeAuthenticatedRequestAndParseResponse(t, nil, "POST", fmt.Sprintf("/api/profiles/%s/follow", user.Username), http.StatusBadRequest, &respBody, token)
 		assert.Equal(t, "cannot follow yourself", respBody.Message)
 	})

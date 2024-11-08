@@ -1,4 +1,4 @@
-package user
+package service
 
 import (
 	"context"
@@ -7,14 +7,24 @@ import (
 	"log/slog"
 	"realworld-aws-lambda-dynamodb-golang/internal/domain"
 	"realworld-aws-lambda-dynamodb-golang/internal/errutil"
+	"realworld-aws-lambda-dynamodb-golang/internal/repository"
 )
 
-type FollowerRepositoryInterface interface {
-	IsFollowing(ctx context.Context, follower, followee uuid.UUID) (bool, error)
-	BatchIsFollowing(ctx context.Context, follower uuid.UUID, followee []uuid.UUID) (map[uuid.UUID]bool, error)
-	Follow(ctx context.Context, follower, followee uuid.UUID) error
-	UnFollow(ctx context.Context, follower, followee uuid.UUID) error
+type ProfileService struct {
+	FollowerRepository repository.FollowerRepositoryInterface
+	UserRepository     repository.UserRepositoryInterface
 }
+
+type ProfileServiceInterface interface {
+	GetUserProfile(c context.Context, loggedInUserId *uuid.UUID, username string) (domain.User, bool, error)
+	Follow(c context.Context, follower uuid.UUID, followeeUsername string) (domain.User, error)
+	UnFollow(c context.Context, follower uuid.UUID, followeeUsername string) (domain.User, error)
+	IsFollowing(c context.Context, follower, followee uuid.UUID) (bool, error)
+	// ToDo @ender - map[uuid.UUID]bool is a bit weird return type. That being said, it fits to purpose without boilerplate
+	IsFollowingBulk(ctx context.Context, follower uuid.UUID, followee []uuid.UUID) (map[uuid.UUID]bool, error)
+}
+
+var _ ProfileServiceInterface = ProfileService{}
 
 func (p ProfileService) IsFollowing(ctx context.Context, follower, followee uuid.UUID) (bool, error) {
 	return p.FollowerRepository.IsFollowing(ctx, follower, followee)

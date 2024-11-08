@@ -88,7 +88,7 @@ func TestGetLoggedInUser(t *testing.T) {
 				assert.NotNil(t, response)
 				assert.Equal(t, tt.expectedStatus, response.StatusCode)
 
-				var errorResponse errutil.GenericError
+				var errorResponse errutil.SimpleError
 				err := json.Unmarshal([]byte(response.Body), &errorResponse)
 				assert.NoError(t, err)
 				assert.Equal(t, tt.expectedError, errorResponse.Message)
@@ -181,7 +181,7 @@ func TestGetOptionalLoggedInUser(t *testing.T) {
 				assert.NotNil(t, response)
 				assert.Equal(t, tt.expectedStatus, response.StatusCode)
 
-				var errorResponse errutil.GenericError
+				var errorResponse errutil.SimpleError
 				err := json.Unmarshal([]byte(response.Body), &errorResponse)
 				assert.NoError(t, err)
 				assert.Equal(t, tt.expectedError, errorResponse.Message)

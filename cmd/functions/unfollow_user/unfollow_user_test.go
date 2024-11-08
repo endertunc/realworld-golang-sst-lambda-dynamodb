@@ -64,7 +64,7 @@ func TestUnfollowNonExistentUser(t *testing.T) {
 
 		// Try to unfollow non-existent user
 		nonExistentUsername := "non-existent-user"
-		var respBody errutil.GenericError
+		var respBody errutil.SimpleError
 		test.MakeAuthenticatedRequestAndParseResponse(t, nil, "DELETE",
 			fmt.Sprintf("/api/profiles/%s/follow", nonExistentUsername),
 			http.StatusNotFound, &respBody, token)
@@ -78,7 +78,7 @@ func TestUnfollowYourself(t *testing.T) {
 		user, token := test.CreateAndLoginUser(t, test.DefaultNewUserRequestUserDto)
 
 		// Try to unfollow yourself
-		var respBody errutil.GenericError
+		var respBody errutil.SimpleError
 		test.MakeAuthenticatedRequestAndParseResponse(t, nil, "DELETE",
 			fmt.Sprintf("/api/profiles/%s/follow", user.Username),
 			http.StatusBadRequest, &respBody, token)

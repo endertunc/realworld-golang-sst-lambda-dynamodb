@@ -209,7 +209,7 @@ func TestGetCommentsAsAnonymousUser(t *testing.T) {
 
 func TestGetCommentsForNonExistentArticle(t *testing.T) {
 	test.WithSetupAndTeardown(t, func() {
-		var respBody errutil.GenericError
+		var respBody errutil.SimpleError
 		test.MakeRequestAndParseResponse(t, nil, "GET",
 			"/api/articles/non-existent-article/comments",
 			http.StatusNotFound, &respBody)

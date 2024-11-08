@@ -46,7 +46,7 @@ func TestDeleteNonExistingComment(t *testing.T) {
 
 		// Try to delete a non-existing comment
 		nonExistingCommentId := uuid.New().String()
-		var respBody errutil.GenericError
+		var respBody errutil.SimpleError
 		test.MakeAuthenticatedRequestAndParseResponse(t, nil, "DELETE",
 			fmt.Sprintf("/api/articles/%s/comments/%s", article.Slug, nonExistingCommentId),
 			http.StatusNotFound, &respBody, token)
@@ -71,7 +71,7 @@ func TestDeleteCommentWithUnrelatedArticle(t *testing.T) {
 		comment := test.CreateDefaultComment(t, article1.Slug, token)
 
 		// Try to delete the comment using article2's slug
-		var respBody errutil.GenericError
+		var respBody errutil.SimpleError
 		test.MakeAuthenticatedRequestAndParseResponse(t, nil, "DELETE",
 			fmt.Sprintf("/api/articles/%s/comments/%s", article2.Slug, comment.Id),
 			http.StatusNotFound, &respBody, token)
@@ -92,7 +92,7 @@ func TestDeleteCommentWithNonExistingArticle(t *testing.T) {
 		comment := test.CreateDefaultComment(t, article.Slug, token)
 
 		// Try to delete the comment using a non-existing article slug
-		var respBody errutil.GenericError
+		var respBody errutil.SimpleError
 		test.MakeAuthenticatedRequestAndParseResponse(t, nil, "DELETE",
 			fmt.Sprintf("/api/articles/%s/comments/%s", "non-existing-article", comment.Id),
 			http.StatusNotFound, &respBody, token)
@@ -110,7 +110,7 @@ func TestDeleteCommentWithInvalidCommentId(t *testing.T) {
 		article := test.CreateDefaultArticle(t, token)
 
 		// Try to delete a comment with invalid UUID format
-		var respBody errutil.GenericError
+		var respBody errutil.SimpleError
 		test.MakeAuthenticatedRequestAndParseResponse(t, nil, "DELETE",
 			fmt.Sprintf("/api/articles/%s/comments/%s", article.Slug, "not-a-uuid"),
 			http.StatusBadRequest, &respBody, token)
@@ -134,7 +134,7 @@ func TestDeleteCommentAsNonOwner(t *testing.T) {
 		comment := test.CreateDefaultComment(t, article.Slug, ownerToken)
 
 		// Try to delete the comment as non-owner
-		var respBody errutil.GenericError
+		var respBody errutil.SimpleError
 		test.MakeAuthenticatedRequestAndParseResponse(t, nil, "DELETE",
 			fmt.Sprintf("/api/articles/%s/comments/%s", article.Slug, comment.Id),
 			http.StatusForbidden, &respBody, nonOwnerToken)

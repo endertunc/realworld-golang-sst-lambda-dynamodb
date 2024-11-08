@@ -1,4 +1,4 @@
-package user
+package api
 
 import (
 	"context"
@@ -6,30 +6,11 @@ import (
 	"log/slog"
 	"realworld-aws-lambda-dynamodb-golang/internal/domain"
 	"realworld-aws-lambda-dynamodb-golang/internal/domain/dto"
+	"realworld-aws-lambda-dynamodb-golang/internal/service"
 )
 
 type UserApi struct {
-	UserService UserServiceInterface
-}
-
-type UserService struct {
-	UserRepository UserRepositoryInterface
-}
-
-type UserServiceInterface interface {
-	LoginUser(ctx context.Context, email, plainTextPassword string) (*domain.Token, *domain.User, error)
-	RegisterUser(ctx context.Context, email, username, plainTextPassword string) (*domain.Token, *domain.User, error)
-	GetCurrentUser(ctx context.Context, userID uuid.UUID) (domain.User, error)
-	GetUserByUserId(ctx context.Context, userID uuid.UUID) (domain.User, error)
-	//GetUserProfile(ctx context.Context, loggedInUserId *uuid.UUID, profileUsername string) (domain.User, bool, error)
-	GetUserByUsername(ctx context.Context, email string) (domain.User, error)
-	GetUserListByUserIDs(ctx context.Context, userIds []uuid.UUID) ([]domain.User, error)
-}
-
-var _ UserServiceInterface = UserService{}
-
-func (s UserService) GetUserByUsername(ctx context.Context, username string) (domain.User, error) {
-	return s.UserRepository.FindUserByUsername(ctx, username)
+	UserService service.UserServiceInterface
 }
 
 func (ua UserApi) LoginUser(ctx context.Context, loginRequestBodyDTO dto.LoginRequestBodyDTO) (dto.UserResponseBodyDTO, error) {

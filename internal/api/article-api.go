@@ -1,4 +1,4 @@
-package user
+package api
 
 import (
 	"context"
@@ -6,43 +6,22 @@ import (
 	"log/slog"
 	"realworld-aws-lambda-dynamodb-golang/internal/domain"
 	"realworld-aws-lambda-dynamodb-golang/internal/domain/dto"
+	"realworld-aws-lambda-dynamodb-golang/internal/service"
 )
 
 type ArticleApi struct {
-	ArticleService ArticleServiceInterface
-	UserService    UserServiceInterface
-	ProfileService ProfileServiceInterface
+	ArticleService service.ArticleServiceInterface
+	UserService    service.UserServiceInterface
+	ProfileService service.ProfileServiceInterface
 }
 
-func NewArticleApi(articleService ArticleServiceInterface, userService UserServiceInterface, profileService ProfileServiceInterface) ArticleApi {
+func NewArticleApi(articleService service.ArticleServiceInterface, userService service.UserServiceInterface, profileService service.ProfileServiceInterface) ArticleApi {
 	return ArticleApi{
 		ArticleService: articleService,
 		UserService:    userService,
 		ProfileService: profileService,
 	}
 }
-
-type ArticleService struct {
-	UserService       UserServiceInterface
-	ArticleRepository ArticleRepositoryInterface
-}
-
-type ArticleServiceInterface interface {
-	GetArticle(c context.Context, slug string) (domain.Article, error)
-	CreateArticle(c context.Context, author uuid.UUID, title, description, body string, tagList []string) (domain.Article, error)
-	AddComment(c context.Context, loggedInUserId uuid.UUID, articleSlug string, body string) (domain.Comment, error)
-	GetArticleComments(c context.Context, slug string) ([]domain.Comment, error)
-	DeleteComment(c context.Context, author uuid.UUID, slug string, commentId uuid.UUID) error
-	DeleteArticle(c context.Context, author uuid.UUID, slug string) error
-	FavoriteArticle(c context.Context, userId uuid.UUID, slug string) (domain.Article, error)
-	UnfavoriteArticle(c context.Context, userId uuid.UUID, slug string) (domain.Article, error)
-	IsFavorited(c context.Context, articleId, userId uuid.UUID) (bool, error)
-	FindArticlesByIds(c context.Context, articleIds []uuid.UUID) ([]domain.Article, error)
-	IsFavoritedBulk(c context.Context, userId uuid.UUID, articleIds []uuid.UUID) (map[uuid.UUID]bool, error)
-	//UpdateArticle(c context.Context, loggedInUserId uuid.UUID) (domain.Token, domain.User, error)
-}
-
-var _ ArticleServiceInterface = ArticleService{}
 
 func (aa ArticleApi) GetArticle(ctx context.Context, loggedInUserId *uuid.UUID, slug string) (dto.ArticleResponseBodyDTO, error) {
 	// ToDo @ender [maybe not] --- we could get article and author in BatchGetItem
@@ -79,7 +58,7 @@ func (aa ArticleApi) GetArticle(ctx context.Context, loggedInUserId *uuid.UUID, 
 
 }
 
-func (aa ArticleApi) CreateArticle(c context.Context, loggedInUserId uuid.UUID, createArticleRequestBodyDTO dto.CreateArticleRequestBodyDTO) (dto.ArticleResponseBodyDTO, error) {
+func (aa ArticleApi) CreateArticle(ctx context.Context, loggedInUserId uuid.UUID, createArticleRequestBodyDTO dto.CreateArticleRequestBodyDTO) (dto.ArticleResponseBodyDTO, error) {
 	articleDTO := createArticleRequestBodyDTO.Article
 	// ToDo @ender do we have any business validation we should apply in service level for an article?
 	// ToDo @ender [GENERAL] - in this project we don't seem to have much complex data types to pass to services
@@ -87,7 +66,7 @@ func (aa ArticleApi) CreateArticle(c context.Context, loggedInUserId uuid.UUID, 
 	//  Once this list of parameters that needs to be passed to service gets crowded,
 	//  one could introduce intermediate "CreateArticleRequest" that ArticleService accepts
 	article, err := aa.ArticleService.CreateArticle(
-		c,
+		ctx,
 		loggedInUserId,
 		articleDTO.Title,
 		articleDTO.Description,
@@ -97,7 +76,7 @@ func (aa ArticleApi) CreateArticle(c context.Context, loggedInUserId uuid.UUID, 
 		return dto.ArticleResponseBodyDTO{}, err
 	}
 
-	user, err := aa.UserService.GetCurrentUser(c, loggedInUserId)
+	user, err := aa.UserService.GetCurrentUser(ctx, loggedInUserId)
 	if err != nil {
 		return dto.ArticleResponseBodyDTO{}, err
 	}
@@ -234,16 +213,4 @@ func (aa ArticleApi) AddComment(ctx context.Context, loggedInUserId uuid.UUID, a
 	// the current user is the author, and the user can't follow itself,
 	// thus we simply pass isFollowing as false
 	return dto.ToSingleCommentResponseBodyDTO(comment, user, false), nil
-}
-
-func (as ArticleService) IsFavorited(c context.Context, articleId, userId uuid.UUID) (bool, error) {
-	return as.ArticleRepository.IsFavorited(c, articleId, userId)
-}
-
-func (as ArticleService) FindArticlesByIds(c context.Context, articleIds []uuid.UUID) ([]domain.Article, error) {
-	return as.ArticleRepository.FindArticlesByIds(c, articleIds)
-}
-
-func (as ArticleService) IsFavoritedBulk(c context.Context, userId uuid.UUID, articleIds []uuid.UUID) (map[uuid.UUID]bool, error) {
-	return as.ArticleRepository.IsFavoritedBulk(c, userId, articleIds)
 }

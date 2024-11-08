@@ -1,26 +1,20 @@
-package user
+package api
 
 import (
 	"context"
 	"github.com/google/uuid"
-	"realworld-aws-lambda-dynamodb-golang/internal/domain"
 	"realworld-aws-lambda-dynamodb-golang/internal/domain/dto"
-	"time"
+	"realworld-aws-lambda-dynamodb-golang/internal/service"
 )
 
 type FeedApi struct {
-	FeedService FeedServiceInterface
+	FeedService service.FeedServiceInterface
 }
 
-func NewFeedApi(feedService FeedServiceInterface) FeedApi {
+func NewFeedApi(feedService service.FeedServiceInterface) FeedApi {
 	return FeedApi{
 		FeedService: feedService,
 	}
-}
-
-type FeedServiceInterface interface {
-	FanoutArticle(ctx context.Context, articleId, authorId uuid.UUID, createdAt time.Time) error
-	FetchArticlesFromFeed(ctx context.Context, userId uuid.UUID, limit int, nextPageToken *string) ([]domain.FeedItem, *string, error)
 }
 
 func (uf FeedApi) FetchUserFeed(ctx context.Context, userId uuid.UUID, limit int, nextPageToken *string) (dto.MultipleArticlesResponseBodyDTO, error) {

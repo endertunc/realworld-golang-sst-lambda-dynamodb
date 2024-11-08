@@ -1,6 +1,6 @@
 # reference file: https://github.com/aws-samples/serverless-go-demo/blob/main/Makefile
 
-FUNCTIONS := add_comment create_article delete_article delete_comment favorite_article follow_user get_article get_article_comments get_current_user get_user_profile login_user register_user unfavorite_article unfollow_user update_article update_user
+FUNCTIONS := add_comment delete_article delete_comment favorite_article follow_user get_article get_article_comments get_current_user get_user_feed get_user_profile login_user post_article register_user unfavorite_article unfollow_user update_article update_user user_feed
 
 # To try different version of Go
 GO := go

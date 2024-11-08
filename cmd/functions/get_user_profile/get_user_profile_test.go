@@ -32,7 +32,7 @@ func TestAnonymousUserFetchNonExistingProfile(t *testing.T) {
 	test.WithSetupAndTeardown(t, func() {
 		nonExistingUsername := "non-existing-user"
 
-		var respBody errutil.GenericError
+		var respBody errutil.SimpleError
 		test.MakeRequestAndParseResponse(t, nil, "GET", fmt.Sprintf("/api/profiles/%s", nonExistingUsername), http.StatusNotFound, &respBody)
 
 		assert.Equal(t, "user not found", respBody.Message)
@@ -92,7 +92,7 @@ func TestAuthenticatedUserFetchNonExistingProfile(t *testing.T) {
 		// Try to fetch a non-existing profile
 		nonExistingUsername := "non-existing-user"
 
-		var respBody errutil.GenericError
+		var respBody errutil.SimpleError
 		test.MakeAuthenticatedRequestAndParseResponse(t, nil, "GET", fmt.Sprintf("/api/profiles/%s", nonExistingUsername), http.StatusNotFound, &respBody, token)
 
 		assert.Equal(t, "user not found", respBody.Message)

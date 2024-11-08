@@ -1,23 +1,31 @@
-package user
+package service
 
 import (
 	"context"
 	"fmt"
-	"realworld-aws-lambda-dynamodb-golang/internal/domain"
-	"realworld-aws-lambda-dynamodb-golang/internal/errutil"
-	"realworld-aws-lambda-dynamodb-golang/internal/security"
-
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
+	"realworld-aws-lambda-dynamodb-golang/internal/domain"
+	"realworld-aws-lambda-dynamodb-golang/internal/errutil"
+	"realworld-aws-lambda-dynamodb-golang/internal/repository"
+	"realworld-aws-lambda-dynamodb-golang/internal/security"
 )
 
-type UserRepositoryInterface interface {
-	FindUserByEmail(c context.Context, email string) (domain.User, error)
-	FindUserByUsername(c context.Context, username string) (domain.User, error)
-	FindUserById(c context.Context, userId uuid.UUID) (domain.User, error)
-	InsertNewUser(c context.Context, newUser domain.User) (domain.User, error)
-	FindUserListByUserIDs(c context.Context, userIds []uuid.UUID) ([]domain.User, error)
+type UserService struct {
+	UserRepository repository.UserRepositoryInterface
 }
+
+type UserServiceInterface interface {
+	LoginUser(ctx context.Context, email, plainTextPassword string) (*domain.Token, *domain.User, error)
+	RegisterUser(ctx context.Context, email, username, plainTextPassword string) (*domain.Token, *domain.User, error)
+	GetCurrentUser(ctx context.Context, userID uuid.UUID) (domain.User, error)
+	GetUserByUserId(ctx context.Context, userID uuid.UUID) (domain.User, error)
+	//GetUserProfile(ctx context.Context, loggedInUserId *uuid.UUID, profileUsername string) (domain.User, bool, error)
+	GetUserByUsername(ctx context.Context, email string) (domain.User, error)
+	GetUserListByUserIDs(ctx context.Context, userIds []uuid.UUID) ([]domain.User, error)
+}
+
+var _ UserServiceInterface = UserService{}
 
 func (s UserService) LoginUser(c context.Context, email, plainTextPassword string) (*domain.Token, *domain.User, error) {
 	user, err := s.UserRepository.FindUserByEmail(c, email)
@@ -83,4 +91,8 @@ func (s UserService) GetUserListByUserIDs(c context.Context, userIds []uuid.UUID
 		return nil, err
 	}
 	return users, nil
+}
+
+func (s UserService) GetUserByUsername(ctx context.Context, username string) (domain.User, error) {
+	return s.UserRepository.FindUserByUsername(ctx, username)
 }

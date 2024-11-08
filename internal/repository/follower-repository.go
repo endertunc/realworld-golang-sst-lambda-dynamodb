@@ -1,4 +1,4 @@
-package user
+package repository
 
 import (
 	"context"
@@ -21,6 +21,13 @@ type DynamodbFollowerRepository struct {
 
 func NewDynamodbFollowerRepository(db *database.DynamoDBStore) DynamodbFollowerRepository {
 	return DynamodbFollowerRepository{db: db}
+}
+
+type FollowerRepositoryInterface interface {
+	IsFollowing(ctx context.Context, follower, followee uuid.UUID) (bool, error)
+	BatchIsFollowing(ctx context.Context, follower uuid.UUID, followee []uuid.UUID) (map[uuid.UUID]bool, error)
+	Follow(ctx context.Context, follower, followee uuid.UUID) error
+	UnFollow(ctx context.Context, follower, followee uuid.UUID) error
 }
 
 var _ FollowerRepositoryInterface = (*DynamodbFollowerRepository)(nil)

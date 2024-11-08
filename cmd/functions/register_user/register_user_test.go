@@ -36,7 +36,7 @@ func Test_RegisterAlreadyExistsEmail(t *testing.T) {
 		// change username but keep the same email
 		reqBodyTwo.User.Username = "test-user-two"
 
-		var respErrorBody errutil.GenericError
+		var respErrorBody errutil.SimpleError
 		test.MakeRequestAndParseResponse(t, reqBodyTwo, "POST", "/api/users", http.StatusConflict, &respErrorBody)
 		assert.Equal(t, "email already exists", respErrorBody.Message)
 	})
@@ -53,7 +53,7 @@ func Test_RegisterAlreadyExistsUsername(t *testing.T) {
 		// change email but keep the same username
 		reqBodyTwo.User.Email = "test-two@example.com"
 
-		var respErrorBody errutil.GenericError
+		var respErrorBody errutil.SimpleError
 		test.MakeRequestAndParseResponse(t, reqBodyTwo, "POST", "/api/users", http.StatusConflict, &respErrorBody)
 		assert.Equal(t, "username already exists", respErrorBody.Message)
 	})

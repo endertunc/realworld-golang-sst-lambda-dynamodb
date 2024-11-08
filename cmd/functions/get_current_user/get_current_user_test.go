@@ -46,7 +46,7 @@ func TestGetCurrentUserWithInvalidToken(t *testing.T) {
 	test.WithSetupAndTeardown(t, func() {
 		invalidToken := "invalid.token.here"
 
-		var respBody errutil.GenericError
+		var respBody errutil.SimpleError
 		test.MakeAuthenticatedRequestAndParseResponse(t, nil, "GET", "/api/user", http.StatusUnauthorized, &respBody, invalidToken)
 
 		assert.Equal(t, "invalid token", respBody.Message)
@@ -55,7 +55,7 @@ func TestGetCurrentUserWithInvalidToken(t *testing.T) {
 
 func TestGetCurrentUserWithoutToken(t *testing.T) {
 	test.WithSetupAndTeardown(t, func() {
-		var respBody errutil.GenericError
+		var respBody errutil.SimpleError
 		test.MakeRequestAndParseResponse(t, nil, "GET", "/api/user", http.StatusUnauthorized, &respBody)
 
 		assert.Equal(t, "authorization header is missing", respBody.Message)

@@ -1,4 +1,4 @@
-package user
+package repository
 
 import (
 	"context"
@@ -30,6 +30,14 @@ type DynamodbUserRepository struct {
 
 func NewDynamodbUserRepository(db *database.DynamoDBStore) DynamodbUserRepository {
 	return DynamodbUserRepository{db: db}
+}
+
+type UserRepositoryInterface interface {
+	FindUserByEmail(c context.Context, email string) (domain.User, error)
+	FindUserByUsername(c context.Context, username string) (domain.User, error)
+	FindUserById(c context.Context, userId uuid.UUID) (domain.User, error)
+	InsertNewUser(c context.Context, newUser domain.User) (domain.User, error)
+	FindUserListByUserIDs(c context.Context, userIds []uuid.UUID) ([]domain.User, error)
 }
 
 var _ UserRepositoryInterface = DynamodbUserRepository{}

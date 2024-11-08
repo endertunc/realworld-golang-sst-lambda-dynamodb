@@ -144,14 +144,14 @@ func TestCreateArticleWithoutTags(t *testing.T) {
 		}
 
 		var respBody dto.ArticleResponseBodyDTO
-		test.MakeAuthenticatedRequestAndParseResponse(t, reqBody, "POST", "/api/articles", http.StatusCreated, &respBody, token)
+		test.MakeAuthenticatedRequestAndParseResponse(t, reqBody, "POST", "/api/articles", http.StatusOK, &respBody, token)
 
 		// Create expected article response
 		expectedArticle := dto.ArticleResponseDTO{
 			Title:          article.Title,
 			Description:    article.Description,
 			Body:           article.Body,
-			TagList:        []string{},
+			TagList:        nil,
 			Favorited:      false,
 			FavoritesCount: 0,
 			Author: dto.AuthorDTO{

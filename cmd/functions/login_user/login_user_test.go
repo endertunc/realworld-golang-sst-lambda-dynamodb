@@ -67,7 +67,7 @@ func TestInvalidPassword(t *testing.T) {
 				Password: "p@sswOrd",
 			},
 		}
-		var respBody errutil.GenericError
+		var respBody errutil.SimpleError
 		test.MakeRequestAndParseResponse(t, reqWithInvalidPassword, "POST", "/api/users/login", http.StatusUnauthorized, &respBody)
 		assert.Equal(t, "invalid credentials", respBody.Message)
 	})
@@ -85,7 +85,7 @@ func TestInvalidEmail(t *testing.T) {
 				Password: user.Password,
 			},
 		}
-		var respBody errutil.GenericError
+		var respBody errutil.SimpleError
 		test.MakeRequestAndParseResponse(t, reqWithInvalidPassword, "POST", "/api/users/login", http.StatusUnauthorized, &respBody)
 		assert.Equal(t, "invalid credentials", respBody.Message)
 	})

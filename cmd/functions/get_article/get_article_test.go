@@ -13,7 +13,7 @@ import (
 func TestGetNonExistentArticle(t *testing.T) {
 	test.WithSetupAndTeardown(t, func() {
 		nonExistentSlug := "non-existent-article"
-		var respBody errutil.GenericError
+		var respBody errutil.SimpleError
 		test.MakeRequestAndParseResponse(t, nil, "GET", fmt.Sprintf("/api/articles/%s", nonExistentSlug), http.StatusNotFound, &respBody)
 		assert.Equal(t, "article not found", respBody.Message)
 	})

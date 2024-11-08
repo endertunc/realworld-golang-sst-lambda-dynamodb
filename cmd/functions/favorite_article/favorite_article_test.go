@@ -51,7 +51,7 @@ func TestFavoriteNonExistentArticle(t *testing.T) {
 
 		// Try to favorite non-existent article
 		nonExistentSlug := "non-existent-article"
-		var respBody errutil.GenericError
+		var respBody errutil.SimpleError
 		test.MakeAuthenticatedRequestAndParseResponse(t, nil, "POST", fmt.Sprintf("/api/articles/%s/favorite", nonExistentSlug), http.StatusNotFound, &respBody, token)
 		assert.Equal(t, "article not found", respBody.Message)
 	})
@@ -76,7 +76,7 @@ func TestFavoriteAlreadyFavoritedArticle(t *testing.T) {
 		assert.Equal(t, 1, favoriteRespBody.Article.FavoritesCount)
 
 		// Favorite the article second time
-		errorRespBody := errutil.GenericError{}
+		errorRespBody := errutil.SimpleError{}
 		test.MakeAuthenticatedRequestAndParseResponse(t, nil, "POST", fmt.Sprintf("/api/articles/%s/favorite", createdArticle.Slug), http.StatusConflict, &errorRespBody, token)
 		assert.Equal(t, "article already favorited", errorRespBody.Message)
 

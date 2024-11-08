@@ -1,24 +1,30 @@
-package user
+package service
 
 import (
 	"context"
 	"github.com/google/uuid"
 	"realworld-aws-lambda-dynamodb-golang/internal/domain"
+	"realworld-aws-lambda-dynamodb-golang/internal/repository"
 	"realworld-aws-lambda-dynamodb-golang/internal/utils"
 	"time"
 )
 
 type UserFeedService struct {
-	UserFeedRepository UserFeedRepositoryInterface
+	UserFeedRepository repository.UserFeedRepositoryInterface
 	ArticleService     ArticleServiceInterface
 	ProfileService     ProfileServiceInterface
 	UserService        UserServiceInterface
 }
 
+type FeedServiceInterface interface {
+	FanoutArticle(ctx context.Context, articleId, authorId uuid.UUID, createdAt time.Time) error
+	FetchArticlesFromFeed(ctx context.Context, userId uuid.UUID, limit int, nextPageToken *string) ([]domain.FeedItem, *string, error)
+}
+
 var _ FeedServiceInterface = UserFeedService{}
 
 func NewUserFeedService(
-	userFeedRepository UserFeedRepositoryInterface,
+	userFeedRepository repository.UserFeedRepositoryInterface,
 	articleService ArticleServiceInterface,
 	profileService ProfileServiceInterface,
 	userService UserServiceInterface) UserFeedService {

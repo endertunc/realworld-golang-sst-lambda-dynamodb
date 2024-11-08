@@ -29,7 +29,6 @@ func ParseBodyAs[T any](ctx context.Context, request events.APIGatewayProxyReque
 	if err != nil {
 		cause := fmt.Errorf("error decoding request body: %w", err)
 		slog.WarnContext(ctx, "error decoding request body", slog.Any("error", cause))
-		// response:= errutil.ToAPIGatewayProxyResponse(ctx, handlerName, cause)
 
 		// A note on err.Error():
 		// json module returns a descriptive enough error message that we can use as is.

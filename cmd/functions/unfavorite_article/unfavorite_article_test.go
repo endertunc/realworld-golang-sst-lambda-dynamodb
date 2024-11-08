@@ -57,7 +57,7 @@ func TestUnfavoriteNonExistentArticle(t *testing.T) {
 
 		// Try to unfavorite non-existent article
 		nonExistentSlug := "non-existent-article"
-		var respBody errutil.GenericError
+		var respBody errutil.SimpleError
 		test.MakeAuthenticatedRequestAndParseResponse(t, nil, "DELETE", fmt.Sprintf("/api/articles/%s/favorite", nonExistentSlug), http.StatusNotFound, &respBody, token)
 		assert.Equal(t, "article not found", respBody.Message)
 	})
@@ -72,7 +72,7 @@ func TestUnfavoriteAlreadyUnfavoritedArticle(t *testing.T) {
 		createdArticle := test.CreateArticleEntity(t, test.DefaultCreateArticleRequestDTO, token)
 
 		// Try to unfavorite an article that was never favorited
-		var respBody errutil.GenericError
+		var respBody errutil.SimpleError
 		test.MakeAuthenticatedRequestAndParseResponse(t, nil, "DELETE", fmt.Sprintf("/api/articles/%s/favorite", createdArticle.Slug), http.StatusConflict, &respBody, token)
 		assert.Equal(t, "article is already unfavorited", respBody.Message)
 

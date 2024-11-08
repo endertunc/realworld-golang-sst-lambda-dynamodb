@@ -1,4 +1,4 @@
-package user
+package repository
 
 import (
 	"context"
@@ -24,6 +24,24 @@ func NewDynamodbArticleRepository(db *database.DynamoDBStore) DynamodbArticleRep
 	return DynamodbArticleRepository{db: db}
 }
 
+type ArticleRepositoryInterface interface {
+	FindArticleBySlug(ctx context.Context, email string) (domain.Article, error)
+	FindArticleById(ctx context.Context, articleId uuid.UUID) (domain.Article, error)
+	FindArticlesByIds(ctx context.Context, articleIds []uuid.UUID) ([]domain.Article, error)
+	CreateArticle(ctx context.Context, article domain.Article) (domain.Article, error)
+	DeleteArticleById(ctx context.Context, articleId uuid.UUID) error
+	UnfavoriteArticle(ctx context.Context, loggedInUserId uuid.UUID, articleId uuid.UUID) error
+	FavoriteArticle(ctx context.Context, loggedInUserId uuid.UUID, articleId uuid.UUID) error
+	DeleteCommentByArticleIdAndCommentId(ctx context.Context, loggedInUserId uuid.UUID, articleId uuid.UUID, commentId uuid.UUID) error
+	FindCommentsByArticleId(ctx context.Context, articleId uuid.UUID) ([]domain.Comment, error)
+	CreateComment(ctx context.Context, comment domain.Comment) error
+	FindCommentByCommentIdAndArticleId(ctx context.Context, commentId, articleId uuid.UUID) (domain.Comment, error)
+	IsFavorited(ctx context.Context, articleId, userId uuid.UUID) (bool, error)
+	IsFavoritedBulk(ctx context.Context, userId uuid.UUID, articleIds []uuid.UUID) (map[uuid.UUID]bool, error)
+}
+
+var _ ArticleRepositoryInterface = DynamodbArticleRepository{}
+
 type DynamodbArticleItem struct {
 	Id             string   `dynamodbav:"pk"`
 	Title          string   `dynamodbav:"title"`
@@ -46,8 +64,6 @@ type DynamodbCommentItem struct {
 	CreatedAt time.Time `dynamodbav:"createdAt,unixtime"`
 	UpdatedAt time.Time `dynamodbav:"updatedAt,unixtime"`
 }
-
-var _ ArticleRepositoryInterface = DynamodbArticleRepository{}
 
 var articleTable = "article"
 var commentTable = "comment"
