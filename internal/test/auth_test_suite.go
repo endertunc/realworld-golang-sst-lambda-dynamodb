@@ -13,8 +13,6 @@ type SharedAuthenticationTestConfig struct {
 	Path   string
 }
 
-// ToDo @ender I have different file name pattern... this file camelCase, auth_test_suite.go, other with kebab-case....
-
 // RunAuthenticationTests runs a standard suite of authentication tests for an endpoint
 func RunAuthenticationTests(t *testing.T, config SharedAuthenticationTestConfig) {
 	t.Run("without_token", func(t *testing.T) {
