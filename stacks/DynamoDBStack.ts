@@ -14,10 +14,6 @@ export function DynamoDBStack({ stack }: StackContext) {
     partitionKey: {
       name: "pk",
       type: dynamodb.AttributeType.STRING
-    },
-    sortKey: {
-      name: "sk",
-      type: dynamodb.AttributeType.STRING
     }
   });
 
@@ -26,6 +22,15 @@ export function DynamoDBStack({ stack }: StackContext) {
     projectionType: dynamodb.ProjectionType.ALL,
     partitionKey: {
       name: "email",
+      type: dynamodb.AttributeType.STRING
+    }
+  });
+
+  userTable.addGlobalSecondaryIndex({
+    indexName: "user_username_gsi",
+    projectionType: dynamodb.ProjectionType.ALL,
+    partitionKey: {
+      name: "username",
       type: dynamodb.AttributeType.STRING
     }
   });
@@ -58,8 +63,8 @@ export function DynamoDBStack({ stack }: StackContext) {
       type: dynamodb.AttributeType.STRING
     },
     sortKey: {
-      name: "articleId",
-      type: dynamodb.AttributeType.STRING
+      name: "createdAt",
+      type: dynamodb.AttributeType.NUMBER
     }
   });
 
@@ -70,6 +75,7 @@ export function DynamoDBStack({ stack }: StackContext) {
       name: "commentId",
       type: dynamodb.AttributeType.STRING
     },
+    // ToDo @ender - I dont think I need this sk
     sortKey: {
       name: "articleId",
       type: dynamodb.AttributeType.STRING
@@ -121,8 +127,16 @@ export function DynamoDBStack({ stack }: StackContext) {
     }
   });
 
+  followerTable.addGlobalSecondaryIndex({
+    indexName: "follower_followee_gsi",
+    projectionType: dynamodb.ProjectionType.ALL,
+    partitionKey: {
+      name: "followee",
+      type: dynamodb.AttributeType.STRING
+    }
+  });
+
   return {
-    userTableName: userTable.tableName,
-    userTableArn: userTable.tableArn
+    articleTable: articleTable
   };
 }

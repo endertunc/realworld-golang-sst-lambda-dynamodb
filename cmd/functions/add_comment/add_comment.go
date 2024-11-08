@@ -2,38 +2,46 @@ package main
 
 import (
 	"context"
+	"errors"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/google/uuid"
+	"log/slog"
+	"net/http"
 	"realworld-aws-lambda-dynamodb-golang/cmd/functions"
 	"realworld-aws-lambda-dynamodb-golang/internal/api"
+	"realworld-aws-lambda-dynamodb-golang/internal/domain"
 	"realworld-aws-lambda-dynamodb-golang/internal/domain/dto"
 	"realworld-aws-lambda-dynamodb-golang/internal/errutil"
 )
 
 const handlerName = "AddCommentHandler"
 
-func Handler(context context.Context, request events.APIGatewayProxyRequest, userId uuid.UUID) events.APIGatewayProxyResponse {
+func Handler(ctx context.Context, request events.APIGatewayProxyRequest, userId uuid.UUID, _ domain.Token) events.APIGatewayProxyResponse {
 	// it's a bit annoying that this could fail even tho the path is required for this endpoint to match...
-	slug, errResponse := api.GetPathParam(context, request, "slug")
+	slug, errResponse := api.GetPathParam(ctx, request, "slug", handlerName)
 
 	if errResponse != nil {
 		return *errResponse
 	}
 
-	addCommentRequestBodyDTO, errResponse := api.ParseBodyAs[dto.AddCommentRequestBodyDTO](context, request, handlerName)
+	addCommentRequestBodyDTO, errResponse := api.ParseBodyAs[dto.AddCommentRequestBodyDTO](ctx, request, handlerName)
 
 	if errResponse != nil {
 		return *errResponse
 	}
 
-	// ToDo @ender - errors from api layer is ignored in all handlers...
-	result, err := functions.ArticleApi.AddComment(context, userId, slug, *addCommentRequestBodyDTO)
+	result, err := functions.ArticleApi.AddComment(ctx, userId, slug, *addCommentRequestBodyDTO)
 
 	if err != nil {
-		return errutil.ToAPIGatewayProxyResponse(context, err)
-	}
+		if errors.Is(err, errutil.ErrArticleNotFound) {
+			slog.DebugContext(ctx, "article not found", slog.String("slug", slug), slog.Any("error", err))
+			return api.ToSimpleError(ctx, http.StatusNotFound, "article not found")
+		}
 
-	return api.ToSuccessAPIGatewayProxyResponse(context, result, handlerName)
+		return api.ToInternalServerError(ctx, err)
+	} else {
+		return api.ToSuccessAPIGatewayProxyResponse(ctx, result, handlerName)
+	}
 }
 
 func main() {

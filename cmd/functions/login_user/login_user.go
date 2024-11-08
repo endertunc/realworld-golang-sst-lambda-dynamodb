@@ -2,30 +2,38 @@ package main
 
 import (
 	"context"
+	"errors"
 	"github.com/aws/aws-lambda-go/lambda"
+	"log/slog"
+	"net/http"
 	"realworld-aws-lambda-dynamodb-golang/cmd/functions"
 	"realworld-aws-lambda-dynamodb-golang/internal/api"
 	"realworld-aws-lambda-dynamodb-golang/internal/domain/dto"
+	"realworld-aws-lambda-dynamodb-golang/internal/errutil"
 )
 import "github.com/aws/aws-lambda-go/events"
 
 const handlerName = "LoginUserHandler"
 
-func Handler(context context.Context, request events.APIGatewayProxyRequest) events.APIGatewayProxyResponse {
+func Handler(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 
-	loginRequestBodyDTO, errResponse := api.ParseBodyAs[dto.LoginRequestBodyDTO](context, request, handlerName)
+	loginRequestBodyDTO, errResponse := api.ParseBodyAs[dto.LoginRequestBodyDTO](ctx, request, handlerName)
 
 	if errResponse != nil {
-		return *errResponse
+		return *errResponse, nil
 	}
 
-	result, err := functions.UserApi.LoginUser(context, *loginRequestBodyDTO)
+	result, err := functions.UserApi.LoginUser(ctx, *loginRequestBodyDTO)
 
 	if err != nil {
-		return api.ToErrorAPIGatewayProxyResponse(context, err, handlerName)
+		if errors.Is(err, errutil.ErrUserNotFound) || errors.Is(err, errutil.ErrInvalidPassword) {
+			slog.WarnContext(ctx, "invalid credentials", slog.Any("error", err))
+			return api.ToSimpleError(ctx, http.StatusUnauthorized, "invalid credentials"), nil
+		}
+		return api.ToInternalServerError(ctx, err), nil
+	} else {
+		return api.ToSuccessAPIGatewayProxyResponse(ctx, result, handlerName), nil
 	}
-
-	return api.ToSuccessAPIGatewayProxyResponse(context, result, handlerName)
 }
 
 //// create enum

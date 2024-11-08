@@ -2,6 +2,7 @@ package domain
 
 import (
 	"github.com/google/uuid"
+	"github.com/gosimple/slug"
 	"time"
 )
 
@@ -16,4 +17,20 @@ type Article struct {
 	AuthorId       uuid.UUID
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
+}
+
+func NewArticle(title, description, body string, tagList []string, authorId uuid.UUID) Article {
+	now := time.Now()
+	return Article{
+		Id:             uuid.New(),
+		Title:          title,
+		Slug:           slug.Make(title),
+		Description:    description,
+		Body:           body,
+		TagList:        tagList,
+		FavoritesCount: 0,
+		AuthorId:       authorId,
+		CreatedAt:      now,
+		UpdatedAt:      now,
+	}
 }

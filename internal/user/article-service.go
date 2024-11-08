@@ -4,22 +4,31 @@ import (
 	"context"
 	"errors"
 	"github.com/google/uuid"
-	"github.com/gosimple/slug"
 	"realworld-aws-lambda-dynamodb-golang/internal/domain"
-	"time"
+	"realworld-aws-lambda-dynamodb-golang/internal/errutil"
 )
 
 type ArticleRepositoryInterface interface {
-	FindArticleBySlug(c context.Context, email string) (domain.Article, error)
-	FindArticleById(c context.Context, articleId uuid.UUID) (domain.Article, error)
-	CreateArticle(c context.Context, article domain.Article) (domain.Article, error)
-	DeleteArticleById(c context.Context, articleId uuid.UUID) error
+	FindArticleBySlug(ctx context.Context, email string) (domain.Article, error)
+	FindArticleById(ctx context.Context, articleId uuid.UUID) (domain.Article, error)
+	FindArticlesByIds(ctx context.Context, articleIds []uuid.UUID) ([]domain.Article, error)
+	CreateArticle(ctx context.Context, article domain.Article) (domain.Article, error)
+	DeleteArticleById(ctx context.Context, articleId uuid.UUID) error
+	UnfavoriteArticle(ctx context.Context, loggedInUserId uuid.UUID, articleId uuid.UUID) error
+	FavoriteArticle(ctx context.Context, loggedInUserId uuid.UUID, articleId uuid.UUID) error
+	DeleteCommentByArticleIdAndCommentId(ctx context.Context, loggedInUserId uuid.UUID, articleId uuid.UUID, commentId uuid.UUID) error
+	FindCommentsByArticleId(ctx context.Context, articleId uuid.UUID) ([]domain.Comment, error)
+	CreateComment(ctx context.Context, comment domain.Comment) error
+	FindCommentByCommentIdAndArticleId(ctx context.Context, commentId, articleId uuid.UUID) (domain.Comment, error)
+	IsFavorited(ctx context.Context, articleId, userId uuid.UUID) (bool, error)
+	IsFavoritedBulk(ctx context.Context, userId uuid.UUID, articleIds []uuid.UUID) (map[uuid.UUID]bool, error)
+}
 
-	UnfavoriteArticle(c context.Context, loggedInUserId uuid.UUID, articleId uuid.UUID) error
-	FavoriteArticle(c context.Context, loggedInUserId uuid.UUID, articleId uuid.UUID) error
-	DeleteCommentByArticleIdAndCommentId(c context.Context, loggedInUserId uuid.UUID, articleId uuid.UUID, commentId uuid.UUID) error
-	GetCommentsByArticleId(c context.Context, articleId uuid.UUID) ([]domain.Comment, error)
-	CreateComment(c context.Context, comment domain.Comment) error
+func NewArticleService(userService UserServiceInterface, articleRepository ArticleRepositoryInterface) ArticleService {
+	return ArticleService{
+		UserService:       userService,
+		ArticleRepository: articleRepository,
+	}
 }
 
 func (as ArticleService) GetArticle(c context.Context, slug string) (domain.Article, error) {
@@ -30,106 +39,102 @@ func (as ArticleService) GetArticle(c context.Context, slug string) (domain.Arti
 	return article, nil
 }
 
-func (aa ArticleService) CreateArticle(c context.Context, author uuid.UUID, title, description, body string, tagList []string) (domain.Article, error) {
-	now := time.Now()
-	article := domain.Article{
-		Id:             uuid.New(),
-		Title:          title,
-		Slug:           slug.Make(title), // ToDo generate slug
-		Description:    description,
-		Body:           body,
-		TagList:        tagList,
-		FavoritesCount: 0,
-		AuthorId:       author,
-		CreatedAt:      now,
-		UpdatedAt:      now,
-	}
+func (as ArticleService) CreateArticle(c context.Context, author uuid.UUID, title, description, body string, tagList []string) (domain.Article, error) {
+
+	article := domain.NewArticle(title, description, body, tagList, author)
 	// ToDo @ender do we have any business validation we should apply in service level for an article?
-	article, err := aa.ArticleRepository.CreateArticle(c, article)
+	article, err := as.ArticleRepository.CreateArticle(c, article)
 	if err != nil {
 		return domain.Article{}, err
 	}
 	return article, nil
 }
 
-func (aa ArticleService) AddComment(c context.Context, author uuid.UUID, articleSlug string, body string) (domain.Comment, error) {
-	article, err := aa.ArticleRepository.FindArticleBySlug(c, articleSlug)
+func (as ArticleService) AddComment(ctx context.Context, author uuid.UUID, articleSlug string, body string) (domain.Comment, error) {
+	article, err := as.ArticleRepository.FindArticleBySlug(ctx, articleSlug)
 	if err != nil {
 		return domain.Comment{}, err
 	}
-	now := time.Now()
-	comment := domain.Comment{
-		Id:        uuid.New(),
-		ArticleId: article.Id,
-		AuthorId:  author,
-		Body:      body,
-		CreatedAt: now,
-		UpdatedAt: now,
-	}
+	comment := domain.NewComment(article.Id, author, body)
 
-	err = aa.ArticleRepository.CreateComment(c, comment)
+	err = as.ArticleRepository.CreateComment(ctx, comment)
 	if err != nil {
 		return domain.Comment{}, err
 	}
 	return comment, nil
 }
 
-func (ap ArticleService) UnfavoriteArticle(c context.Context, loggedInUserId uuid.UUID, slug string) (domain.Article, error) {
-	article, err := ap.ArticleRepository.FindArticleBySlug(c, slug)
+func (as ArticleService) UnfavoriteArticle(c context.Context, loggedInUserId uuid.UUID, slug string) (domain.Article, error) {
+	article, err := as.ArticleRepository.FindArticleBySlug(c, slug)
 	if err != nil {
 		return domain.Article{}, err
 	}
-	err = ap.ArticleRepository.UnfavoriteArticle(c, loggedInUserId, article.Id)
+	// ToDo @ender check if the user already unfavorited the article
+	err = as.ArticleRepository.UnfavoriteArticle(c, loggedInUserId, article.Id)
 	if err != nil {
 		return domain.Article{}, err
 	}
-	// ToDo @ender favorited should be false
-	// ToDo @ender favoritesCount should be decreased by 1
+	article.FavoritesCount--
 	return article, nil
 }
 
-func (ap ArticleService) FavoriteArticle(c context.Context, loggedInUserId uuid.UUID, slug string) (domain.Article, error) {
-	article, err := ap.ArticleRepository.FindArticleBySlug(c, slug)
+func (as ArticleService) FavoriteArticle(c context.Context, loggedInUserId uuid.UUID, slug string) (domain.Article, error) {
+	article, err := as.ArticleRepository.FindArticleBySlug(c, slug)
 	if err != nil {
 		return domain.Article{}, err
 	}
-	err = ap.ArticleRepository.FavoriteArticle(c, loggedInUserId, article.Id)
+	err = as.ArticleRepository.FavoriteArticle(c, loggedInUserId, article.Id)
+	// ToDo @ender check if the user already favorited the article
 	if err != nil {
 		return domain.Article{}, err
 	}
-	// ToDo @ender favorited should be true
-	// ToDo @ender favoritesCount should be increased by 1
+	// we increment the count here to avoid another query
+	// given the fact that favoritesCount is not a critical date
+	article.FavoritesCount++
 	return article, nil
 }
 
-func (ap ArticleService) DeleteComment(c context.Context, loggedInUserId uuid.UUID, slug string, commentId uuid.UUID) error {
-	article, err := ap.ArticleRepository.FindArticleBySlug(c, slug)
+// DeleteComment
+/**
+ * ToDo @ender We can actually delete a comment only if the comment belongs to the user with a single query
+ */
+func (as ArticleService) DeleteComment(ctx context.Context, loggedInUserId uuid.UUID, slug string, commentId uuid.UUID) error {
+	article, err := as.ArticleRepository.FindArticleBySlug(ctx, slug)
 	if err != nil {
 		return err
 	}
-	// ToDo @ender check if the comment belongs to the article
-	// ToDo @ender check if the comment belongs to the user
-	err = ap.ArticleRepository.DeleteCommentByArticleIdAndCommentId(c, loggedInUserId, article.Id, commentId)
+	// check if the comment belongs to the article / comment exists
+	comment, err := as.ArticleRepository.FindCommentByCommentIdAndArticleId(ctx, commentId, article.Id)
+	if err != nil {
+		return err
+	}
+
+	// check if the comment belongs to the user
+	if comment.AuthorId != loggedInUserId {
+		return errutil.ErrCantDeleteOthersComment
+	}
+
+	err = as.ArticleRepository.DeleteCommentByArticleIdAndCommentId(ctx, loggedInUserId, article.Id, commentId)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (ap ArticleService) GetArticleComments(c context.Context, slug string) ([]domain.Comment, error) {
-	article, err := ap.ArticleRepository.FindArticleBySlug(c, slug)
+func (as ArticleService) GetArticleComments(c context.Context, slug string) ([]domain.Comment, error) {
+	article, err := as.ArticleRepository.FindArticleBySlug(c, slug)
 	if err != nil {
 		return []domain.Comment{}, err
 	}
-	comments, err := ap.ArticleRepository.GetCommentsByArticleId(c, article.Id)
+	comments, err := as.ArticleRepository.FindCommentsByArticleId(c, article.Id)
 	if err != nil {
 		return []domain.Comment{}, err
 	}
 	return comments, nil
 }
 
-func (ap ArticleService) DeleteArticle(c context.Context, authorId uuid.UUID, slug string) error {
-	article, err := ap.ArticleRepository.FindArticleBySlug(c, slug)
+func (as ArticleService) DeleteArticle(c context.Context, authorId uuid.UUID, slug string) error {
+	article, err := as.ArticleRepository.FindArticleBySlug(c, slug)
 	if err != nil {
 		return err
 	}
@@ -139,7 +144,7 @@ func (ap ArticleService) DeleteArticle(c context.Context, authorId uuid.UUID, sl
 		return errors.New("you can't touch this")
 	}
 
-	err = ap.ArticleRepository.DeleteArticleById(c, article.Id)
+	err = as.ArticleRepository.DeleteArticleById(c, article.Id)
 	if err != nil {
 		return err
 	}

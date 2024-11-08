@@ -2,28 +2,39 @@ package main
 
 import (
 	"context"
+	"errors"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/google/uuid"
+	"log/slog"
+	"net/http"
 	"realworld-aws-lambda-dynamodb-golang/cmd/functions"
 	"realworld-aws-lambda-dynamodb-golang/internal/api"
+	"realworld-aws-lambda-dynamodb-golang/internal/domain"
+	"realworld-aws-lambda-dynamodb-golang/internal/errutil"
 )
 
-func Handler(context context.Context, request events.APIGatewayProxyRequest, userId *uuid.UUID) events.APIGatewayProxyResponse {
+const handlerName = "GetArticleCommentsHandler"
+
+func Handler(ctx context.Context, request events.APIGatewayProxyRequest, userId *uuid.UUID, _ *domain.Token) events.APIGatewayProxyResponse {
 	// it's a bit annoying that this could fail even tho the path is required for this endpoint to match...
-	slug, response := api.GetPathParam(context, request, "slug")
+	slug, response := api.GetPathParam(ctx, request, "slug", handlerName)
 
 	if response != nil {
 		return *response
 	}
 
-	// ToDo @ender - errors from api layer is ignored in all handlers...
-	result, err := functions.ArticleApi.GetArticleComments(context, userId, slug)
-
+	result, err := functions.ArticleApi.GetArticleComments(ctx, userId, slug)
 	if err != nil {
-		return api.ToErrorAPIGatewayProxyResponse(context, err, "GetArticleCommentsHandler")
+		if errors.Is(err, errutil.ErrArticleNotFound) {
+			slog.DebugContext(ctx, "article not found", slog.String("slug", slug), slog.Any("error", err))
+			return api.ToSimpleError(ctx, http.StatusNotFound, "article not found")
+		}
+		return api.ToInternalServerError(ctx, err)
+	} else {
+		return api.ToSuccessAPIGatewayProxyResponse(ctx, result, handlerName)
+
 	}
 
-	return api.ToSuccessAPIGatewayProxyResponse(context, result, "GetArticleCommentsHandler")
 }
 
 func main() {

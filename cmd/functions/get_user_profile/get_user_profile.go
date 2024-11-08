@@ -2,27 +2,39 @@ package main
 
 import (
 	"context"
+	"errors"
 	"github.com/google/uuid"
+	"log/slog"
+	"net/http"
 	"realworld-aws-lambda-dynamodb-golang/cmd/functions"
 	"realworld-aws-lambda-dynamodb-golang/internal/api"
+	"realworld-aws-lambda-dynamodb-golang/internal/domain"
+	"realworld-aws-lambda-dynamodb-golang/internal/errutil"
 )
 import "github.com/aws/aws-lambda-go/events"
 
-func Handler(context context.Context, request events.APIGatewayProxyRequest, userId *uuid.UUID) events.APIGatewayProxyResponse {
+const handlerName = "GetUserProfileHandler"
+
+func Handler(context context.Context, request events.APIGatewayProxyRequest, userId *uuid.UUID, _ *domain.Token) events.APIGatewayProxyResponse {
 	// it's a bit annoying that this could fail even tho the path is required for this endpoint to match...
-	username, response := api.GetPathParam(context, request, "username")
+	username, response := api.GetPathParam(context, request, "username", handlerName)
 
 	if response != nil {
 		return *response
 	}
 
-	result, err := functions.UserApi.GetUserProfile(context, userId, username)
+	result, err := functions.ProfileApi.GetUserProfile(context, userId, username)
 
 	if err != nil {
-		return api.ToErrorAPIGatewayProxyResponse(context, err, "GetUserProfileHandler")
+		if errors.Is(err, errutil.ErrUserNotFound) {
+			slog.DebugContext(context, "user profile not found", slog.String("username", username), slog.Any("error", err))
+			return api.ToSimpleError(context, http.StatusNotFound, "user not found")
+		} else {
+			return api.ToInternalServerError(context, err)
+		}
+	} else {
+		return api.ToSuccessAPIGatewayProxyResponse(context, result, handlerName)
 	}
-
-	return api.ToSuccessAPIGatewayProxyResponse(context, result, "GetUserProfileHandler")
 }
 
 func main() {

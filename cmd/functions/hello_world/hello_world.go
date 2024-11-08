@@ -15,7 +15,6 @@ import (
 	"github.com/opensearch-project/opensearch-go/v4"
 	"github.com/opensearch-project/opensearch-go/v4/opensearchapi"
 	requestsigner "github.com/opensearch-project/opensearch-go/v4/signer/awsv2"
-
 	"io"
 	"log"
 	"net/http"
@@ -37,7 +36,7 @@ func localTest() (events.APIGatewayProxyResponse, error) {
 	//fmt.Println(os.Getenv("AWS_SESSION_TOKEN"))
 
 	//endpoint := "https://ka9ehtys9fgwac4oju9g.eu-west-1.aoss.amazonaws.com"
-	endpoint := "https://search-realworldopense-p4kuwp4thqur-foz5vt5hhkbk2wb67jr5hlcabi.eu-west-1.es.amazonaws.com"
+	endpoint := "https://search-realworldopense-w3j3w0wiwtzi-hcticyamm5umjxcqnxvzlbj47q.eu-west-1.es.amazonaws.com"
 	//endpoint := "https://localhost:9200"
 	//endpoint := os.Getenv("OPENSEARCH_ENDPOINT")
 	fmt.Println("OPENSEARCH_ENDPOINT from environment is", endpoint)

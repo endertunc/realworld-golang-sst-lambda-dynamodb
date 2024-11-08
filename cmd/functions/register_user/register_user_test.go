@@ -1,52 +1,60 @@
 package main
 
 import (
-	"encoding/json"
-	"net/http"
-	"testing"
-
-	"github.com/steinfletcher/apitest"
 	"github.com/stretchr/testify/assert"
+	"net/http"
 	"realworld-aws-lambda-dynamodb-golang/internal/domain/dto"
+	"realworld-aws-lambda-dynamodb-golang/internal/errutil"
+	"realworld-aws-lambda-dynamodb-golang/internal/test"
+	"testing"
 )
 
-func TestRegisterUserHandler(t *testing.T) {
-	// Test Case 1: Successful user registration
-	apitest.New().
-		EnableNetworking().
-		Post("/register").
-		JSON(dto.NewUserRequestBodyDTO{
+func Test_SuccessfulRegister(t *testing.T) {
+	test.WithSetupAndTeardown(t, func() {
+		reqBody := dto.NewUserRequestBodyDTO{
 			User: dto.NewUserRequestUserDto{
-				Username: "testuser",
 				Email:    "test@example.com",
+				Username: "test-user",
 				Password: "password123",
 			},
-		}).
-		Expect(t).
-		Status(200).
-		Assert(func(res *http.Response, req *http.Request) error {
-			var responseBody dto.UserResponseBodyDTO
-			if err := json.NewDecoder(res.Body).Decode(&responseBody); err != nil {
-				return err
-			}
-			assert.Equal(t, "test@example.com", responseBody.User.Email)
-			assert.Equal(t, "testuser", responseBody.User.Username)
-			assert.NotEmpty(t, responseBody.User.Token)
-			return nil
-		}).
-		End()
+		}
+		var respBody dto.UserResponseBodyDTO
+		test.MakeRequestAndParseResponse(t, reqBody, "POST", "/api/users", http.StatusOK, &respBody)
+		assert.Equal(t, "test@example.com", respBody.User.Email)
+		assert.NotEmpty(t, respBody.User.Token)
+	})
+}
 
-	// Test Case 2: Invalid request body
-	apitest.New().
-		EnableNetworking().
-		Post("/register").
-		JSON(dto.NewUserRequestBodyDTO{
-			User: dto.NewUserRequestUserDto{
-				Email: "test@example.com",
-			},
-		}).
-		Expect(t).
-		Status(400).
-		Body(`{"message": "error decoding request body"}`).
-		End()
+func Test_RegisterAlreadyExistsEmail(t *testing.T) {
+	test.WithSetupAndTeardown(t, func() {
+		reqBodyOne := test.DefaultNewUserRequestBodyDTO
+		var respBodyOne dto.UserResponseBodyDTO
+		test.MakeRequestAndParseResponse(t, reqBodyOne, "POST", "/api/users", http.StatusOK, &respBodyOne)
+		assert.NotEmpty(t, respBodyOne)
+
+		reqBodyTwo := test.DefaultNewUserRequestBodyDTO
+		// change username but keep the same email
+		reqBodyTwo.User.Username = "test-user-two"
+
+		var respErrorBody errutil.GenericError
+		test.MakeRequestAndParseResponse(t, reqBodyTwo, "POST", "/api/users", http.StatusConflict, &respErrorBody)
+		assert.Equal(t, "email already exists", respErrorBody.Message)
+	})
+}
+
+func Test_RegisterAlreadyExistsUsername(t *testing.T) {
+	test.WithSetupAndTeardown(t, func() {
+		reqBodyOne := test.DefaultNewUserRequestBodyDTO
+		var respBodyOne dto.UserResponseBodyDTO
+		test.MakeRequestAndParseResponse(t, reqBodyOne, "POST", "/api/users", http.StatusOK, &respBodyOne)
+		assert.NotEmpty(t, respBodyOne)
+
+		reqBodyTwo := test.DefaultNewUserRequestBodyDTO
+		// change email but keep the same username
+		reqBodyTwo.User.Email = "test-two@example.com"
+
+		var respErrorBody errutil.GenericError
+		test.MakeRequestAndParseResponse(t, reqBodyTwo, "POST", "/api/users", http.StatusConflict, &respErrorBody)
+		assert.Equal(t, "username already exists", respErrorBody.Message)
+	})
 }

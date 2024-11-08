@@ -13,3 +13,15 @@ type Comment struct {
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
+
+func NewComment(articleId, authorId uuid.UUID, body string) Comment {
+	now := time.Now()
+	return Comment{
+		Id:        uuid.New(),
+		ArticleId: articleId,
+		AuthorId:  authorId,
+		Body:      body,
+		CreatedAt: now,
+		UpdatedAt: now,
+	}
+}
