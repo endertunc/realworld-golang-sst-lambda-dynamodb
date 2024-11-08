@@ -35,7 +35,7 @@ func loadKeys() (ed25519.PublicKey, ed25519.PrivateKey) {
 	privateKeyPath := filepath.Join(keysDirectory, "private.pem")
 	privatePEM, err := os.ReadFile(privateKeyPath)
 	if err != nil {
-		panic(fmt.Sprintf("failed to read private key: %v", err))
+		panic(fmt.Sprintf("failed to read private key at %s: %v", privateKeyPath, err))
 	}
 
 	privateBlock, _ := pem.Decode(privatePEM)
@@ -53,7 +53,7 @@ func loadKeys() (ed25519.PublicKey, ed25519.PrivateKey) {
 	publicKeyPath := filepath.Join(keysDirectory, "public.pem")
 	publicPEM, err := os.ReadFile(publicKeyPath)
 	if err != nil {
-		panic(fmt.Sprintf("failed to read public key: %v", err))
+		panic(fmt.Sprintf("failed to read public key at %s: %v", publicKeyPath, err))
 	}
 
 	publicBlock, _ := pem.Decode(publicPEM)

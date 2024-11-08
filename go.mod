@@ -20,6 +20,7 @@ require (
 	//github.com/steinfletcher/apitest v1.5.16
 	github.com/stretchr/testify v1.9.0
 	golang.org/x/crypto v0.28.0
+	github.com/caarlos0/env/v11 v11.2.2
 
 )
 

@@ -25,16 +25,17 @@ func NewDynamodbArticleRepository(db *database.DynamoDBStore) DynamodbArticleRep
 }
 
 type DynamodbArticleItem struct {
-	Id             string    `dynamodbav:"pk"`
-	Title          string    `dynamodbav:"title"`
-	Slug           string    `dynamodbav:"slug"`
-	Description    string    `dynamodbav:"description"`
-	Body           string    `dynamodbav:"body"`
-	TagList        []string  `dynamodbav:"tagList"`
-	FavoritesCount int       `dynamodbav:"favoritesCount"`
-	AuthorId       string    `dynamodbav:"authorId"`
-	CreatedAt      time.Time `dynamodbav:"createdAt,unixtime"`
-	UpdatedAt      time.Time `dynamodbav:"updatedAt,unixtime"`
+	Id             string   `dynamodbav:"pk"`
+	Title          string   `dynamodbav:"title"`
+	Slug           string   `dynamodbav:"slug"`
+	Description    string   `dynamodbav:"description"`
+	Body           string   `dynamodbav:"body"`
+	TagList        []string `dynamodbav:"tagList"`
+	FavoritesCount int      `dynamodbav:"favoritesCount"`
+	AuthorId       string   `dynamodbav:"authorId"`
+	// ToDo @ender should we convert everything to milliseconds precision?
+	CreatedAt int64 `dynamodbav:"createdAt"`
+	UpdatedAt int64 `dynamodbav:"updatedAt"`
 }
 
 type DynamodbCommentItem struct {
@@ -377,6 +378,12 @@ func (d DynamodbArticleRepository) IsFavorited(ctx context.Context, articleId, u
 }
 
 func (d DynamodbArticleRepository) FindArticlesByIds(ctx context.Context, articleIds []uuid.UUID) ([]domain.Article, error) {
+	// short circuit if articleIds is empty, no need to query
+	// also, dynamodb will throw a validation error if we try to query with empty keys
+	if len(articleIds) == 0 {
+		return []domain.Article{}, nil
+	}
+
 	keys := make([]map[string]ddbtypes.AttributeValue, 0, len(articleIds))
 	for _, articleId := range articleIds {
 		keys = append(keys, map[string]ddbtypes.AttributeValue{
@@ -413,6 +420,12 @@ func (d DynamodbArticleRepository) FindArticlesByIds(ctx context.Context, articl
 }
 
 func (d DynamodbArticleRepository) IsFavoritedBulk(ctx context.Context, userId uuid.UUID, articleIds []uuid.UUID) (map[uuid.UUID]bool, error) {
+	// short circuit if articleIds is empty, no need to query
+	// also, dynamodb will throw a validation error if we try to query with empty keys
+	if len(articleIds) == 0 {
+		return map[uuid.UUID]bool{}, nil
+	}
+
 	keys := make([]map[string]ddbtypes.AttributeValue, 0, len(articleIds))
 	for _, articleId := range articleIds {
 		keys = append(keys, map[string]ddbtypes.AttributeValue{
@@ -458,8 +471,8 @@ func toDynamodbArticleItem(article domain.Article) DynamodbArticleItem {
 		TagList:        article.TagList,
 		FavoritesCount: article.FavoritesCount,
 		AuthorId:       article.AuthorId.String(),
-		CreatedAt:      article.CreatedAt,
-		UpdatedAt:      article.UpdatedAt,
+		CreatedAt:      article.CreatedAt.UnixMilli(),
+		UpdatedAt:      article.UpdatedAt.UnixMilli(),
 	}
 }
 
@@ -473,8 +486,8 @@ func toDomainArticle(article DynamodbArticleItem) domain.Article {
 		TagList:        article.TagList,
 		FavoritesCount: article.FavoritesCount,
 		AuthorId:       uuid.MustParse(article.AuthorId),
-		CreatedAt:      article.CreatedAt,
-		UpdatedAt:      article.UpdatedAt,
+		CreatedAt:      time.UnixMilli(article.CreatedAt),
+		UpdatedAt:      time.UnixMilli(article.UpdatedAt),
 	}
 }
 

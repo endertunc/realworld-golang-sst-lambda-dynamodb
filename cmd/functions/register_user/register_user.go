@@ -18,7 +18,7 @@ const handlerName = "RegisterUserHandler"
 
 func Handler(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 
-	newUserRequestBodyDTO, errResponse := api.ParseBodyAs[dto.NewUserRequestBodyDTO](ctx, request, handlerName)
+	newUserRequestBodyDTO, errResponse := api.ParseBodyAs[dto.NewUserRequestBodyDTO](ctx, request)
 
 	if errResponse != nil {
 		return *errResponse, nil

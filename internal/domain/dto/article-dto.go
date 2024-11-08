@@ -49,7 +49,7 @@ type ArticleResponseDTO struct {
 type MultipleArticlesResponseBodyDTO struct {
 	Articles      []ArticleResponseDTO `json:"article"`
 	ArticlesCount int                  `json:"articlesCount"`
-	NextPageToken *string              `json:"nextPageToken"`
+	NextPageToken *string              `json:"nextPageToken,omitempty"`
 }
 
 // factory methods
@@ -77,11 +77,15 @@ func ToArticleResponseBodyDTO(article domain.Article, author domain.User, isFavo
 	return ArticleResponseBodyDTO{Article: ToArticleResponseDTO(article, author, isFavorited, isFollowing)}
 }
 
-func ToMultipleArticlesResponseBodyDTO(feedItems []domain.FeedItem) MultipleArticlesResponseBodyDTO {
+func ToMultipleArticlesResponseBodyDTO(feedItems []domain.FeedItem, nextPageToken *string) MultipleArticlesResponseBodyDTO {
 	articles := make([]ArticleResponseDTO, 0, len(feedItems))
 	for _, feedItem := range feedItems {
 		articleResponseDTO := ToArticleResponseDTO(feedItem.Article, feedItem.Author, feedItem.IsFavorited, feedItem.IsFollowing)
 		articles = append(articles, articleResponseDTO)
 	}
-	return MultipleArticlesResponseBodyDTO{Articles: articles, ArticlesCount: len(articles)}
+	return MultipleArticlesResponseBodyDTO{
+		Articles:      articles,
+		ArticlesCount: len(articles),
+		NextPageToken: nextPageToken,
+	}
 }

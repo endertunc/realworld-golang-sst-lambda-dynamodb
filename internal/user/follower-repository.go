@@ -93,6 +93,12 @@ func (s DynamodbFollowerRepository) UnFollow(ctx context.Context, follower, foll
 }
 
 func (s DynamodbFollowerRepository) BatchIsFollowing(ctx context.Context, follower uuid.UUID, followees []uuid.UUID) (map[uuid.UUID]bool, error) {
+	// short circuit if followees is empty, no need to query
+	// also, dynamodb will throw a validation error if we try to query with empty keys
+	if len(followees) == 0 {
+		return map[uuid.UUID]bool{}, nil
+	}
+
 	keys := make([]map[string]ddbtypes.AttributeValue, 0, len(follower))
 	for _, followee := range followees {
 		keys = append(keys, map[string]ddbtypes.AttributeValue{

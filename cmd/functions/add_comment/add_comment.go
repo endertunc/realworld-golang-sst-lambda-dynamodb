@@ -24,7 +24,7 @@ func Handler(ctx context.Context, request events.APIGatewayProxyRequest, userId 
 		return *errResponse
 	}
 
-	addCommentRequestBodyDTO, errResponse := api.ParseBodyAs[dto.AddCommentRequestBodyDTO](ctx, request, handlerName)
+	addCommentRequestBodyDTO, errResponse := api.ParseBodyAs[dto.AddCommentRequestBodyDTO](ctx, request)
 
 	if errResponse != nil {
 		return *errResponse

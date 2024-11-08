@@ -17,7 +17,7 @@ const handlerName = "LoginUserHandler"
 
 func Handler(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 
-	loginRequestBodyDTO, errResponse := api.ParseBodyAs[dto.LoginRequestBodyDTO](ctx, request, handlerName)
+	loginRequestBodyDTO, errResponse := api.ParseBodyAs[dto.LoginRequestBodyDTO](ctx, request)
 
 	if errResponse != nil {
 		return *errResponse, nil

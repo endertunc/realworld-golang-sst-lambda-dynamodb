@@ -53,7 +53,7 @@ func handleRequest(ctx context.Context, event events.DynamoDBEvent) (BatchResult
 
 // ToDo @ender move to somewhere else...
 func parseDynamoDBEventRecord(record events.DynamoDBEventRecord) (uuid.UUID, uuid.UUID, time.Time, error) {
-	//slog.DebugContext(context.Background(), "Parsing DynamoDB event record", slog.Any("record", record))
+	slog.DebugContext(context.Background(), "Processing DynamoDB event record", slog.Any("record", record))
 	// ToDo @ender why somewhere we use pk and other places regular field name...
 	articleId, err := uuid.Parse(record.Change.NewImage["pk"].String())
 	if err != nil {

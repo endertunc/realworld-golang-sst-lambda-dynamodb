@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"strings"
 	"sync"
 	"testing"
 
@@ -184,7 +185,12 @@ func MakeAuthenticatedRequestAndParseResponse(t *testing.T, reqBody interface{},
 	}
 	defer resp.Body.Close()
 
-	require.Equal(t, expectedStatusCode, resp.StatusCode)
+	if expectedStatusCode != resp.StatusCode {
+		buf := new(strings.Builder)
+		_, _ = io.Copy(buf, resp.Body)
+		t.Logf("response body: %v", buf.String())
+	}
+	assert.Equal(t, expectedStatusCode, resp.StatusCode)
 
 	if respBody != nil {
 		err = json.NewDecoder(resp.Body).Decode(respBody)

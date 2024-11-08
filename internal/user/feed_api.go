@@ -20,13 +20,13 @@ func NewFeedApi(feedService FeedServiceInterface) FeedApi {
 
 type FeedServiceInterface interface {
 	FanoutArticle(ctx context.Context, articleId, authorId uuid.UUID, createdAt time.Time) error
-	FetchArticlesFromFeed(ctx context.Context, userId uuid.UUID, limit int) ([]domain.FeedItem, error)
+	FetchArticlesFromFeed(ctx context.Context, userId uuid.UUID, limit int, nextPageToken *string) ([]domain.FeedItem, *string, error)
 }
 
-func (uf FeedApi) FetchUserFeed(ctx context.Context, userId uuid.UUID, limit int) (dto.MultipleArticlesResponseBodyDTO, error) {
-	feedItems, err := uf.FeedService.FetchArticlesFromFeed(ctx, userId, limit)
+func (uf FeedApi) FetchUserFeed(ctx context.Context, userId uuid.UUID, limit int, nextPageToken *string) (dto.MultipleArticlesResponseBodyDTO, error) {
+	feedItems, nextToken, err := uf.FeedService.FetchArticlesFromFeed(ctx, userId, limit, nextPageToken)
 	if err != nil {
 		return dto.MultipleArticlesResponseBodyDTO{}, err
 	}
-	return dto.ToMultipleArticlesResponseBodyDTO(feedItems), err
+	return dto.ToMultipleArticlesResponseBodyDTO(feedItems, nextToken), nil
 }

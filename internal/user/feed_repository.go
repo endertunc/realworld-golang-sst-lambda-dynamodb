@@ -2,6 +2,8 @@ package user
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
@@ -25,7 +27,7 @@ type UserFeedRepository struct {
 
 type UserFeedRepositoryInterface interface {
 	FanoutArticle(ctx context.Context, articleId, authorId uuid.UUID, createdAt time.Time) error
-	FindArticleIdsInUserFeed(ctx context.Context, userId uuid.UUID, limit int) ([]uuid.UUID, error)
+	FindArticleIdsInUserFeed(ctx context.Context, userId uuid.UUID, limit int, nextPageToken *string) ([]uuid.UUID, *string, error)
 }
 
 var _ UserFeedRepositoryInterface = UserFeedRepository{}
@@ -35,10 +37,10 @@ func NewUserFeedRepository(db *database.DynamoDBStore) UserFeedRepository {
 }
 
 type DynamodbFeedItem struct {
-	UserId    string    `dynamodbav:"userId"`             // pk
-	CreatedAt time.Time `dynamodbav:"createdAt,unixtime"` // sk
-	ArticleId string    `dynamodbav:"articleId"`
-	AuthorId  string    `dynamodbav:"authorId"`
+	UserId    string `dynamodbav:"userId"`    // pk
+	CreatedAt int64  `dynamodbav:"createdAt"` // sk
+	ArticleId string `dynamodbav:"articleId"`
+	AuthorId  string `dynamodbav:"authorId"`
 }
 
 func (uf UserFeedRepository) FanoutArticle(ctx context.Context, articleId, authorId uuid.UUID, createdAt time.Time) error {
@@ -68,7 +70,7 @@ func (uf UserFeedRepository) FanoutArticle(ctx context.Context, articleId, autho
 			}
 			dynamodbFeedItem := DynamodbFeedItem{
 				UserId:    dynamodbFollowerItem.Follower,
-				CreatedAt: createdAt,
+				CreatedAt: createdAt.UnixMilli(),
 				ArticleId: articleId.String(),
 				AuthorId:  authorId.String(),
 			}
@@ -96,8 +98,8 @@ func (uf UserFeedRepository) FanoutArticle(ctx context.Context, articleId, autho
 	return nil
 }
 
-func (uf UserFeedRepository) FindArticleIdsInUserFeed(ctx context.Context, userId uuid.UUID, limit int) ([]uuid.UUID, error) {
-	paginator := dynamodb.NewQueryPaginator(uf.db.Client, &dynamodb.QueryInput{
+func (uf UserFeedRepository) FindArticleIdsInUserFeed(ctx context.Context, userId uuid.UUID, limit int, nextPageToken *string) ([]uuid.UUID, *string, error) {
+	input := &dynamodb.QueryInput{
 		TableName:              aws.String(feedTable),
 		KeyConditionExpression: aws.String("userId = :userId"),
 		Limit:                  aws.Int32(int32(limit)),
@@ -105,35 +107,81 @@ func (uf UserFeedRepository) FindArticleIdsInUserFeed(ctx context.Context, userI
 		ExpressionAttributeValues: map[string]ddbtypes.AttributeValue{
 			":userId": &ddbtypes.AttributeValueMemberS{Value: userId.String()},
 		},
-	})
-
-	// ToDo @ender we should log where the process stops in case of an error
-	articleIds := make([]uuid.UUID, 0, limit)
-	for paginator.HasMorePages() {
-		result, err := paginator.NextPage(ctx)
-
-		slog.DebugContext(ctx, "find article ids in user feed",
-			slog.Any("LastEvaluatedKey", result.LastEvaluatedKey),
-			slog.Any("Count", result.Count),
-			slog.Any("ResultMetadata", result.ResultMetadata))
-
-		if err != nil {
-			return []uuid.UUID{}, fmt.Errorf("%w: %w", errutil.ErrDynamoQuery, err)
-		}
-		// ToDo @ender we only need articleId not the whole item.
-		dynamodbFeedItems := make([]DynamodbFeedItem, 0, len(result.Items))
-		err = attributevalue.UnmarshalListOfMaps(result.Items, &dynamodbFeedItems)
-		if err != nil {
-			return []uuid.UUID{}, fmt.Errorf("%w: %w", errutil.ErrDynamoMapping, err)
-		}
-		for _, item := range dynamodbFeedItems {
-			articleId, err := uuid.Parse(item.ArticleId)
-			if err != nil {
-				return []uuid.UUID{}, fmt.Errorf("%w: %w", errutil.ErrDynamoMapping, err)
-			}
-			articleIds = append(articleIds, articleId)
-		}
 	}
 
-	return articleIds, nil
+	// decode and set LastEvaluatedKey if nextPageToken is provided
+	if nextPageToken != nil {
+		decodedLastEvaluatedKey, err := decodeLastEvaluatedKey(*nextPageToken)
+		if err != nil {
+			return nil, nil, fmt.Errorf("%w: %w", errutil.ErrDynamoTokenDecoding, err)
+		}
+		input.ExclusiveStartKey = decodedLastEvaluatedKey
+	}
+
+	result, err := uf.db.Client.Query(ctx, input)
+	if err != nil {
+		return nil, nil, fmt.Errorf("%w: %w", errutil.ErrDynamoQuery, err)
+	}
+
+	slog.DebugContext(ctx, "find article ids in user feed",
+		slog.Any("LastEvaluatedKey", result.LastEvaluatedKey),
+		slog.Any("Count", result.Count),
+		slog.Any("ResultMetadata", result.ResultMetadata))
+
+	// parse feed items
+	dynamodbFeedItems := make([]DynamodbFeedItem, 0, len(result.Items))
+	err = attributevalue.UnmarshalListOfMaps(result.Items, &dynamodbFeedItems)
+	if err != nil {
+		return nil, nil, fmt.Errorf("%w: %w", errutil.ErrDynamoMapping, err)
+	}
+
+	// convert to article ids
+	articleIds := make([]uuid.UUID, 0, len(dynamodbFeedItems))
+	for _, item := range dynamodbFeedItems {
+		articleId, err := uuid.Parse(item.ArticleId)
+		if err != nil {
+			return nil, nil, fmt.Errorf("%w: %w", errutil.ErrDynamoMapping, err)
+		}
+		articleIds = append(articleIds, articleId)
+	}
+
+	// prepare next page token if there are more results
+	var nextToken *string
+	if len(result.LastEvaluatedKey) > 0 {
+		encodedToken, err := encodeLastEvaluatedKey(result.LastEvaluatedKey)
+		if err != nil {
+			return nil, nil, fmt.Errorf("%w: %w", errutil.ErrDynamoTokenEncoding, err)
+		}
+		nextToken = encodedToken
+	}
+
+	return articleIds, nextToken, nil
+}
+
+func encodeLastEvaluatedKey(input map[string]ddbtypes.AttributeValue) (*string, error) {
+	var inputMap map[string]interface{}
+	err := attributevalue.UnmarshalMap(input, &inputMap)
+	if err != nil {
+		return nil, err
+	}
+	bytesJSON, err := json.Marshal(inputMap)
+	if err != nil {
+		return nil, err
+	}
+	output := base64.StdEncoding.EncodeToString(bytesJSON)
+	return &output, nil
+}
+
+func decodeLastEvaluatedKey(input string) (map[string]ddbtypes.AttributeValue, error) {
+	bytesJSON, err := base64.StdEncoding.DecodeString(input)
+	if err != nil {
+		return nil, err
+	}
+	var outputJSON map[string]interface{}
+	err = json.Unmarshal(bytesJSON, &outputJSON)
+	if err != nil {
+		return nil, err
+	}
+
+	return attributevalue.MarshalMap(outputJSON)
 }

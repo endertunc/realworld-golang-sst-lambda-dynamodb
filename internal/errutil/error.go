@@ -176,6 +176,8 @@ var (
 	ErrDynamoQuery             = errors.New("dynamodb query failed")
 	ErrDynamoMapping           = errors.New("dynamodb mapping failed")
 	ErrDynamoMarshalling       = errors.New("dynamodb marshalling failed")
+	ErrDynamoTokenDecoding     = errors.New("dynamodb token decoding failed")
+	ErrDynamoTokenEncoding     = errors.New("dynamodb token encoding failed")
 	ErrCantFollowYourself      = errors.New("cannot follow yourself")
 	ErrCantDeleteOthersComment = errors.New("cannot delete other's comment")
 	ErrCommentNotFound         = errors.New("comment not found")

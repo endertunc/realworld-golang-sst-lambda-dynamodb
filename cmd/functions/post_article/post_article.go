@@ -13,7 +13,7 @@ import (
 const handlerName = "CreateArticleHandler"
 
 func Handler(context context.Context, request events.APIGatewayProxyRequest, userId uuid.UUID, _ domain.Token) events.APIGatewayProxyResponse {
-	createArticleRequestBodyDTO, errResponse := api.ParseBodyAs[dto.CreateArticleRequestBodyDTO](context, request, handlerName)
+	createArticleRequestBodyDTO, errResponse := api.ParseBodyAs[dto.CreateArticleRequestBodyDTO](context, request)
 
 	if errResponse != nil {
 		return *errResponse

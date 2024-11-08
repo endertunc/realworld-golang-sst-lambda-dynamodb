@@ -4,10 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/aws/aws-lambda-go/events"
 	"log/slog"
 	"net/http"
 	"strconv"
+	"strings"
+
+	"github.com/aws/aws-lambda-go/events"
 )
 
 func GetPathParam(ctx context.Context, request events.APIGatewayProxyRequest, paramName, handlerName string) (string, *events.APIGatewayProxyResponse) {
@@ -21,7 +23,7 @@ func GetPathParam(ctx context.Context, request events.APIGatewayProxyRequest, pa
 	return param, nil
 }
 
-func ParseBodyAs[T any](ctx context.Context, request events.APIGatewayProxyRequest, handlerName string) (*T, *events.APIGatewayProxyResponse) {
+func ParseBodyAs[T any](ctx context.Context, request events.APIGatewayProxyRequest) (*T, *events.APIGatewayProxyResponse) {
 	var out T
 	err := json.Unmarshal([]byte(request.Body), &out)
 	if err != nil {
@@ -47,21 +49,110 @@ func ParseBodyAs[T any](ctx context.Context, request events.APIGatewayProxyReque
 	return &out, nil
 }
 
-// ToDo @ender let's see if we can make this generic using ozzo-validation
-func GetQueryParamOrDefault(ctx context.Context, request events.APIGatewayProxyRequest, paramName, handlerName string, defaultValue int) (int, *events.APIGatewayProxyResponse) {
+func GetOptionalIntQueryParam(
+	ctx context.Context,
+	request events.APIGatewayProxyRequest,
+	paramName string,
+	min,
+	max *int,
+) (*int, *events.APIGatewayProxyResponse) {
 	param, ok := request.QueryStringParameters[paramName]
 	if !ok {
-		return defaultValue, nil
+		return nil, nil
 	}
 
 	value, err := strconv.Atoi(param)
 	if err != nil {
 		message := fmt.Sprintf("query parameter %s must be a valid integer", paramName)
 		response := ToSimpleError(ctx, http.StatusBadRequest, message)
-		//response := ToErrorAPIGatewayProxyResponse(ctx, handlerName, errutil.BadRequestError(paramName, message))
-		return 0, &response
+		return nil, &response
 	}
 
-	// ToDo @ender make sure it's not negative. simply use https://github.com/invopop/validation (fork of ozzo-validation)
-	return value, nil
+	if min != nil && value < *min {
+		message := fmt.Sprintf("query parameter %s must be greater than or equal to %d", paramName, *min)
+		response := ToSimpleError(ctx, http.StatusBadRequest, message)
+		return nil, &response
+	}
+
+	if max != nil && value > *max {
+		message := fmt.Sprintf("query parameter %s must be less than or equal to %d", paramName, *max)
+		response := ToSimpleError(ctx, http.StatusBadRequest, message)
+		return nil, &response
+	}
+
+	return &value, nil
 }
+
+func GetIntQueryParamOrDefault(
+	ctx context.Context,
+	request events.APIGatewayProxyRequest,
+	paramName string,
+	defaultValue int,
+	min,
+	max *int,
+) (int, *events.APIGatewayProxyResponse) {
+	param, response := GetOptionalIntQueryParam(ctx, request, paramName, min, max)
+	if response != nil {
+		return 0, response
+	} else if param == nil {
+		return defaultValue, nil
+	} else {
+		return *param, nil
+	}
+}
+
+func GetOptionalStringQueryParam(
+	ctx context.Context,
+	request events.APIGatewayProxyRequest,
+	paramName string,
+) (*string, *events.APIGatewayProxyResponse) {
+	param, ok := request.QueryStringParameters[paramName]
+	if !ok {
+		return nil, nil
+	}
+
+	if strings.TrimSpace(param) == "" {
+		message := fmt.Sprintf("query parameter %s cannot be blank", paramName)
+		response := ToSimpleError(ctx, http.StatusBadRequest, message)
+		return nil, &response
+	}
+
+	return &param, nil
+}
+
+//func GetOptionalStringQueryParamWithDefault(
+//	ctx context.Context,
+//	request events.APIGatewayProxyRequest,
+//	paramName string,
+//	defaultValue string,
+//) (string, *events.APIGatewayProxyResponse) {
+//	param, response := GetOptionalStringQueryParam(ctx, request, paramName)
+//	if response != nil {
+//		return "", response
+//	} else if param == nil {
+//		return defaultValue, nil
+//	} else {
+//		return *param, nil
+//	}
+//}
+//
+//func GetRequiredStringQueryParam(
+//	ctx context.Context,
+//	request events.APIGatewayProxyRequest,
+//	paramName string,
+//) (string, *events.APIGatewayProxyResponse) {
+//	param, ok := request.QueryStringParameters[paramName]
+//	if !ok {
+//		message := fmt.Sprintf("query parameter %s is missing", paramName)
+//		response := ToSimpleError(ctx, http.StatusBadRequest, message)
+//		return "", &response
+//	}
+//
+//	if strings.TrimSpace(param) == "" {
+//		message := fmt.Sprintf("query parameter %s cannot be blank", paramName)
+//		response := ToSimpleError(ctx, http.StatusBadRequest, message)
+//		return "", &response
+//	}
+//
+//	return param, nil
+//}
