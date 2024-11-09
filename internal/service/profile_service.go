@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	mapset "github.com/deckarep/golang-set/v2"
 	"github.com/google/uuid"
 	"log/slog"
 	"realworld-aws-lambda-dynamodb-golang/internal/domain"
@@ -20,8 +21,7 @@ type ProfileServiceInterface interface {
 	Follow(c context.Context, follower uuid.UUID, followeeUsername string) (domain.User, error)
 	UnFollow(c context.Context, follower uuid.UUID, followeeUsername string) (domain.User, error)
 	IsFollowing(c context.Context, follower, followee uuid.UUID) (bool, error)
-	// ToDo @ender - map[uuid.UUID]bool is a bit weird return type. That being said, it fits to purpose without boilerplate
-	IsFollowingBulk(ctx context.Context, follower uuid.UUID, followee []uuid.UUID) (map[uuid.UUID]bool, error)
+	IsFollowingBulk(ctx context.Context, follower uuid.UUID, followee []uuid.UUID) (mapset.Set[uuid.UUID], error)
 }
 
 var _ ProfileServiceInterface = ProfileService{}
@@ -30,7 +30,7 @@ func (p ProfileService) IsFollowing(ctx context.Context, follower, followee uuid
 	return p.FollowerRepository.IsFollowing(ctx, follower, followee)
 }
 
-func (p ProfileService) IsFollowingBulk(ctx context.Context, follower uuid.UUID, followee []uuid.UUID) (map[uuid.UUID]bool, error) {
+func (p ProfileService) IsFollowingBulk(ctx context.Context, follower uuid.UUID, followee []uuid.UUID) (mapset.Set[uuid.UUID], error) {
 	return p.FollowerRepository.BatchIsFollowing(ctx, follower, followee)
 }
 

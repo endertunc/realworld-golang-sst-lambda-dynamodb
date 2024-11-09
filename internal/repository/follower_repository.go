@@ -7,6 +7,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	ddbtypes "github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
+	mapset "github.com/deckarep/golang-set/v2"
 	"github.com/google/uuid"
 	"log/slog"
 	"realworld-aws-lambda-dynamodb-golang/internal/database"
@@ -25,7 +26,7 @@ func NewDynamodbFollowerRepository(db *database.DynamoDBStore) DynamodbFollowerR
 
 type FollowerRepositoryInterface interface {
 	IsFollowing(ctx context.Context, follower, followee uuid.UUID) (bool, error)
-	BatchIsFollowing(ctx context.Context, follower uuid.UUID, followee []uuid.UUID) (map[uuid.UUID]bool, error)
+	BatchIsFollowing(ctx context.Context, follower uuid.UUID, followee []uuid.UUID) (mapset.Set[uuid.UUID], error)
 	Follow(ctx context.Context, follower, followee uuid.UUID) error
 	UnFollow(ctx context.Context, follower, followee uuid.UUID) error
 }
@@ -99,11 +100,12 @@ func (s DynamodbFollowerRepository) UnFollow(ctx context.Context, follower, foll
 	return nil
 }
 
-func (s DynamodbFollowerRepository) BatchIsFollowing(ctx context.Context, follower uuid.UUID, followees []uuid.UUID) (map[uuid.UUID]bool, error) {
+func (s DynamodbFollowerRepository) BatchIsFollowing(ctx context.Context, follower uuid.UUID, followees []uuid.UUID) (mapset.Set[uuid.UUID], error) {
+	set := mapset.NewThreadUnsafeSet[uuid.UUID]()
 	// short circuit if followees is empty, no need to query
 	// also, dynamodb will throw a validation error if we try to query with empty keys
 	if len(followees) == 0 {
-		return map[uuid.UUID]bool{}, nil
+		return set, nil
 	}
 
 	keys := make([]map[string]ddbtypes.AttributeValue, 0, len(follower))
@@ -124,11 +126,11 @@ func (s DynamodbFollowerRepository) BatchIsFollowing(ctx context.Context, follow
 		},
 	})
 	if err != nil {
-		return map[uuid.UUID]bool{}, fmt.Errorf("%w: %w", errutil.ErrDynamoQuery, err)
+		return set, fmt.Errorf("%w: %w", errutil.ErrDynamoQuery, err)
 	}
 
 	followersItems := response.Responses[followerTable]
-	result := make(map[uuid.UUID]bool, len(followees))
+
 	for _, item := range followersItems {
 		dynamodbFollowerItem := DynamodbFollowerItem{}
 		err = attributevalue.UnmarshalMap(item, &dynamodbFollowerItem)
@@ -136,8 +138,8 @@ func (s DynamodbFollowerRepository) BatchIsFollowing(ctx context.Context, follow
 			return nil, fmt.Errorf("%w: %w", errutil.ErrDynamoMapping, err)
 		}
 		// ToDo @ender do not use MustParse - it panics if the string is not a valid UUID
-		result[uuid.MustParse(dynamodbFollowerItem.Followee)] = true
+		set.Add(uuid.MustParse(dynamodbFollowerItem.Followee))
 	}
 
-	return result, nil
+	return set, nil
 }

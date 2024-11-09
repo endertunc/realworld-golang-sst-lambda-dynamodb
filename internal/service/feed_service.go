@@ -81,13 +81,13 @@ func (uf UserFeedService) FetchArticlesFromFeed(ctx context.Context, userId uuid
 	}
 
 	// fetch isFollowing in bulk
-	isFollowingMap, err := uf.ProfileService.IsFollowingBulk(ctx, userId, uniqueAuthorIdsList)
+	followedAuthorsSet, err := uf.ProfileService.IsFollowingBulk(ctx, userId, uniqueAuthorIdsList)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	// fetch isFollowing in bulk
-	isFavoritedMap, err := uf.ArticleService.IsFavoritedBulk(ctx, userId, articleIds)
+	favoritedArticlesSet, err := uf.ArticleService.IsFavoritedBulk(ctx, userId, articleIds)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -96,14 +96,14 @@ func (uf UserFeedService) FetchArticlesFromFeed(ctx context.Context, userId uuid
 	// we need to return article in the order of articleIds
 	for _, articleId := range articleIds {
 		article, articleFound := authorIdToArticleMap[articleId]
-		_, isFollowing := isFollowingMap[article.AuthorId]
+		isFollowing := followedAuthorsSet.ContainsOne(article.AuthorId)
 		author, authorFound := authorsMap[article.AuthorId]
 
 		// 1- we should have the article in the authorIdToArticleMap, otherwise let it skip
 		// 2- we don't show articles from users that the current user is not following
 		// 3- we should have the author in the authorsMap, otherwise let it skip
 		if articleFound && isFollowing && authorFound {
-			_, isFavorited := isFavoritedMap[article.Id]
+			isFavorited := favoritedArticlesSet.ContainsOne(article.Id)
 			feedItem := domain.FeedItem{
 				Article:     article,
 				Author:      author,

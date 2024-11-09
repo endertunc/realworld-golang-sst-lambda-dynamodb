@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	mapset "github.com/deckarep/golang-set/v2"
 	"github.com/google/uuid"
 	"realworld-aws-lambda-dynamodb-golang/internal/domain"
 	"realworld-aws-lambda-dynamodb-golang/internal/errutil"
@@ -25,7 +26,7 @@ type ArticleServiceInterface interface {
 	UnfavoriteArticle(c context.Context, userId uuid.UUID, slug string) (domain.Article, error)
 	IsFavorited(c context.Context, articleId, userId uuid.UUID) (bool, error)
 	FindArticlesByIds(c context.Context, articleIds []uuid.UUID) ([]domain.Article, error)
-	IsFavoritedBulk(c context.Context, userId uuid.UUID, articleIds []uuid.UUID) (map[uuid.UUID]bool, error)
+	IsFavoritedBulk(c context.Context, userId uuid.UUID, articleIds []uuid.UUID) (mapset.Set[uuid.UUID], error)
 	//UpdateArticle(c context.Context, loggedInUserId uuid.UUID) (domain.Token, domain.User, error)
 }
 
@@ -166,6 +167,6 @@ func (as ArticleService) FindArticlesByIds(c context.Context, articleIds []uuid.
 	return as.ArticleRepository.FindArticlesByIds(c, articleIds)
 }
 
-func (as ArticleService) IsFavoritedBulk(c context.Context, userId uuid.UUID, articleIds []uuid.UUID) (map[uuid.UUID]bool, error) {
+func (as ArticleService) IsFavoritedBulk(c context.Context, userId uuid.UUID, articleIds []uuid.UUID) (mapset.Set[uuid.UUID], error) {
 	return as.ArticleRepository.IsFavoritedBulk(c, userId, articleIds)
 }

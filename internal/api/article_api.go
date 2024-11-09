@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	mapset "github.com/deckarep/golang-set/v2"
 	"github.com/google/uuid"
 	"log/slog"
 	"realworld-aws-lambda-dynamodb-golang/internal/domain"
@@ -188,13 +189,13 @@ func (aa ArticleApi) GetArticleComments(ctx context.Context, loggedInUserId *uui
 		}
 
 		if loggedInUserId == nil {
-			return dto.ToMultiCommentsResponseBodyDTO(comments, authorIdsToAuthorMap, map[uuid.UUID]bool{}), nil
+			return dto.ToMultiCommentsResponseBodyDTO(comments, authorIdsToAuthorMap, mapset.NewSetWithSize[uuid.UUID](0)), nil
 		} else {
-			followedAuthorsMap, err := aa.ProfileService.IsFollowingBulk(ctx, *loggedInUserId, uniqueAuthorIdsList)
+			followedAuthorsSet, err := aa.ProfileService.IsFollowingBulk(ctx, *loggedInUserId, uniqueAuthorIdsList)
 			if err != nil {
 				return dto.MultiCommentsResponseBodyDTO{}, err
 			}
-			return dto.ToMultiCommentsResponseBodyDTO(comments, authorIdsToAuthorMap, followedAuthorsMap), nil
+			return dto.ToMultiCommentsResponseBodyDTO(comments, authorIdsToAuthorMap, followedAuthorsSet), nil
 		}
 
 	}

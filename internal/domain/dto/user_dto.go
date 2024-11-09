@@ -43,7 +43,9 @@ type UserResponseUserDto struct {
 	Username string  `json:"username"`
 	Token    string  `json:"token"`
 	Bio      *string `json:"bio"`
-	Image    *string `json:"image"`
+	// ToDo @ender - once we have update profile, we should validate that this is a valid url I guess?
+	//   It's not clear to me what this field suppose to store. I am assuming it's just a url to the image.
+	Image *string `json:"image"`
 }
 
 func ToUserResponseBodyDTO(user domain.User, token domain.Token) UserResponseBodyDTO {

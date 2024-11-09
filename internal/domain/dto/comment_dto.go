@@ -1,6 +1,7 @@
 package dto
 
 import (
+	mapset "github.com/deckarep/golang-set/v2"
 	"github.com/google/uuid"
 	"realworld-aws-lambda-dynamodb-golang/internal/domain"
 	"time"
@@ -37,7 +38,7 @@ type CommentResponseDTO struct {
 }
 
 // factory methods
-func ToMultiCommentsResponseBodyDTO(comments []domain.Comment, authorIdToAuthorMap map[uuid.UUID]domain.User, isFollowingMap map[uuid.UUID]bool) MultiCommentsResponseBodyDTO {
+func ToMultiCommentsResponseBodyDTO(comments []domain.Comment, authorIdToAuthorMap map[uuid.UUID]domain.User, followedAuthorsSet mapset.Set[uuid.UUID]) MultiCommentsResponseBodyDTO {
 	commentResponseDTOs := make([]CommentResponseDTO, 0, len(comments))
 
 	for _, comment := range comments {
@@ -51,7 +52,7 @@ func ToMultiCommentsResponseBodyDTO(comments []domain.Comment, authorIdToAuthorM
 				Username:  author.Username,
 				Bio:       author.Bio,
 				Image:     author.Image,
-				Following: isFollowingMap[comment.AuthorId],
+				Following: followedAuthorsSet.ContainsOne(comment.AuthorId),
 			},
 		}
 		commentResponseDTOs = append(commentResponseDTOs, commentResponseDTO)

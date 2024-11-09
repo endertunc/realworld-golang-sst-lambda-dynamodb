@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	mapset "github.com/deckarep/golang-set/v2"
 	"realworld-aws-lambda-dynamodb-golang/internal/database"
 	"realworld-aws-lambda-dynamodb-golang/internal/domain"
 	"realworld-aws-lambda-dynamodb-golang/internal/errutil"
@@ -37,7 +38,7 @@ type ArticleRepositoryInterface interface {
 	CreateComment(ctx context.Context, comment domain.Comment) error
 	FindCommentByCommentIdAndArticleId(ctx context.Context, commentId, articleId uuid.UUID) (domain.Comment, error)
 	IsFavorited(ctx context.Context, articleId, userId uuid.UUID) (bool, error)
-	IsFavoritedBulk(ctx context.Context, userId uuid.UUID, articleIds []uuid.UUID) (map[uuid.UUID]bool, error)
+	IsFavoritedBulk(ctx context.Context, userId uuid.UUID, articleIds []uuid.UUID) (mapset.Set[uuid.UUID], error)
 }
 
 var _ ArticleRepositoryInterface = DynamodbArticleRepository{}
@@ -435,11 +436,13 @@ func (d DynamodbArticleRepository) FindArticlesByIds(ctx context.Context, articl
 
 }
 
-func (d DynamodbArticleRepository) IsFavoritedBulk(ctx context.Context, userId uuid.UUID, articleIds []uuid.UUID) (map[uuid.UUID]bool, error) {
+func (d DynamodbArticleRepository) IsFavoritedBulk(ctx context.Context, userId uuid.UUID, articleIds []uuid.UUID) (mapset.Set[uuid.UUID], error) {
+	set := mapset.NewThreadUnsafeSet[uuid.UUID]()
+
 	// short circuit if articleIds is empty, no need to query
 	// also, dynamodb will throw a validation error if we try to query with empty keys
 	if len(articleIds) == 0 {
-		return map[uuid.UUID]bool{}, nil
+		return set, nil
 	}
 
 	keys := make([]map[string]ddbtypes.AttributeValue, 0, len(articleIds))
@@ -460,21 +463,20 @@ func (d DynamodbArticleRepository) IsFavoritedBulk(ctx context.Context, userId u
 
 	result, err := d.db.Client.BatchGetItem(ctx, input)
 	if err != nil {
-		return map[uuid.UUID]bool{}, fmt.Errorf("%w: %w", errutil.ErrDynamoQuery, err)
+		return set, fmt.Errorf("%w: %w", errutil.ErrDynamoQuery, err)
 	}
 
 	dynamodbFavoriteArticleItems := make([]DynamodbFavoriteArticleItem, 0, len(result.Responses[favoriteTable]))
 	err = attributevalue.UnmarshalListOfMaps(result.Responses[favoriteTable], &dynamodbFavoriteArticleItems)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %w", errutil.ErrDynamoMarshalling, err)
+		return set, fmt.Errorf("%w: %w", errutil.ErrDynamoMarshalling, err)
 	}
-	resultMap := make(map[uuid.UUID]bool, len(dynamodbFavoriteArticleItems))
 	for _, item := range dynamodbFavoriteArticleItems {
 		// ToDo @ender must parse again...
-		resultMap[uuid.MustParse(item.ArticleId)] = true
+		set.Add(uuid.MustParse(item.ArticleId))
 	}
 
-	return resultMap, nil
+	return set, nil
 }
 
 func toDynamodbArticleItem(article domain.Article) DynamodbArticleItem {
