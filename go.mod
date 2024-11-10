@@ -23,6 +23,8 @@ require (
 	//github.com/steinfletcher/apitest v1.5.16
 	github.com/stretchr/testify v1.9.0
 	golang.org/x/crypto v0.28.0
+	//github.com/samber/slog-http v1.4.4
+    //github.com/veqryn/slog-context v0.7.0
 
 )
 
@@ -32,7 +34,6 @@ require (
 	github.com/go-playground/locales v0.14.1
 	github.com/go-playground/universal-translator v0.18.1
 	github.com/joho/godotenv v1.5.1
-	go.uber.org/mock v0.5.0
 )
 
 require (
@@ -63,6 +64,7 @@ require (
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826 // indirect
 	github.com/perimeterx/marshmallow v1.1.5 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
+	github.com/stretchr/objx v0.5.2 // indirect
 	golang.org/x/mod v0.18.0 // indirect
 	golang.org/x/net v0.26.0 // indirect
 	golang.org/x/sys v0.26.0 // indirect

@@ -2,29 +2,26 @@ package service
 
 import (
 	"context"
-	mapset "github.com/deckarep/golang-set/v2"
+	"github.com/stretchr/testify/mock"
 	"realworld-aws-lambda-dynamodb-golang/internal/domain/generator"
-	rmocks "realworld-aws-lambda-dynamodb-golang/internal/repository/mocks"
+	"realworld-aws-lambda-dynamodb-golang/internal/service/mocks"
 	"testing"
+
+	mapset "github.com/deckarep/golang-set/v2"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
-	"go.uber.org/mock/gomock"
-
 	"realworld-aws-lambda-dynamodb-golang/internal/domain"
-	"realworld-aws-lambda-dynamodb-golang/internal/service/mocks"
+
+	rmocks "realworld-aws-lambda-dynamodb-golang/internal/repository/mocks"
 )
 
 func TestFetchArticlesFromFeed_SuccessfulMultipleArticles(t *testing.T) {
-	// Create a mock controller
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	// Create mock dependencies
-	mockUserFeedRepo := rmocks.NewMockUserFeedRepositoryInterface(ctrl)
-	mockArticleService := mocks.NewMockArticleServiceInterface(ctrl)
-	mockProfileService := mocks.NewMockProfileServiceInterface(ctrl)
-	mockUserService := mocks.NewMockUserServiceInterface(ctrl)
+	ctx := context.Background()
+	mockUserFeedRepo := rmocks.NewMockUserFeedRepositoryInterface(t)
+	mockArticleService := mocks.NewMockArticleServiceInterface(t)
+	mockProfileService := mocks.NewMockProfileServiceInterface(t)
+	mockUserService := mocks.NewMockUserServiceInterface(t)
 
 	// Create a service instance with mock dependencies
 	feedService := UserFeedService{
@@ -51,31 +48,32 @@ func TestFetchArticlesFromFeed_SuccessfulMultipleArticles(t *testing.T) {
 
 	// Set up expectations for UserFeedRepository
 	mockUserFeedRepo.EXPECT().
-		FindArticleIdsInUserFeed(gomock.Any(), feedUser.Id, limit, nextPageToken).
+		FindArticleIdsInUserFeed(mock.Anything, feedUser.Id, limit, nextPageToken).
 		Return([]uuid.UUID{article1.Id, article2.Id}, nextPageToken, nil)
 
 	// Set up expectations for ArticleService
 	mockArticleService.EXPECT().
-		FindArticlesByIds(gomock.Any(), []uuid.UUID{article1.Id, article2.Id}).
+		FindArticlesByIds(mock.Anything, []uuid.UUID{article1.Id, article2.Id}).
 		Return([]domain.Article{article1, article2}, nil)
 
 	// Set up expectations for UserService
 	mockUserService.EXPECT().
-		GetUserListByUserIDs(gomock.Any(), []uuid.UUID{author1.Id, author2.Id}).
+		GetUserListByUserIDs(mock.Anything, []uuid.UUID{author1.Id, author2.Id}).
 		Return([]domain.User{author1, author2}, nil)
 
 	// Set up expectations for ProfileService
 	mockProfileService.EXPECT().
-		IsFollowingBulk(gomock.Any(), feedUser.Id, []uuid.UUID{author1.Id, author2.Id}).
+		IsFollowingBulk(mock.Anything, feedUser.Id, []uuid.UUID{author1.Id, author2.Id}).
 		Return(mapset.NewSet(author1.Id, author2.Id), nil)
 
 	// Set up expectations for ArticleService
 	mockArticleService.EXPECT().
-		IsFavoritedBulk(gomock.Any(), feedUser.Id, []uuid.UUID{article1.Id, article2.Id}).
+		IsFavoritedBulk(mock.Anything, feedUser.Id, []uuid.UUID{article1.Id, article2.Id}).
 		Return(mapset.NewSet(article1.Id), nil)
 
 	// Call the method under test
-	feedItems, nextToken, err := feedService.FetchArticlesFromFeed(context.Background(), feedUser.Id, limit, nextPageToken)
+
+	feedItems, nextToken, err := feedService.FetchArticlesFromFeed(ctx, feedUser.Id, limit, nextPageToken)
 
 	// Assertions
 	assert.NoError(t, err)

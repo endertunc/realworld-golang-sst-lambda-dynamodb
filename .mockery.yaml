@@ -1,0 +1,17 @@
+with-expecter: true
+filename: "mock_{{ .InterfaceName | snakecase }}.go"
+dir: "{{ .InterfaceDir }}/mocks"
+outpkg: "mocks"
+packages:
+  realworld-aws-lambda-dynamodb-golang/internal/repository:
+    interfaces:
+      ArticleRepositoryInterface:
+      FollowerRepositoryInterface:
+      UserRepositoryInterface:
+      UserFeedRepositoryInterface:
+  realworld-aws-lambda-dynamodb-golang/internal/service:
+    interfaces:
+      ArticleServiceInterface:
+      UserServiceInterface:
+      FeedServiceInterface:
+      ProfileServiceInterface:
