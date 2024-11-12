@@ -4,9 +4,15 @@ import (
 	"context"
 	"errors"
 	"github.com/aws/aws-lambda-go/events"
+	"github.com/aws/aws-lambda-go/lambda"
+	"github.com/awslabs/aws-lambda-go-api-proxy/httpadapter"
 	"github.com/google/uuid"
+	samberSlog "github.com/samber/slog-http"
+	slogctx "github.com/veqryn/slog-context"
+	veqrynslog "github.com/veqryn/slog-context/http"
 	"log/slog"
 	"net/http"
+	"os"
 	"realworld-aws-lambda-dynamodb-golang/cmd/functions"
 	"realworld-aws-lambda-dynamodb-golang/internal/api"
 	"realworld-aws-lambda-dynamodb-golang/internal/domain"
@@ -14,6 +20,50 @@ import (
 )
 
 const handlerName = "GetArticleCommentsHandler"
+
+func init() {
+	h := slogctx.NewHandler(
+		slog.NewJSONHandler(os.Stdout, nil),
+		&slogctx.HandlerOptions{
+			Prependers: []slogctx.AttrExtractor{
+				veqrynslog.ExtractAttrCollection,
+			},
+		},
+	)
+	slog.SetDefault(slog.New(h))
+
+	http.Handle("GET /api/articles/{slug}/comments", veqrynslog.AttrCollection(samberSlog.New(slog.Default())(api.StartOptionallyAuthenticatedHandlerHTTP(HandlerHTTP))))
+}
+
+func HandlerHTTP(w http.ResponseWriter, r *http.Request, userId *uuid.UUID, token *domain.Token) {
+	ctx := r.Context()
+
+	slug, ok := api.GetPathParamHTTP(ctx, w, r, "slug")
+	if !ok {
+		return
+	}
+
+	result, err := functions.ArticleApi.GetArticleComments(ctx, userId, slug)
+
+	if err != nil {
+		if errors.Is(err, errutil.ErrArticleNotFound) {
+			slog.DebugContext(ctx, "article not found", slog.String("slug", slug), slog.Any("error", err))
+			api.ToSimpleHTTPError(w, http.StatusNotFound, "article not found")
+			return
+		}
+
+		if errors.Is(err, errutil.ErrDynamoMarshalling) {
+			slog.DebugContext(ctx, "article not found", slog.String("slug", slug), slog.Any("error", err))
+			api.ToSimpleHTTPError(w, http.StatusNotFound, "JUST FOR FUN!!!")
+			return
+		}
+
+		api.ToInternalServerHTTPError(w, err)
+		return
+	}
+
+	api.ToSuccessHTTPResponse(w, result)
+}
 
 func Handler(ctx context.Context, request events.APIGatewayProxyRequest, userId *uuid.UUID, _ *domain.Token) events.APIGatewayProxyResponse {
 	// it's a bit annoying that this could fail even tho the path is required for this endpoint to match...
@@ -38,6 +88,5 @@ func Handler(ctx context.Context, request events.APIGatewayProxyRequest, userId 
 }
 
 func main() {
-	api.StartOptionallyAuthenticatedHandler(Handler)
-
+	lambda.Start(httpadapter.NewV2(http.DefaultServeMux).ProxyWithContext)
 }

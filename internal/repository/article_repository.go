@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	mapset "github.com/deckarep/golang-set/v2"
+	"github.com/samber/oops"
+	"log/slog"
 	"realworld-aws-lambda-dynamodb-golang/internal/database"
 	"realworld-aws-lambda-dynamodb-golang/internal/domain"
 	"realworld-aws-lambda-dynamodb-golang/internal/errutil"
@@ -15,6 +17,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	ddbtypes "github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/google/uuid"
+	veqrynslog "github.com/veqryn/slog-context/http"
 )
 
 type DynamodbArticleRepository struct {
@@ -197,7 +200,7 @@ func (d DynamodbArticleRepository) DeleteCommentByArticleIdAndCommentId(c contex
  *  it's not necessary in our case but we could sort the comments by createdAt field.
  */
 
-func (d DynamodbArticleRepository) FindCommentsByArticleId(c context.Context, articleId uuid.UUID) ([]domain.Comment, error) {
+func (d DynamodbArticleRepository) FindCommentsByArticleId(ctx context.Context, articleId uuid.UUID) ([]domain.Comment, error) {
 
 	input := &dynamodb.QueryInput{
 		TableName:              &commentTable,
@@ -208,18 +211,25 @@ func (d DynamodbArticleRepository) FindCommentsByArticleId(c context.Context, ar
 		},
 	}
 
-	result, err := d.db.Client.Query(c, input)
+	result, err := d.db.Client.Query(ctx, input)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", errutil.ErrDynamoQuery, err)
 	}
 
-	comments := make([]domain.Comment, 0, len(result.Items))
-	err = attributevalue.UnmarshalListOfMaps(result.Items, &comments)
+	dynamodbCommentItems := make([]DynamodbArticleItem, 0, len(result.Items))
+	err = attributevalue.UnmarshalListOfMaps(result.Items, &dynamodbCommentItems)
 	if err != nil {
+		// ToDo @ender experiment with this oops library
+		fancyError := oops.Wrap(fmt.Errorf("%w: %w", errutil.ErrDynamoMarshalling, err))
+		veqrynslog.With(ctx, "regularError", fmt.Errorf("%w: %w", errutil.ErrDynamoMarshalling, err))
+		veqrynslog.With(ctx, "fancyError", fancyError)
+		veqrynslog.With(ctx, slog.Group("errorContext", slog.String("articleId", articleId.String())))
 		return nil, fmt.Errorf("%w: %w", errutil.ErrDynamoMarshalling, err)
 	}
 
-	return comments, nil
+	return lo.Map(dynamodbCommentItems, func(comment DynamodbCommentItem, _ int) domain.Comment {
+		return toDomainComment(comment)
+	}), nil
 }
 
 func (d DynamodbArticleRepository) CreateComment(ctx context.Context, comment domain.Comment) error {

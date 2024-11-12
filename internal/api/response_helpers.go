@@ -4,10 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/aws/aws-lambda-go/events"
 	"log/slog"
 	"net/http"
 	"realworld-aws-lambda-dynamodb-golang/internal/errutil"
+
+	"github.com/aws/aws-lambda-go/events"
 )
 
 var InternalServerError = events.APIGatewayProxyResponse{
@@ -52,4 +53,42 @@ func ToSimpleError(ctx context.Context, statusCode int, message string) events.A
 func ToInternalServerError(ctx context.Context, err error) events.APIGatewayProxyResponse {
 	slog.ErrorContext(ctx, "unexpected error", slog.Any("error", err))
 	return InternalServerError
+}
+
+// HTTP-specific response helpers using net/http
+
+func ToSuccessHTTPResponse(w http.ResponseWriter, body interface{}) {
+	if body == nil {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	bodyJson, err := json.Marshal(body)
+	if err != nil {
+		cause := fmt.Errorf("%w: %w", errutil.ErrJsonEncode, err)
+		ToInternalServerHTTPError(w, cause)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write(bodyJson)
+}
+
+func ToSimpleHTTPError(w http.ResponseWriter, statusCode int, message string) {
+	body, err := json.Marshal(errutil.SimpleError{Message: message})
+	if err != nil {
+		slog.Error("error encoding response body", slog.Any("error", err))
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
+	w.Write(body)
+}
+
+func ToInternalServerHTTPError(w http.ResponseWriter, err error) {
+	slog.Error("unexpected error", slog.Any("error", err))
+	http.Error(w, "internal server error", http.StatusInternalServerError)
 }

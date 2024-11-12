@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"github.com/aws/aws-lambda-go/lambda"
+	"github.com/awslabs/aws-lambda-go-api-proxy/httpadapter"
 	"log/slog"
 	"net/http"
 	"realworld-aws-lambda-dynamodb-golang/cmd/functions"
@@ -14,6 +15,34 @@ import (
 import "github.com/aws/aws-lambda-go/events"
 
 const handlerName = "LoginUserHandler"
+
+func init() {
+	http.Handle("POST /api/users/login", http.HandlerFunc(HandlerHTTP))
+}
+
+func HandlerHTTP(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	loginRequestBodyDTO, ok := api.ParseBodyAsHTTP[dto.LoginRequestBodyDTO](ctx, w, r)
+
+	if !ok {
+		return
+	}
+
+	result, err := functions.UserApi.LoginUser(ctx, *loginRequestBodyDTO)
+
+	if err != nil {
+		if errors.Is(err, errutil.ErrUserNotFound) || errors.Is(err, errutil.ErrInvalidPassword) {
+			slog.WarnContext(ctx, "invalid credentials", slog.Any("error", err))
+			api.ToSimpleHTTPError(w, http.StatusUnauthorized, "invalid credentials")
+			return
+		}
+		api.ToInternalServerHTTPError(w, err)
+		return
+	}
+
+	api.ToSuccessHTTPResponse(w, result)
+}
 
 func Handler(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 
@@ -36,84 +65,6 @@ func Handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 	}
 }
 
-//// create enum
-//type ErrType int64
-//
-//const (
-//	Internal ErrType = iota
-//	UserNotFound
-//	InvalidCredentials
-//	DynamodbQuery
-//	DynamodbMapping
-//)
-//
-//type ExampleError struct {
-//	Type            ErrType
-//	Message         string
-//	InternalMessage *string
-//	Operation       string
-//	Cause           error
-//}
-//
-//var (
-//	ErrInternal           = ExampleError{Type: Internal, Message: "Internal error"}
-//	ErrDynamodbQuery      = ExampleError{Type: DynamodbQuery, Message: "Dynamodb error"}
-//	ErrDynamodbMapping    = ExampleError{Type: DynamodbMapping, Message: "Dynamodb error"}
-//	ErrUserNotFound       = ExampleError{Type: UserNotFound, Message: "Missing field"}
-//	ErrInvalidCredentials = ExampleError{Type: InvalidCredentials, Message: "Missing field"}
-//)
-//
-//func (e ExampleError) Error() string {
-//	return e.Message
-//}
-//
-//func (e ExampleError) Unwrap() error {
-//	return e.Cause
-//}
-//
-//func (e ExampleError) Is(target error) bool {
-//	var t ExampleError
-//	ok := errors.As(target, &t)
-//	if !ok {
-//		return false
-//	}
-//
-//	return e.Type == t.Type
-//}
-
 func main() {
-	//
-	////var e1 error = ExampleError{
-	////	Type:    UserNotFound,
-	////	Message: "user not found",
-	////	Cause:   MissingField,
-	////}
-	//
-	//e2 := ExampleError{
-	//	Type:    DynamodbMapping,
-	//	Message: "invalid credentials",
-	//	Cause:   ExampleError{Type: InvalidCredentials, Message: "Missing field"},
-	//}
-	//
-	//e3 := ExampleError{
-	//	Type:    UserNotFound,
-	//	Message: "invalid something else",
-	//	Cause:   e2,
-	//}
-	//
-	//if errors.Is(e3, ErrInvalidCredentials) {
-	//	fmt.Println("e2 is caused by given error")
-	//} else {
-	//	fmt.Println("e2 is NOT caused given error")
-	//}
-	//
-	//exampleError := ExampleError{}
-	//ok := errors.As(e3, &exampleError)
-	//if ok && exampleError.Type == UserNotFound {
-	//	fmt.Println("e2 is of type ExampleError")
-	//} else {
-	//	fmt.Println("e2 is NOT of type ExampleError")
-	//}
-
-	lambda.Start(Handler)
+	lambda.Start(httpadapter.NewV2(http.DefaultServeMux).ProxyWithContext)
 }

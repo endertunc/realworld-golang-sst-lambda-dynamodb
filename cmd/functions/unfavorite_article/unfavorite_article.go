@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"github.com/aws/aws-lambda-go/events"
+	"github.com/aws/aws-lambda-go/lambda"
+	"github.com/awslabs/aws-lambda-go-api-proxy/httpadapter"
 	"github.com/google/uuid"
 	"log/slog"
 	"net/http"
@@ -14,6 +16,39 @@ import (
 )
 
 const handlerName = "UnfavoriteArticleHandler"
+
+func init() {
+	http.Handle("DELETE /api/articles/{slug}/favorite", api.StartAuthenticatedHandlerHTTP(HandlerHTTP))
+}
+
+func HandlerHTTP(w http.ResponseWriter, r *http.Request, userId uuid.UUID, _ domain.Token) {
+	ctx := r.Context()
+
+	slug, ok := api.GetPathParamHTTP(ctx, w, r, "slug")
+	if !ok {
+		return
+	}
+
+	result, err := functions.ArticleApi.UnfavoriteArticle(ctx, userId, slug)
+
+	if err != nil {
+		if errors.Is(err, errutil.ErrArticleNotFound) {
+			slog.DebugContext(ctx, "article not found", slog.String("slug", slug))
+			api.ToSimpleHTTPError(w, http.StatusNotFound, "article not found")
+			return
+		} else if errors.Is(err, errutil.ErrAlreadyUnfavorited) {
+			slog.DebugContext(ctx, "article is already unfavorited", slog.String("slug", slug), slog.String("userId", userId.String()))
+			api.ToSimpleHTTPError(w, http.StatusConflict, "article is already unfavorited")
+			return
+		} else {
+			api.ToInternalServerHTTPError(w, err)
+			return
+		}
+	}
+
+	api.ToSuccessHTTPResponse(w, result)
+	return
+}
 
 func Handler(context context.Context, request events.APIGatewayProxyRequest, userId uuid.UUID, _ domain.Token) events.APIGatewayProxyResponse {
 	// it's a bit annoying that this could fail even tho the path is required for this endpoint to match...
@@ -28,7 +63,7 @@ func Handler(context context.Context, request events.APIGatewayProxyRequest, use
 	if err != nil {
 		if errors.Is(err, errutil.ErrArticleNotFound) {
 			slog.DebugContext(context, "article not found", slog.String("slug", slug))
-			return api.ToSimpleError(context, 404, "article not found")
+			return api.ToSimpleError(context, http.StatusNotFound, "article not found")
 		} else if errors.Is(err, errutil.ErrAlreadyUnfavorited) {
 			slog.DebugContext(context, "article is already unfavorited", slog.String("slug", slug), slog.String("userId", userId.String()))
 			return api.ToSimpleError(context, http.StatusConflict, "article is already unfavorited")
@@ -42,5 +77,5 @@ func Handler(context context.Context, request events.APIGatewayProxyRequest, use
 }
 
 func main() {
-	api.StartAuthenticatedHandler(Handler)
+	lambda.Start(httpadapter.NewV2(http.DefaultServeMux).ProxyWithContext)
 }

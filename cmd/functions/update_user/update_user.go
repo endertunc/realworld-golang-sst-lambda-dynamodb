@@ -14,5 +14,5 @@ func main() {
 		io.WriteString(w, "Hello")
 	})
 
-	lambda.Start(httpadapter.New(http.DefaultServeMux).ProxyWithContext)
+	lambda.Start(httpadapter.NewV2(http.DefaultServeMux).ProxyWithContext)
 }

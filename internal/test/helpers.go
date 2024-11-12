@@ -162,6 +162,12 @@ func MakeRequestAndParseResponse(t *testing.T, reqBody interface{}, method, path
 	}
 	defer resp.Body.Close()
 
+	if expectedStatusCode != resp.StatusCode {
+		buf := new(strings.Builder)
+		_, _ = io.Copy(buf, resp.Body)
+		t.Logf("response body: %v", buf.String())
+	}
+
 	require.Equal(t, expectedStatusCode, resp.StatusCode)
 
 	if respBody != nil {

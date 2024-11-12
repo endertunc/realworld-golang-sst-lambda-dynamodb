@@ -4,13 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/aws/aws-lambda-go/events"
-	"github.com/google/uuid"
 	"log/slog"
 	"net/http"
 	"realworld-aws-lambda-dynamodb-golang/internal/domain"
 	"realworld-aws-lambda-dynamodb-golang/internal/errutil"
 	"strings"
+
+	"github.com/aws/aws-lambda-go/events"
+	"github.com/google/uuid"
 )
 
 var (
@@ -76,11 +77,6 @@ func GetLoggedInUser(ctx context.Context, request events.APIGatewayProxyRequest)
 		slog.WarnContext(ctx, "missing authorization header")
 		response := toSimpleError(ctx, http.StatusUnauthorized, "authorization header is missing")
 		return uuid.Nil, "", &response
-		//return uuid.Nil, "", &events.APIGatewayProxyResponse{
-		//	StatusCode: http.StatusUnauthorized, //
-		//	Body:       "authorization header is missing",
-		//	Headers:    map[string]string{"Content-Type": "application/json"},
-		//}
 	}
 
 	userId, token, errResponse := getLoggedInUserFromHeader(ctx, authorizationHeader)
@@ -97,11 +93,6 @@ func getLoggedInUserFromHeader(ctx context.Context, authorizationHeader string) 
 		slog.WarnContext(ctx, "empty authorization header")
 		response := toSimpleError(ctx, http.StatusUnauthorized, "authorization header is empty")
 		return uuid.Nil, "", &response
-		//return uuid.Nil, "", &events.APIGatewayProxyResponse{
-		//	StatusCode: http.StatusUnauthorized,
-		//	Body:       "authorization header is empty", // ToDo @ender this is not a json tho...
-		//	Headers:    map[string]string{"Content-Type": "application/json"},
-		//}
 	}
 
 	token, ok := strings.CutPrefix(authorizationHeader, "Token ")
@@ -110,14 +101,6 @@ func getLoggedInUserFromHeader(ctx context.Context, authorizationHeader string) 
 		slog.WarnContext(ctx, "invalid token type")
 		response := toSimpleError(ctx, http.StatusUnauthorized, "invalid token type")
 		return uuid.Nil, "", &response
-		//return uuid.Nil, "", &events.APIGatewayProxyResponse{
-		//	StatusCode: http.StatusUnauthorized, //
-		//	Body:       "invalid token type",
-		//	Headers: map[string]string{
-		//		"Content-Type":     "application/json",
-		//		"WWW-Authenticate": "Bearer", // ToDo @ender optional
-		//	},
-		//}
 	}
 
 	userId, err := ValidateToken(token)
@@ -126,18 +109,9 @@ func getLoggedInUserFromHeader(ctx context.Context, authorizationHeader string) 
 		slog.WarnContext(ctx, "invalid token", slog.Any("error", err), slog.Any("token", token))
 		response := toSimpleError(ctx, http.StatusUnauthorized, "invalid token")
 		return uuid.Nil, "", &response
-		//return uuid.Nil, "", &events.APIGatewayProxyResponse{
-		//	StatusCode: http.StatusUnauthorized, //
-		//	Body:       "invalid token",
-		//	Headers: map[string]string{
-		//		"Content-Type":     "application/json",
-		//		"WWW-Authenticate": "Bearer", // ToDo @ender option
-		//	},
-		//}
 	}
 
 	return userId, domain.Token(token), nil
-
 }
 
 // ToDo @ender this is a duplicate of the one in api/response-helpers. We can't reference it due to the cyclic dependency
@@ -156,4 +130,75 @@ func toSimpleError(ctx context.Context, statusCode int, message string) events.A
 		Body:       string(body),
 		Headers:    map[string]string{"Content-Type": "application/json"},
 	}
+}
+
+// HTTP-specific authentication functions
+
+func GetOptionalLoggedInUserHTTP(ctx context.Context, w http.ResponseWriter, r *http.Request) (*uuid.UUID, *domain.Token, bool) {
+	authorizationHeader, found := r.Header["authorization"]
+	if !found && len(authorizationHeader) == 0 {
+		return nil, nil, true
+	}
+
+	userId, token, err := getLoggedInUserFromHeaderHTTP(ctx, w, authorizationHeader[0])
+	if err {
+		return nil, nil, false
+	}
+
+	return &userId, &token, true
+}
+
+func GetLoggedInUserHTTP(ctx context.Context, w http.ResponseWriter, r *http.Request) (uuid.UUID, domain.Token, bool) {
+	authorizationHeader, found := r.Header["Authorization"]
+	if !found && len(authorizationHeader) == 0 {
+		slog.WarnContext(ctx, "missing authorization header")
+		toSimpleHTTPError(w, http.StatusUnauthorized, "authorization header is missing")
+		return uuid.Nil, "", false
+	}
+
+	userId, token, err := getLoggedInUserFromHeaderHTTP(ctx, w, authorizationHeader[0])
+	if err {
+		return uuid.Nil, "", false
+	}
+
+	return userId, token, true
+}
+
+func getLoggedInUserFromHeaderHTTP(ctx context.Context, w http.ResponseWriter, authorizationHeader string) (uuid.UUID, domain.Token, bool) {
+	authorizationHeader = strings.TrimSpace(authorizationHeader)
+	if authorizationHeader == "" {
+		slog.WarnContext(ctx, "empty authorization header")
+		toSimpleHTTPError(w, http.StatusUnauthorized, "authorization header is empty")
+		return uuid.Nil, "", true
+	}
+
+	token, ok := strings.CutPrefix(authorizationHeader, "Token ")
+	if !ok {
+		slog.WarnContext(ctx, "invalid token type")
+		toSimpleHTTPError(w, http.StatusUnauthorized, "invalid token type")
+		return uuid.Nil, "", true
+	}
+
+	userId, err := ValidateToken(token)
+	if err != nil {
+		// you should never(?) log token - this is only for development purposes
+		slog.WarnContext(ctx, "invalid token", slog.Any("error", err), slog.Any("token", token))
+		toSimpleHTTPError(w, http.StatusUnauthorized, "invalid token")
+		return uuid.Nil, "", true
+	}
+
+	return userId, domain.Token(token), false
+}
+
+func toSimpleHTTPError(w http.ResponseWriter, statusCode int, message string) {
+	body, err := json.Marshal(errutil.SimpleError{Message: message})
+	if err != nil {
+		slog.Error("error encoding response body", slog.Any("error", err))
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
+	w.Write(body)
 }
