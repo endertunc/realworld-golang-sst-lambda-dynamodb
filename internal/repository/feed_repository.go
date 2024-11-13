@@ -158,6 +158,7 @@ func (uf UserFeedRepository) FindArticleIdsInUserFeed(ctx context.Context, userI
 	return articleIds, nextToken, nil
 }
 
+// ToDo move this to commons in the repositories package.
 func encodeLastEvaluatedKey(input map[string]ddbtypes.AttributeValue) (*string, error) {
 	var inputMap map[string]interface{}
 	err := attributevalue.UnmarshalMap(input, &inputMap)

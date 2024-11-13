@@ -215,3 +215,15 @@ func (aa ArticleApi) AddComment(ctx context.Context, loggedInUserId uuid.UUID, a
 	// thus we simply pass isFollowing as false
 	return dto.ToSingleCommentResponseBodyDTO(comment, user, false), nil
 }
+
+func (aa ArticleApi) ListArticles(ctx context.Context, loggedInUserId *uuid.UUID, author *string, limit int, nextPageToken *string) (dto.MultipleArticlesResponseBodyDTO, error) {
+	if author != nil {
+		feedItems, nextToken, err := aa.ArticleService.GetArticlesByAuthor(ctx, loggedInUserId, *author, limit, nextPageToken)
+		if err != nil {
+			return dto.MultipleArticlesResponseBodyDTO{}, err
+		}
+		return dto.ToMultipleArticlesResponseBodyDTO(feedItems, nextToken), nil
+	}
+
+	return dto.MultipleArticlesResponseBodyDTO{}, nil
+}

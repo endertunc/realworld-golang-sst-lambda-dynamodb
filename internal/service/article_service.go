@@ -5,6 +5,7 @@ import (
 	"errors"
 	mapset "github.com/deckarep/golang-set/v2"
 	"github.com/google/uuid"
+	"github.com/samber/lo"
 	"realworld-aws-lambda-dynamodb-golang/internal/domain"
 	"realworld-aws-lambda-dynamodb-golang/internal/errutil"
 	"realworld-aws-lambda-dynamodb-golang/internal/repository"
@@ -12,46 +13,49 @@ import (
 
 type ArticleService struct {
 	UserService       UserServiceInterface
+	ProfileService    ProfileServiceInterface
 	ArticleRepository repository.ArticleRepositoryInterface
 }
 
 type ArticleServiceInterface interface {
-	GetArticle(c context.Context, slug string) (domain.Article, error)
-	CreateArticle(c context.Context, author uuid.UUID, title, description, body string, tagList []string) (domain.Article, error)
-	AddComment(c context.Context, loggedInUserId uuid.UUID, articleSlug string, body string) (domain.Comment, error)
-	GetArticleComments(c context.Context, slug string) ([]domain.Comment, error)
-	DeleteComment(c context.Context, author uuid.UUID, slug string, commentId uuid.UUID) error
-	DeleteArticle(c context.Context, author uuid.UUID, slug string) error
-	FavoriteArticle(c context.Context, userId uuid.UUID, slug string) (domain.Article, error)
-	UnfavoriteArticle(c context.Context, userId uuid.UUID, slug string) (domain.Article, error)
-	IsFavorited(c context.Context, articleId, userId uuid.UUID) (bool, error)
-	FindArticlesByIds(c context.Context, articleIds []uuid.UUID) ([]domain.Article, error)
-	IsFavoritedBulk(c context.Context, userId uuid.UUID, articleIds []uuid.UUID) (mapset.Set[uuid.UUID], error)
-	//UpdateArticle(c context.Context, loggedInUserId uuid.UUID) (domain.Token, domain.User, error)
+	GetArticle(ctx context.Context, slug string) (domain.Article, error)
+	CreateArticle(ctx context.Context, author uuid.UUID, title, description, body string, tagList []string) (domain.Article, error)
+	AddComment(ctx context.Context, loggedInUserId uuid.UUID, articleSlug string, body string) (domain.Comment, error)
+	GetArticleComments(ctx context.Context, slug string) ([]domain.Comment, error)
+	DeleteComment(ctx context.Context, author uuid.UUID, slug string, commentId uuid.UUID) error
+	DeleteArticle(ctx context.Context, author uuid.UUID, slug string) error
+	FavoriteArticle(ctx context.Context, userId uuid.UUID, slug string) (domain.Article, error)
+	UnfavoriteArticle(ctx context.Context, userId uuid.UUID, slug string) (domain.Article, error)
+	IsFavorited(ctx context.Context, articleId, userId uuid.UUID) (bool, error)
+	FindArticlesByIds(ctx context.Context, articleIds []uuid.UUID) ([]domain.Article, error)
+	IsFavoritedBulk(ctx context.Context, userId uuid.UUID, articleIds []uuid.UUID) (mapset.Set[uuid.UUID], error)
+	GetArticlesByAuthor(ctx context.Context, userId *uuid.UUID, author string, limit int, nextPageToken *string) ([]domain.FeedItem, *string, error)
+	//UpdateArticle(ctx context.Context, loggedInUserId uuid.UUID) (domain.Token, domain.User, error)
 }
 
 var _ ArticleServiceInterface = ArticleService{}
 
-func NewArticleService(userService UserServiceInterface, articleRepository repository.ArticleRepositoryInterface) ArticleService {
+func NewArticleService(userService UserServiceInterface, profileService ProfileServiceInterface, articleRepository repository.ArticleRepositoryInterface) ArticleService {
 	return ArticleService{
 		UserService:       userService,
+		ProfileService:    profileService,
 		ArticleRepository: articleRepository,
 	}
 }
 
-func (as ArticleService) GetArticle(c context.Context, slug string) (domain.Article, error) {
-	article, err := as.ArticleRepository.FindArticleBySlug(c, slug)
+func (as ArticleService) GetArticle(ctx context.Context, slug string) (domain.Article, error) {
+	article, err := as.ArticleRepository.FindArticleBySlug(ctx, slug)
 	if err != nil {
 		return domain.Article{}, err
 	}
 	return article, nil
 }
 
-func (as ArticleService) CreateArticle(c context.Context, author uuid.UUID, title, description, body string, tagList []string) (domain.Article, error) {
+func (as ArticleService) CreateArticle(ctx context.Context, author uuid.UUID, title, description, body string, tagList []string) (domain.Article, error) {
 
 	article := domain.NewArticle(title, description, body, tagList, author)
 	// ToDo @ender do we have any business validation we should apply in service level for an article?
-	article, err := as.ArticleRepository.CreateArticle(c, article)
+	article, err := as.ArticleRepository.CreateArticle(ctx, article)
 	if err != nil {
 		return domain.Article{}, err
 	}
@@ -72,13 +76,13 @@ func (as ArticleService) AddComment(ctx context.Context, author uuid.UUID, artic
 	return comment, nil
 }
 
-func (as ArticleService) UnfavoriteArticle(c context.Context, loggedInUserId uuid.UUID, slug string) (domain.Article, error) {
-	article, err := as.ArticleRepository.FindArticleBySlug(c, slug)
+func (as ArticleService) UnfavoriteArticle(ctx context.Context, loggedInUserId uuid.UUID, slug string) (domain.Article, error) {
+	article, err := as.ArticleRepository.FindArticleBySlug(ctx, slug)
 	if err != nil {
 		return domain.Article{}, err
 	}
 	// ToDo @ender check if the user already unfavorited the article
-	err = as.ArticleRepository.UnfavoriteArticle(c, loggedInUserId, article.Id)
+	err = as.ArticleRepository.UnfavoriteArticle(ctx, loggedInUserId, article.Id)
 	if err != nil {
 		return domain.Article{}, err
 	}
@@ -86,12 +90,12 @@ func (as ArticleService) UnfavoriteArticle(c context.Context, loggedInUserId uui
 	return article, nil
 }
 
-func (as ArticleService) FavoriteArticle(c context.Context, loggedInUserId uuid.UUID, slug string) (domain.Article, error) {
-	article, err := as.ArticleRepository.FindArticleBySlug(c, slug)
+func (as ArticleService) FavoriteArticle(ctx context.Context, loggedInUserId uuid.UUID, slug string) (domain.Article, error) {
+	article, err := as.ArticleRepository.FindArticleBySlug(ctx, slug)
 	if err != nil {
 		return domain.Article{}, err
 	}
-	err = as.ArticleRepository.FavoriteArticle(c, loggedInUserId, article.Id)
+	err = as.ArticleRepository.FavoriteArticle(ctx, loggedInUserId, article.Id)
 	// ToDo @ender check if the user already favorited the article
 	if err != nil {
 		return domain.Article{}, err
@@ -129,20 +133,20 @@ func (as ArticleService) DeleteComment(ctx context.Context, loggedInUserId uuid.
 	return nil
 }
 
-func (as ArticleService) GetArticleComments(c context.Context, slug string) ([]domain.Comment, error) {
-	article, err := as.ArticleRepository.FindArticleBySlug(c, slug)
+func (as ArticleService) GetArticleComments(ctx context.Context, slug string) ([]domain.Comment, error) {
+	article, err := as.ArticleRepository.FindArticleBySlug(ctx, slug)
 	if err != nil {
 		return []domain.Comment{}, err
 	}
-	comments, err := as.ArticleRepository.FindCommentsByArticleId(c, article.Id)
+	comments, err := as.ArticleRepository.FindCommentsByArticleId(ctx, article.Id)
 	if err != nil {
 		return []domain.Comment{}, err
 	}
 	return comments, nil
 }
 
-func (as ArticleService) DeleteArticle(c context.Context, authorId uuid.UUID, slug string) error {
-	article, err := as.ArticleRepository.FindArticleBySlug(c, slug)
+func (as ArticleService) DeleteArticle(ctx context.Context, authorId uuid.UUID, slug string) error {
+	article, err := as.ArticleRepository.FindArticleBySlug(ctx, slug)
 	if err != nil {
 		return err
 	}
@@ -152,21 +156,73 @@ func (as ArticleService) DeleteArticle(c context.Context, authorId uuid.UUID, sl
 		return errors.New("you can't touch this")
 	}
 
-	err = as.ArticleRepository.DeleteArticleById(c, article.Id)
+	err = as.ArticleRepository.DeleteArticleById(ctx, article.Id)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (as ArticleService) IsFavorited(c context.Context, articleId, userId uuid.UUID) (bool, error) {
-	return as.ArticleRepository.IsFavorited(c, articleId, userId)
+func (as ArticleService) IsFavorited(ctx context.Context, articleId, userId uuid.UUID) (bool, error) {
+	return as.ArticleRepository.IsFavorited(ctx, articleId, userId)
 }
 
-func (as ArticleService) FindArticlesByIds(c context.Context, articleIds []uuid.UUID) ([]domain.Article, error) {
-	return as.ArticleRepository.FindArticlesByIds(c, articleIds)
+func (as ArticleService) FindArticlesByIds(ctx context.Context, articleIds []uuid.UUID) ([]domain.Article, error) {
+	return as.ArticleRepository.FindArticlesByIds(ctx, articleIds)
 }
 
-func (as ArticleService) IsFavoritedBulk(c context.Context, userId uuid.UUID, articleIds []uuid.UUID) (mapset.Set[uuid.UUID], error) {
-	return as.ArticleRepository.IsFavoritedBulk(c, userId, articleIds)
+func (as ArticleService) IsFavoritedBulk(ctx context.Context, userId uuid.UUID, articleIds []uuid.UUID) (mapset.Set[uuid.UUID], error) {
+	return as.ArticleRepository.IsFavoritedBulk(ctx, userId, articleIds)
+}
+
+// ToDo @ender to keep things short - we better pass limit and nextPageToken struct Pagination or something like that.
+func (as ArticleService) GetArticlesByAuthor(ctx context.Context, loggedInUser *uuid.UUID, author string, limit int, nextPageToken *string) ([]domain.FeedItem, *string, error) {
+	// find the author user by username
+	authorUser, err := as.UserService.GetUserByUsername(ctx, author)
+	if err != nil {
+		// ToDo @ender if author is not found, should we return an error or an empty list?
+		//  at the moment ErrUserNotFound is mapped to StatusNotFound
+		return nil, nil, err
+	}
+
+	articles, nextToken, err := as.ArticleRepository.FindArticlesByAuthor(ctx, authorUser.Id, limit, nextPageToken)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	isFollowing := false
+	favoritedArticlesSet := mapset.NewSet[uuid.UUID]()
+	if loggedInUser != nil {
+		// check if the user is following the author
+		isFollowing, err = as.ProfileService.IsFollowing(ctx, *loggedInUser, authorUser.Id)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		// fetch isFollowing in bulk
+		articleIds := lo.Map(articles, func(article domain.Article, _ int) uuid.UUID {
+			return article.Id
+		})
+		favoritedArticlesSet, err = as.IsFavoritedBulk(ctx, *loggedInUser, articleIds)
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+
+	feedItems := make([]domain.FeedItem, 0, len(articles))
+
+	// we need to return articles in the order they are returned from the database
+	for _, article := range articles {
+		isFavorited := favoritedArticlesSet.ContainsOne(article.Id)
+		feedItem := domain.FeedItem{
+			Article:     article,
+			Author:      authorUser,
+			IsFavorited: isFavorited,
+			IsFollowing: isFollowing,
+		}
+		feedItems = append(feedItems, feedItem)
+	}
+
+	return feedItems, nextToken, nil
+
 }

@@ -135,7 +135,7 @@ func toSimpleError(ctx context.Context, statusCode int, message string) events.A
 // HTTP-specific authentication functions
 
 func GetOptionalLoggedInUserHTTP(ctx context.Context, w http.ResponseWriter, r *http.Request) (*uuid.UUID, *domain.Token, bool) {
-	authorizationHeader, found := r.Header["authorization"]
+	authorizationHeader, found := r.Header["Authorization"]
 	if !found && len(authorizationHeader) == 0 {
 		return nil, nil, true
 	}

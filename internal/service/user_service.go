@@ -21,7 +21,7 @@ type UserServiceInterface interface {
 	GetCurrentUser(ctx context.Context, userID uuid.UUID) (domain.User, error)
 	GetUserByUserId(ctx context.Context, userID uuid.UUID) (domain.User, error)
 	//GetUserProfile(ctx context.Context, loggedInUserId *uuid.UUID, profileUsername string) (domain.User, bool, error)
-	GetUserByUsername(ctx context.Context, email string) (domain.User, error)
+	GetUserByUsername(ctx context.Context, username string) (domain.User, error)
 	GetUserListByUserIDs(ctx context.Context, userIds []uuid.UUID) ([]domain.User, error)
 }
 

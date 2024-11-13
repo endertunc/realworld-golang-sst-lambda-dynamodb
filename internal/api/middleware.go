@@ -2,6 +2,9 @@ package api
 
 import (
 	"context"
+	samberSlog "github.com/samber/slog-http"
+	veqrynslog "github.com/veqryn/slog-context/http"
+	"log/slog"
 	"net/http"
 	"realworld-aws-lambda-dynamodb-golang/internal/domain"
 	"realworld-aws-lambda-dynamodb-golang/internal/security"
@@ -39,8 +42,8 @@ func StartOptionallyAuthenticatedHandler(handlerToWrap OptionallyAuthenticatedHa
 
 type AuthenticatedHandlerHTTP func(w http.ResponseWriter, r *http.Request, userId uuid.UUID, token domain.Token)
 
-func StartAuthenticatedHandlerHTTP(handlerToWrap AuthenticatedHandlerHTTP) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+func StartAuthenticatedHandlerHTTP(handlerToWrap AuthenticatedHandlerHTTP) http.Handler {
+	var handlerFunc http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		userId, token, ok := security.GetLoggedInUserHTTP(ctx, w, r)
 		if !ok {
@@ -48,12 +51,13 @@ func StartAuthenticatedHandlerHTTP(handlerToWrap AuthenticatedHandlerHTTP) http.
 		}
 		handlerToWrap(w, r, userId, token)
 	}
+	return veqrynslog.AttrCollection(samberSlog.New(slog.Default())(handlerFunc))
 }
 
 type OptionallyAuthenticatedHandlerHTTP func(w http.ResponseWriter, r *http.Request, userId *uuid.UUID, token *domain.Token)
 
-func StartOptionallyAuthenticatedHandlerHTTP(handlerToWrap OptionallyAuthenticatedHandlerHTTP) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+func StartOptionallyAuthenticatedHandlerHTTP(handlerToWrap OptionallyAuthenticatedHandlerHTTP) http.Handler {
+	var handlerFunc http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		userId, token, ok := security.GetOptionalLoggedInUserHTTP(ctx, w, r)
 		if !ok {
@@ -61,4 +65,6 @@ func StartOptionallyAuthenticatedHandlerHTTP(handlerToWrap OptionallyAuthenticat
 		}
 		handlerToWrap(w, r, userId, token)
 	}
+	// wrap handler function with slog middleware and context middleware
+	return veqrynslog.AttrCollection(samberSlog.New(slog.Default())(handlerFunc))
 }

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	mapset "github.com/deckarep/golang-set/v2"
+	"github.com/samber/lo"
 	"github.com/samber/oops"
 	"log/slog"
 	"realworld-aws-lambda-dynamodb-golang/internal/database"
@@ -42,6 +43,7 @@ type ArticleRepositoryInterface interface {
 	FindCommentByCommentIdAndArticleId(ctx context.Context, commentId, articleId uuid.UUID) (domain.Comment, error)
 	IsFavorited(ctx context.Context, articleId, userId uuid.UUID) (bool, error)
 	IsFavoritedBulk(ctx context.Context, userId uuid.UUID, articleIds []uuid.UUID) (mapset.Set[uuid.UUID], error)
+	FindArticlesByAuthor(ctx context.Context, authorId uuid.UUID, limit int, nextPageToken *string) ([]domain.Article, *string, error)
 }
 
 var _ ArticleRepositoryInterface = DynamodbArticleRepository{}
@@ -75,6 +77,7 @@ var favoriteTable = "favorite"
 
 var articleSlugGSI = aws.String("article_slug_gsi")
 var commentArticleGSI = aws.String("comment_article_gsi")
+var articleAuthorIdGSI = aws.String("article_author_gsi")
 
 type DynamodbFavoriteArticleItem struct {
 	UserId    string `dynamodbav:"userId"`
@@ -216,7 +219,7 @@ func (d DynamodbArticleRepository) FindCommentsByArticleId(ctx context.Context, 
 		return nil, fmt.Errorf("%w: %w", errutil.ErrDynamoQuery, err)
 	}
 
-	dynamodbCommentItems := make([]DynamodbArticleItem, 0, len(result.Items))
+	dynamodbCommentItems := make([]DynamodbCommentItem, 0, len(result.Items))
 	err = attributevalue.UnmarshalListOfMaps(result.Items, &dynamodbCommentItems)
 	if err != nil {
 		// ToDo @ender experiment with this oops library
@@ -487,6 +490,58 @@ func (d DynamodbArticleRepository) IsFavoritedBulk(ctx context.Context, userId u
 	}
 
 	return set, nil
+}
+
+func (d DynamodbArticleRepository) FindArticlesByAuthor(ctx context.Context, authorId uuid.UUID, limit int, nextPageToken *string) ([]domain.Article, *string, error) {
+
+	input := &dynamodb.QueryInput{
+		TableName:              aws.String(articleTable),
+		IndexName:              articleAuthorIdGSI,
+		KeyConditionExpression: aws.String("authorId = :authorId"),
+		Limit:                  aws.Int32(int32(limit)),
+		ScanIndexForward:       aws.Bool(false),
+		ExpressionAttributeValues: map[string]ddbtypes.AttributeValue{
+			":authorId": &ddbtypes.AttributeValueMemberS{Value: authorId.String()},
+		},
+	}
+
+	// decode and set LastEvaluatedKey if nextPageToken is provided
+	if nextPageToken != nil {
+		decodedLastEvaluatedKey, err := decodeLastEvaluatedKey(*nextPageToken)
+		if err != nil {
+			return nil, nil, fmt.Errorf("%w: %w", errutil.ErrDynamoTokenDecoding, err)
+		}
+		input.ExclusiveStartKey = decodedLastEvaluatedKey
+	}
+
+	result, err := d.db.Client.Query(ctx, input)
+	if err != nil {
+		return nil, nil, fmt.Errorf("%w: %w", errutil.ErrDynamoQuery, err)
+	}
+
+	// parse feed items
+	dynamodbArticleItems := make([]DynamodbArticleItem, 0, len(result.Items))
+	err = attributevalue.UnmarshalListOfMaps(result.Items, &dynamodbArticleItems)
+	if err != nil {
+		return nil, nil, fmt.Errorf("%w: %w", errutil.ErrDynamoMapping, err)
+	}
+
+	// convert to domain articles
+	articles := lo.Map(dynamodbArticleItems, func(item DynamodbArticleItem, _ int) domain.Article {
+		return toDomainArticle(item)
+	})
+
+	// prepare next page token if there are more results
+	var nextToken *string
+	if len(result.LastEvaluatedKey) > 0 {
+		encodedToken, err := encodeLastEvaluatedKey(result.LastEvaluatedKey)
+		if err != nil {
+			return nil, nil, fmt.Errorf("%w: %w", errutil.ErrDynamoTokenEncoding, err)
+		}
+		nextToken = encodedToken
+	}
+
+	return articles, nextToken, nil
 }
 
 func toDynamodbArticleItem(article domain.Article) DynamodbArticleItem {

@@ -1,6 +1,8 @@
 package functions
 
 import (
+	slogctx "github.com/veqryn/slog-context"
+	veqrynslog "github.com/veqryn/slog-context/http"
 	"log/slog"
 	"os"
 	"realworld-aws-lambda-dynamodb-golang/internal/api"
@@ -16,10 +18,10 @@ var (
 	//		Level:     slog.LevelInfo,
 	//	},
 	//}))
-	logger = slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
-		//AddSource: true,
-		Level: slog.LevelDebug,
-	}))
+	//logger = slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+	//	//AddSource: true,
+	//	Level: slog.LevelDebug,
+	//}))
 	dynamodbStore      = database.NewDynamoDBStore()
 	UserRepository     = repository.NewDynamodbUserRepository(dynamodbStore)
 	UserService        = service.UserService{UserRepository: UserRepository}
@@ -28,7 +30,7 @@ var (
 	ProfileApi         = api.ProfileApi{ProfileService: ProfileService}
 	UserApi            = api.UserApi{UserService: UserService}
 	ArticleRepository  = repository.NewDynamodbArticleRepository(dynamodbStore)
-	ArticleService     = service.NewArticleService(UserService, ArticleRepository)
+	ArticleService     = service.NewArticleService(UserService, ProfileService, ArticleRepository)
 	ArticleApi         = api.NewArticleApi(ArticleService, UserService, ProfileService)
 	UserFeedRepository = repository.NewUserFeedRepository(dynamodbStore)
 	UserFeedService    = service.NewUserFeedService(UserFeedRepository, ArticleService, ProfileService, UserService)
@@ -36,5 +38,13 @@ var (
 )
 
 func init() {
-	slog.SetDefault(logger)
+	h := slogctx.NewHandler(
+		slog.NewJSONHandler(os.Stdout, nil),
+		&slogctx.HandlerOptions{
+			Prependers: []slogctx.AttrExtractor{
+				veqrynslog.ExtractAttrCollection,
+			},
+		},
+	)
+	slog.SetDefault(slog.New(h))
 }

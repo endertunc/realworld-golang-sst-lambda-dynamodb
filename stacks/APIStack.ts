@@ -114,6 +114,7 @@ export function APIStack({ stack }: StackContext) {
   // const updateArticle = createLambdaFunction("update-article", "update_article/update_article.go");
   const getArticle = createLambdaFunction("get-article", "get_article/get_article.go", [dynamoPolicy]);
   const getUserFeed = createLambdaFunction("get-user-feed", "get_user_feed/get_user_feed.go", [dynamoPolicy]);
+  const listArticles = createLambdaFunction("list-articles", "list_articles/list_articles.go", [dynamoPolicy]);
   // const deleteArticle = createLambdaFunction("delete-article", "delete_article/delete_article.go");
   //
   const favoriteArticle = createLambdaFunction("favorite-article", "favorite_article/favorite_article.go", [
@@ -148,6 +149,7 @@ export function APIStack({ stack }: StackContext) {
       "DELETE /api/profiles/{username}/follow":    unfollowUser,
       "POST   /api/articles":                      postArticle,
       // "PUT    /api/articles/{slug}":               updateArticle,
+      "GET    /api/articles":                      listArticles,
       "GET    /api/articles/feed":                 getUserFeed,
       "GET    /api/articles/{slug}":               getArticle,
       // "DELETE /api/articles/{slug}":               deleteArticle,

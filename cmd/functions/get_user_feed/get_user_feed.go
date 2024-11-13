@@ -46,7 +46,7 @@ func HandlerHTTP(w http.ResponseWriter, r *http.Request, userId uuid.UUID, token
 		return
 	}
 
-	nextPageToken, ok := api.GetOptionalStringQueryParamHTTP(ctx, w, r, "offset")
+	nextPageToken, ok := api.GetOptionalStringQueryParamHTTP(w, r, "offset")
 
 	if !ok {
 		return

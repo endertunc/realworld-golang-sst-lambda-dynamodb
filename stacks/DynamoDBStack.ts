@@ -55,6 +55,19 @@ export function DynamoDBStack({ stack }: StackContext) {
     }
   });
 
+  articleTable.addGlobalSecondaryIndex({
+    indexName: "article_author_gsi",
+    projectionType: dynamodb.ProjectionType.ALL,
+    partitionKey: {
+      name: "authorId",
+      type: dynamodb.AttributeType.STRING
+    },
+    sortKey: {
+      name: "createdAt",
+      type: dynamodb.AttributeType.NUMBER
+    }
+  });
+
   const feedTable = new dynamodb.Table(stack, "feed", {
     ...commonTableProps,
     tableName: "feed",

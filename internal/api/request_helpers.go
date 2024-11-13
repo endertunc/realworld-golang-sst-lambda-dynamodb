@@ -231,7 +231,6 @@ func GetIntQueryParamOrDefaultHTTP(
 }
 
 func GetOptionalStringQueryParamHTTP(
-	ctx context.Context,
 	w http.ResponseWriter,
 	r *http.Request,
 	paramName string,

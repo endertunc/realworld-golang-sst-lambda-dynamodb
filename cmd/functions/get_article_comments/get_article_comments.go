@@ -7,12 +7,8 @@ import (
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/awslabs/aws-lambda-go-api-proxy/httpadapter"
 	"github.com/google/uuid"
-	samberSlog "github.com/samber/slog-http"
-	slogctx "github.com/veqryn/slog-context"
-	veqrynslog "github.com/veqryn/slog-context/http"
 	"log/slog"
 	"net/http"
-	"os"
 	"realworld-aws-lambda-dynamodb-golang/cmd/functions"
 	"realworld-aws-lambda-dynamodb-golang/internal/api"
 	"realworld-aws-lambda-dynamodb-golang/internal/domain"
@@ -22,17 +18,7 @@ import (
 const handlerName = "GetArticleCommentsHandler"
 
 func init() {
-	h := slogctx.NewHandler(
-		slog.NewJSONHandler(os.Stdout, nil),
-		&slogctx.HandlerOptions{
-			Prependers: []slogctx.AttrExtractor{
-				veqrynslog.ExtractAttrCollection,
-			},
-		},
-	)
-	slog.SetDefault(slog.New(h))
-
-	http.Handle("GET /api/articles/{slug}/comments", veqrynslog.AttrCollection(samberSlog.New(slog.Default())(api.StartOptionallyAuthenticatedHandlerHTTP(HandlerHTTP))))
+	http.Handle("GET /api/articles/{slug}/comments", api.StartOptionallyAuthenticatedHandlerHTTP(HandlerHTTP))
 }
 
 func HandlerHTTP(w http.ResponseWriter, r *http.Request, userId *uuid.UUID, token *domain.Token) {
