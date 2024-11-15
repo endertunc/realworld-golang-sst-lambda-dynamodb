@@ -388,6 +388,76 @@ func (_c *MockArticleRepositoryInterface_FindArticleBySlug_Call) RunAndReturn(ru
 	return _c
 }
 
+// FindArticlesByAuthor provides a mock function with given fields: ctx, authorId, limit, nextPageToken
+func (_m *MockArticleRepositoryInterface) FindArticlesByAuthor(ctx context.Context, authorId uuid.UUID, limit int, nextPageToken *string) ([]domain.Article, *string, error) {
+	ret := _m.Called(ctx, authorId, limit, nextPageToken)
+
+	if len(ret) == 0 {
+		panic("no return value specified for FindArticlesByAuthor")
+	}
+
+	var r0 []domain.Article
+	var r1 *string
+	var r2 error
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, int, *string) ([]domain.Article, *string, error)); ok {
+		return rf(ctx, authorId, limit, nextPageToken)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, int, *string) []domain.Article); ok {
+		r0 = rf(ctx, authorId, limit, nextPageToken)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]domain.Article)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID, int, *string) *string); ok {
+		r1 = rf(ctx, authorId, limit, nextPageToken)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*string)
+		}
+	}
+
+	if rf, ok := ret.Get(2).(func(context.Context, uuid.UUID, int, *string) error); ok {
+		r2 = rf(ctx, authorId, limit, nextPageToken)
+	} else {
+		r2 = ret.Error(2)
+	}
+
+	return r0, r1, r2
+}
+
+// MockArticleRepositoryInterface_FindArticlesByAuthor_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindArticlesByAuthor'
+type MockArticleRepositoryInterface_FindArticlesByAuthor_Call struct {
+	*mock.Call
+}
+
+// FindArticlesByAuthor is a helper method to define mock.On call
+//   - ctx context.Context
+//   - authorId uuid.UUID
+//   - limit int
+//   - nextPageToken *string
+func (_e *MockArticleRepositoryInterface_Expecter) FindArticlesByAuthor(ctx interface{}, authorId interface{}, limit interface{}, nextPageToken interface{}) *MockArticleRepositoryInterface_FindArticlesByAuthor_Call {
+	return &MockArticleRepositoryInterface_FindArticlesByAuthor_Call{Call: _e.mock.On("FindArticlesByAuthor", ctx, authorId, limit, nextPageToken)}
+}
+
+func (_c *MockArticleRepositoryInterface_FindArticlesByAuthor_Call) Run(run func(ctx context.Context, authorId uuid.UUID, limit int, nextPageToken *string)) *MockArticleRepositoryInterface_FindArticlesByAuthor_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(uuid.UUID), args[2].(int), args[3].(*string))
+	})
+	return _c
+}
+
+func (_c *MockArticleRepositoryInterface_FindArticlesByAuthor_Call) Return(_a0 []domain.Article, _a1 *string, _a2 error) *MockArticleRepositoryInterface_FindArticlesByAuthor_Call {
+	_c.Call.Return(_a0, _a1, _a2)
+	return _c
+}
+
+func (_c *MockArticleRepositoryInterface_FindArticlesByAuthor_Call) RunAndReturn(run func(context.Context, uuid.UUID, int, *string) ([]domain.Article, *string, error)) *MockArticleRepositoryInterface_FindArticlesByAuthor_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // FindArticlesByIds provides a mock function with given fields: ctx, articleIds
 func (_m *MockArticleRepositoryInterface) FindArticlesByIds(ctx context.Context, articleIds []uuid.UUID) ([]domain.Article, error) {
 	ret := _m.Called(ctx, articleIds)
@@ -443,6 +513,76 @@ func (_c *MockArticleRepositoryInterface_FindArticlesByIds_Call) Return(_a0 []do
 }
 
 func (_c *MockArticleRepositoryInterface_FindArticlesByIds_Call) RunAndReturn(run func(context.Context, []uuid.UUID) ([]domain.Article, error)) *MockArticleRepositoryInterface_FindArticlesByIds_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// FindArticlesFavoritedByUser provides a mock function with given fields: ctx, userId, limit, nextPageToken
+func (_m *MockArticleRepositoryInterface) FindArticlesFavoritedByUser(ctx context.Context, userId uuid.UUID, limit int, nextPageToken *string) ([]uuid.UUID, *string, error) {
+	ret := _m.Called(ctx, userId, limit, nextPageToken)
+
+	if len(ret) == 0 {
+		panic("no return value specified for FindArticlesFavoritedByUser")
+	}
+
+	var r0 []uuid.UUID
+	var r1 *string
+	var r2 error
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, int, *string) ([]uuid.UUID, *string, error)); ok {
+		return rf(ctx, userId, limit, nextPageToken)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, int, *string) []uuid.UUID); ok {
+		r0 = rf(ctx, userId, limit, nextPageToken)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]uuid.UUID)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID, int, *string) *string); ok {
+		r1 = rf(ctx, userId, limit, nextPageToken)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*string)
+		}
+	}
+
+	if rf, ok := ret.Get(2).(func(context.Context, uuid.UUID, int, *string) error); ok {
+		r2 = rf(ctx, userId, limit, nextPageToken)
+	} else {
+		r2 = ret.Error(2)
+	}
+
+	return r0, r1, r2
+}
+
+// MockArticleRepositoryInterface_FindArticlesFavoritedByUser_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindArticlesFavoritedByUser'
+type MockArticleRepositoryInterface_FindArticlesFavoritedByUser_Call struct {
+	*mock.Call
+}
+
+// FindArticlesFavoritedByUser is a helper method to define mock.On call
+//   - ctx context.Context
+//   - userId uuid.UUID
+//   - limit int
+//   - nextPageToken *string
+func (_e *MockArticleRepositoryInterface_Expecter) FindArticlesFavoritedByUser(ctx interface{}, userId interface{}, limit interface{}, nextPageToken interface{}) *MockArticleRepositoryInterface_FindArticlesFavoritedByUser_Call {
+	return &MockArticleRepositoryInterface_FindArticlesFavoritedByUser_Call{Call: _e.mock.On("FindArticlesFavoritedByUser", ctx, userId, limit, nextPageToken)}
+}
+
+func (_c *MockArticleRepositoryInterface_FindArticlesFavoritedByUser_Call) Run(run func(ctx context.Context, userId uuid.UUID, limit int, nextPageToken *string)) *MockArticleRepositoryInterface_FindArticlesFavoritedByUser_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(uuid.UUID), args[2].(int), args[3].(*string))
+	})
+	return _c
+}
+
+func (_c *MockArticleRepositoryInterface_FindArticlesFavoritedByUser_Call) Return(_a0 []uuid.UUID, _a1 *string, _a2 error) *MockArticleRepositoryInterface_FindArticlesFavoritedByUser_Call {
+	_c.Call.Return(_a0, _a1, _a2)
+	return _c
+}
+
+func (_c *MockArticleRepositoryInterface_FindArticlesFavoritedByUser_Call) RunAndReturn(run func(context.Context, uuid.UUID, int, *string) ([]uuid.UUID, *string, error)) *MockArticleRepositoryInterface_FindArticlesFavoritedByUser_Call {
 	_c.Call.Return(run)
 	return _c
 }

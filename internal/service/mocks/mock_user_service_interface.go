@@ -138,9 +138,9 @@ func (_c *MockUserServiceInterface_GetUserByUserId_Call) RunAndReturn(run func(c
 	return _c
 }
 
-// GetUserByUsername provides a mock function with given fields: ctx, email
-func (_m *MockUserServiceInterface) GetUserByUsername(ctx context.Context, email string) (domain.User, error) {
-	ret := _m.Called(ctx, email)
+// GetUserByUsername provides a mock function with given fields: ctx, username
+func (_m *MockUserServiceInterface) GetUserByUsername(ctx context.Context, username string) (domain.User, error) {
+	ret := _m.Called(ctx, username)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetUserByUsername")
@@ -149,16 +149,16 @@ func (_m *MockUserServiceInterface) GetUserByUsername(ctx context.Context, email
 	var r0 domain.User
 	var r1 error
 	if rf, ok := ret.Get(0).(func(context.Context, string) (domain.User, error)); ok {
-		return rf(ctx, email)
+		return rf(ctx, username)
 	}
 	if rf, ok := ret.Get(0).(func(context.Context, string) domain.User); ok {
-		r0 = rf(ctx, email)
+		r0 = rf(ctx, username)
 	} else {
 		r0 = ret.Get(0).(domain.User)
 	}
 
 	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
-		r1 = rf(ctx, email)
+		r1 = rf(ctx, username)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -173,12 +173,12 @@ type MockUserServiceInterface_GetUserByUsername_Call struct {
 
 // GetUserByUsername is a helper method to define mock.On call
 //   - ctx context.Context
-//   - email string
-func (_e *MockUserServiceInterface_Expecter) GetUserByUsername(ctx interface{}, email interface{}) *MockUserServiceInterface_GetUserByUsername_Call {
-	return &MockUserServiceInterface_GetUserByUsername_Call{Call: _e.mock.On("GetUserByUsername", ctx, email)}
+//   - username string
+func (_e *MockUserServiceInterface_Expecter) GetUserByUsername(ctx interface{}, username interface{}) *MockUserServiceInterface_GetUserByUsername_Call {
+	return &MockUserServiceInterface_GetUserByUsername_Call{Call: _e.mock.On("GetUserByUsername", ctx, username)}
 }
 
-func (_c *MockUserServiceInterface_GetUserByUsername_Call) Run(run func(ctx context.Context, email string)) *MockUserServiceInterface_GetUserByUsername_Call {
+func (_c *MockUserServiceInterface_GetUserByUsername_Call) Run(run func(ctx context.Context, username string)) *MockUserServiceInterface_GetUserByUsername_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run(args[0].(context.Context), args[1].(string))
 	})
