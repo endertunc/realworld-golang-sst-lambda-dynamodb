@@ -216,14 +216,27 @@ func (aa ArticleApi) AddComment(ctx context.Context, loggedInUserId uuid.UUID, a
 	return dto.ToSingleCommentResponseBodyDTO(comment, user, false), nil
 }
 
-func (aa ArticleApi) ListArticles(ctx context.Context, loggedInUserId *uuid.UUID, author *string, limit int, nextPageToken *string) (dto.MultipleArticlesResponseBodyDTO, error) {
-	if author != nil {
-		feedItems, nextToken, err := aa.ArticleService.GetArticlesByAuthor(ctx, loggedInUserId, *author, limit, nextPageToken)
-		if err != nil {
-			return dto.MultipleArticlesResponseBodyDTO{}, err
-		}
-		return dto.ToMultipleArticlesResponseBodyDTO(feedItems, nextToken), nil
-	}
+type ListArticlesQueryOptions struct {
+	Author      *string
+	FavoritedBy *string
+	Tag         *string
+}
 
-	return dto.MultipleArticlesResponseBodyDTO{}, nil
+func (aa ArticleApi) ListArticles(ctx context.Context, loggedInUserId *uuid.UUID, queryOptions ListArticlesQueryOptions, limit int, nextPageToken *string) (dto.MultipleArticlesResponseBodyDTO, error) {
+	feedItems, newNextPageToken, err := func() ([]domain.FeedItem, *string, error) {
+		if queryOptions.Author != nil {
+			return aa.ArticleService.GetMostRecentArticlesByAuthor(ctx, loggedInUserId, *queryOptions.Author, limit, nextPageToken)
+		} else if queryOptions.FavoritedBy != nil {
+			return aa.ArticleService.GetMostRecentArticlesFavoritedByUser(ctx, loggedInUserId, *queryOptions.FavoritedBy, limit, nextPageToken)
+		} else if queryOptions.Tag != nil {
+			return aa.ArticleService.GetMostRecentArticlesFavoritedByTag(ctx, loggedInUserId, *queryOptions.Tag, limit, nextPageToken)
+		} else {
+			return aa.ArticleService.GetMostRecentArticlesGlobally(ctx, loggedInUserId, limit, nextPageToken)
+		}
+	}()
+
+	if err != nil {
+		return dto.MultipleArticlesResponseBodyDTO{}, err
+	}
+	return dto.ToMultipleArticlesResponseBodyDTO(feedItems, newNextPageToken), nil
 }

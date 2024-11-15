@@ -104,7 +104,7 @@ export function DynamoDBStack({ stack }: StackContext) {
     }
   });
 
-  const favoritetTable = new dynamodb.Table(stack, "favorite", {
+  const favoritedTable = new dynamodb.Table(stack, "favorite", {
     ...commonTableProps,
     tableName: "favorite",
     partitionKey: {
@@ -117,13 +117,16 @@ export function DynamoDBStack({ stack }: StackContext) {
     }
   });
 
-  // ToDo - do we need this???
-  favoritetTable.addGlobalSecondaryIndex({
-    indexName: "favorite_article_gsi",
+  favoritedTable.addGlobalSecondaryIndex({
+    indexName: "favorite_user_id_created_at_gsi",
     projectionType: dynamodb.ProjectionType.ALL,
     partitionKey: {
-      name: "articleId",
+      name: "userId",
       type: dynamodb.AttributeType.STRING
+    },
+    sortKey: {
+      name: "createdAt",
+      type: dynamodb.AttributeType.NUMBER
     }
   });
 

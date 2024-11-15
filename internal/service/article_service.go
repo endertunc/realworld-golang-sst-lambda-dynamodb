@@ -29,8 +29,10 @@ type ArticleServiceInterface interface {
 	IsFavorited(ctx context.Context, articleId, userId uuid.UUID) (bool, error)
 	FindArticlesByIds(ctx context.Context, articleIds []uuid.UUID) ([]domain.Article, error)
 	IsFavoritedBulk(ctx context.Context, userId uuid.UUID, articleIds []uuid.UUID) (mapset.Set[uuid.UUID], error)
-	GetArticlesByAuthor(ctx context.Context, userId *uuid.UUID, author string, limit int, nextPageToken *string) ([]domain.FeedItem, *string, error)
-	//UpdateArticle(ctx context.Context, loggedInUserId uuid.UUID) (domain.Token, domain.User, error)
+	GetMostRecentArticlesByAuthor(ctx context.Context, userId *uuid.UUID, author string, limit int, nextPageToken *string) ([]domain.FeedItem, *string, error)
+	GetMostRecentArticlesFavoritedByUser(ctx context.Context, loggedInUser *uuid.UUID, favoritedByUsername string, limit int, nextPageToken *string) ([]domain.FeedItem, *string, error)
+	GetMostRecentArticlesFavoritedByTag(ctx context.Context, loggedInUser *uuid.UUID, tag string, limit int, nextPageToken *string) ([]domain.FeedItem, *string, error)
+	GetMostRecentArticlesGlobally(ctx context.Context, loggedInUser *uuid.UUID, limit int, nextPageToken *string) ([]domain.FeedItem, *string, error)
 }
 
 var _ ArticleServiceInterface = ArticleService{}
@@ -176,7 +178,8 @@ func (as ArticleService) IsFavoritedBulk(ctx context.Context, userId uuid.UUID, 
 }
 
 // ToDo @ender to keep things short - we better pass limit and nextPageToken struct Pagination or something like that.
-func (as ArticleService) GetArticlesByAuthor(ctx context.Context, loggedInUser *uuid.UUID, author string, limit int, nextPageToken *string) ([]domain.FeedItem, *string, error) {
+// ToDo @ender this is first iteration, GetMostRecentArticles* share a lot of common code
+func (as ArticleService) GetMostRecentArticlesByAuthor(ctx context.Context, loggedInUser *uuid.UUID, author string, limit int, nextPageToken *string) ([]domain.FeedItem, *string, error) {
 	// find the author user by username
 	authorUser, err := as.UserService.GetUserByUsername(ctx, author)
 	if err != nil {
@@ -225,4 +228,229 @@ func (as ArticleService) GetArticlesByAuthor(ctx context.Context, loggedInUser *
 
 	return feedItems, nextToken, nil
 
+}
+
+// ToDo @ender this is first iteration, GetMostRecentArticles* share a lot of common code
+func (as ArticleService) GetMostRecentArticlesFavoritedByUser(ctx context.Context, loggedInUser *uuid.UUID, favoritedByUsername string, limit int, nextPageToken *string) ([]domain.FeedItem, *string, error) {
+	// find the author user by username
+	favoritedByUser, err := as.UserService.GetUserByUsername(ctx, favoritedByUsername)
+	if err != nil {
+		// ToDo @ender if author is not found, should we return an error or an empty list?
+		//  at the moment ErrUserNotFound is mapped to StatusNotFound
+		return nil, nil, err
+	}
+
+	articleIds, nextToken, err := as.ArticleRepository.FindArticlesFavoritedByUser(ctx, favoritedByUser.Id, limit, nextPageToken)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	articles, err := as.ArticleRepository.FindArticlesByIds(ctx, articleIds)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	authorIdToArticleMap := make(map[uuid.UUID]domain.Article)
+	for _, article := range articles {
+		authorIdToArticleMap[article.Id] = article
+	}
+
+	authorIdsList := lo.Map(articles, func(article domain.Article, _ int) uuid.UUID {
+		return article.AuthorId
+	})
+
+	uniqueAuthorIdsList := lo.Uniq(authorIdsList)
+
+	// fetch authors (users) in bulk and create a map for lookup by authorId
+	authors, err := as.UserService.GetUserListByUserIDs(ctx, uniqueAuthorIdsList)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	authorsMap := make(map[uuid.UUID]domain.User)
+	for _, author := range authors {
+		authorsMap[author.Id] = author
+	}
+
+	followedAuthorsSet := mapset.NewThreadUnsafeSet[uuid.UUID]()
+	favoritedArticlesSet := mapset.NewThreadUnsafeSet[uuid.UUID]()
+	if loggedInUser != nil {
+		// fetch isFollowing in bulk
+		followedAuthorsSet, err = as.ProfileService.IsFollowingBulk(ctx, *loggedInUser, uniqueAuthorIdsList)
+		if err != nil {
+			return nil, nil, err
+		}
+		// fetch isFollowing in bulk
+		favoritedArticlesSet, err = as.ArticleRepository.IsFavoritedBulk(ctx, *loggedInUser, articleIds)
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+
+	feedItems := make([]domain.FeedItem, 0)
+	// we need to return article in the order of articleIds
+	for _, articleId := range articleIds {
+		article, articleFound := authorIdToArticleMap[articleId]
+		author, authorFound := authorsMap[article.AuthorId]
+
+		// 1- we should have the article in the authorIdToArticleMap, otherwise let it skip
+		// 2- we should have the author in the authorsMap, otherwise let it skip
+		if articleFound && authorFound {
+			isFavorited := favoritedArticlesSet.ContainsOne(article.Id)
+			isFollowing := followedAuthorsSet.ContainsOne(article.AuthorId)
+			feedItem := domain.FeedItem{
+				Article:     article,
+				Author:      author,
+				IsFavorited: isFavorited,
+				IsFollowing: isFollowing,
+			}
+			feedItems = append(feedItems, feedItem)
+		}
+	}
+
+	return feedItems, nextToken, nil
+}
+
+// ToDo @ender this is first iteration, GetMostRecentArticles* share a lot of common code
+func (as ArticleService) GetMostRecentArticlesFavoritedByTag(ctx context.Context, loggedInUser *uuid.UUID, tag string, limit int, nextPageToken *string) ([]domain.FeedItem, *string, error) {
+	// this time we should fetch this information from elasticsearch
+	var (
+		articles  []domain.Article = nil
+		nextToken *string          = nil
+		err       error            = nil
+	)
+
+	if err != nil {
+		return nil, nil, err
+	}
+
+	authorIdToArticleMap := make(map[uuid.UUID]domain.Article)
+	for _, article := range articles {
+		authorIdToArticleMap[article.Id] = article
+	}
+
+	authorIdsList := lo.Map(articles, func(article domain.Article, _ int) uuid.UUID {
+		return article.AuthorId
+	})
+
+	uniqueAuthorIdsList := lo.Uniq(authorIdsList)
+
+	// fetch authors (users) in bulk and create a map for lookup by authorId
+	authors, err := as.UserService.GetUserListByUserIDs(ctx, uniqueAuthorIdsList)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	authorsMap := make(map[uuid.UUID]domain.User)
+	for _, author := range authors {
+		authorsMap[author.Id] = author
+	}
+
+	followedAuthorsSet := mapset.NewThreadUnsafeSet[uuid.UUID]()
+	favoritedArticlesSet := mapset.NewThreadUnsafeSet[uuid.UUID]()
+	if loggedInUser != nil {
+		// fetch isFollowing in bulk
+		followedAuthorsSet, err = as.ProfileService.IsFollowingBulk(ctx, *loggedInUser, uniqueAuthorIdsList)
+		if err != nil {
+			return nil, nil, err
+		}
+		// fetch isFollowing in bulk
+		articleIds := lo.Map(articles, func(article domain.Article, _ int) uuid.UUID { return article.Id })
+		favoritedArticlesSet, err = as.ArticleRepository.IsFavoritedBulk(ctx, *loggedInUser, articleIds)
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+
+	feedItems := make([]domain.FeedItem, 0)
+	// we need to return article in the order of articleIds
+	for _, article := range articles {
+		author, authorFound := authorsMap[article.AuthorId]
+		// 1- we should have the author in the authorsMap, otherwise let it skip
+		if authorFound {
+			isFavorited := favoritedArticlesSet.ContainsOne(article.Id)
+			isFollowing := followedAuthorsSet.ContainsOne(article.AuthorId)
+			feedItem := domain.FeedItem{
+				Article:     article,
+				Author:      author,
+				IsFavorited: isFavorited,
+				IsFollowing: isFollowing,
+			}
+			feedItems = append(feedItems, feedItem)
+		}
+	}
+
+	return feedItems, nextToken, nil
+}
+
+// ToDo @ender this is first iteration, GetMostRecentArticles* share a lot of common code
+func (as ArticleService) GetMostRecentArticlesGlobally(ctx context.Context, loggedInUser *uuid.UUID, limit int, nextPageToken *string) ([]domain.FeedItem, *string, error) {
+	// this time we should fetch this information from elasticsearch
+	var (
+		articles  []domain.Article = nil
+		nextToken *string          = nil
+		err       error            = nil
+	)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	authorIdToArticleMap := make(map[uuid.UUID]domain.Article)
+	for _, article := range articles {
+		authorIdToArticleMap[article.Id] = article
+	}
+
+	authorIdsList := lo.Map(articles, func(article domain.Article, _ int) uuid.UUID {
+		return article.AuthorId
+	})
+
+	uniqueAuthorIdsList := lo.Uniq(authorIdsList)
+
+	// fetch authors (users) in bulk and create a map for lookup by authorId
+	authors, err := as.UserService.GetUserListByUserIDs(ctx, uniqueAuthorIdsList)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	authorsMap := make(map[uuid.UUID]domain.User)
+	for _, author := range authors {
+		authorsMap[author.Id] = author
+	}
+
+	followedAuthorsSet := mapset.NewThreadUnsafeSet[uuid.UUID]()
+	favoritedArticlesSet := mapset.NewThreadUnsafeSet[uuid.UUID]()
+	if loggedInUser != nil {
+		// fetch isFollowing in bulk
+		followedAuthorsSet, err = as.ProfileService.IsFollowingBulk(ctx, *loggedInUser, uniqueAuthorIdsList)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		// fetch isFollowing in bulk
+		articleIds := lo.Map(articles, func(article domain.Article, _ int) uuid.UUID { return article.Id })
+		favoritedArticlesSet, err = as.ArticleRepository.IsFavoritedBulk(ctx, *loggedInUser, articleIds)
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+
+	feedItems := make([]domain.FeedItem, 0)
+	// we need to return articles in the order they are returned from the database
+	for _, article := range articles {
+		author, authorFound := authorsMap[article.AuthorId]
+		// 1- we should have the author in the authorsMap, otherwise let it skip
+		if authorFound {
+			isFavorited := favoritedArticlesSet.ContainsOne(article.Id)
+			isFollowing := followedAuthorsSet.ContainsOne(article.AuthorId)
+			feedItem := domain.FeedItem{
+				Article:     article,
+				Author:      author,
+				IsFavorited: isFavorited,
+				IsFollowing: isFollowing,
+			}
+			feedItems = append(feedItems, feedItem)
+		}
+	}
+
+	return feedItems, nextToken, nil
 }

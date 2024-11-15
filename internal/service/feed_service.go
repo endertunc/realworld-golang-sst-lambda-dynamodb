@@ -3,9 +3,9 @@ package service
 import (
 	"context"
 	"github.com/google/uuid"
+	"github.com/samber/lo"
 	"realworld-aws-lambda-dynamodb-golang/internal/domain"
 	"realworld-aws-lambda-dynamodb-golang/internal/repository"
-	"realworld-aws-lambda-dynamodb-golang/internal/utils"
 	"time"
 )
 
@@ -61,13 +61,10 @@ func (uf UserFeedService) FetchArticlesFromFeed(ctx context.Context, userId uuid
 		authorIdToArticleMap[article.Id] = article
 	}
 
-	authorIdsList := make([]uuid.UUID, 0)
-	for _, article := range articles {
-		authorIdsList = append(authorIdsList, article.AuthorId)
-	}
-
-	// @ToDo @ender - this code is duplicate
-	uniqueAuthorIdsList := utils.RemoveDuplicatesFromList(authorIdsList)
+	authorIdsList := lo.Map(articles, func(article domain.Article, _ int) uuid.UUID {
+		return article.AuthorId
+	})
+	uniqueAuthorIdsList := lo.Uniq(authorIdsList)
 
 	// fetch authors (users) in bulk and create a map for lookup by authorId
 	authors, err := uf.UserService.GetUserListByUserIDs(ctx, uniqueAuthorIdsList)

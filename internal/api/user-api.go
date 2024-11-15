@@ -3,7 +3,6 @@ package api
 import (
 	"context"
 	"github.com/google/uuid"
-	"log/slog"
 	"realworld-aws-lambda-dynamodb-golang/internal/domain"
 	"realworld-aws-lambda-dynamodb-golang/internal/domain/dto"
 	"realworld-aws-lambda-dynamodb-golang/internal/service"
@@ -36,10 +35,5 @@ func (ua UserApi) GetCurrentUser(ctx context.Context, userID uuid.UUID, token do
 	if err != nil {
 		return dto.UserResponseBodyDTO{}, err
 	}
-	slog.DebugContext(ctx, "token", slog.Any("token", token))
 	return dto.ToUserResponseBodyDTO(user, token), nil
-}
-
-func (ua UserApi) GetUserByEmail(ctx context.Context, email string) (domain.User, error) {
-	return ua.UserService.GetUserByUsername(ctx, email)
 }

@@ -118,12 +118,10 @@ func cleanupDynamodbTables(t *testing.T) {
 }
 
 func beforeEach(t *testing.T) {
-	t.Log("running before each")
 	cleanupDynamodbTables(t)
 }
 
 func afterEach(t *testing.T) {
-	t.Log("running after each")
 }
 
 func WithSetupAndTeardown(t *testing.T, testFunc func()) {

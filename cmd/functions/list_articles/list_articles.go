@@ -19,25 +19,28 @@ func init() {
 func HandlerHTTP(w http.ResponseWriter, r *http.Request, userId *uuid.UUID, _ *domain.Token) {
 	ctx := r.Context()
 
-	// Get author from query
+	// ToDo @ender errors should NOT be ignored here
 	author, _ := api.GetOptionalStringQueryParamHTTP(w, r, "author")
+	favoritedBy, _ := api.GetOptionalStringQueryParamHTTP(w, r, "favorited")
+	tag, _ := api.GetOptionalStringQueryParamHTTP(w, r, "tag")
 
-	if author != nil {
-		result, err := functions.ArticleApi.ListArticles(ctx, userId, author, 10, nil)
-		if err != nil {
-			if errors.Is(err, errutil.ErrUserNotFound) {
-				api.ToSimpleHTTPError(w, http.StatusNotFound, "author not found")
-				return
-			}
-			api.ToInternalServerHTTPError(w, err)
-			return
-		}
-
-		// Success response
-		api.ToSuccessHTTPResponse(w, result)
-		return
+	listArticlesQueryOptions := api.ListArticlesQueryOptions{
+		Author:      author,
+		FavoritedBy: favoritedBy,
+		Tag:         tag,
 	}
 
+	result, err := functions.ArticleApi.ListArticles(ctx, userId, listArticlesQueryOptions, 10, nil)
+	if err != nil {
+		if errors.Is(err, errutil.ErrUserNotFound) {
+			api.ToSimpleHTTPError(w, http.StatusNotFound, "author not found")
+			return
+		}
+		api.ToInternalServerHTTPError(w, err)
+		return
+	}
+	// Success response
+	api.ToSuccessHTTPResponse(w, result)
 	return
 }
 
