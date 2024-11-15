@@ -24,12 +24,8 @@ const (
 	conditionalCheckFailed = "ConditionalCheckFailed"
 )
 
-type DynamodbUserRepository struct {
+type dynamodbUserRepository struct {
 	db *database.DynamoDBStore
-}
-
-func NewDynamodbUserRepository(db *database.DynamoDBStore) DynamodbUserRepository {
-	return DynamodbUserRepository{db: db}
 }
 
 type UserRepositoryInterface interface {
@@ -40,7 +36,11 @@ type UserRepositoryInterface interface {
 	FindUserListByUserIDs(c context.Context, userIds []uuid.UUID) ([]domain.User, error)
 }
 
-var _ UserRepositoryInterface = DynamodbUserRepository{}
+var _ UserRepositoryInterface = dynamodbUserRepository{}
+
+func NewDynamodbUserRepository(db *database.DynamoDBStore) UserRepositoryInterface {
+	return dynamodbUserRepository{db: db}
+}
 
 type DynamodbUserItem struct {
 	Id             string    `dynamodbav:"pk"`
@@ -53,10 +53,10 @@ type DynamodbUserItem struct {
 	UpdatedAt      time.Time `dynamodbav:"updatedAt,unixtime"`
 }
 
-var _ UserRepositoryInterface = (*DynamodbUserRepository)(nil)
+var _ UserRepositoryInterface = (*dynamodbUserRepository)(nil)
 
 // ToDo @ender there are a lot of duplicate code between FindByXXX methods duplication is not always a bad thing but just to be aware
-func (s DynamodbUserRepository) FindUserByEmail(c context.Context, email string) (domain.User, error) {
+func (s dynamodbUserRepository) FindUserByEmail(c context.Context, email string) (domain.User, error) {
 	response, err := s.db.Client.Query(c, &dynamodb.QueryInput{
 		TableName:              aws.String(userTable),
 		IndexName:              aws.String(userEmailGSI),
@@ -87,7 +87,7 @@ func (s DynamodbUserRepository) FindUserByEmail(c context.Context, email string)
 	return domainUser, nil
 }
 
-func (s DynamodbUserRepository) InsertNewUser(ctx context.Context, newUser domain.User) (domain.User, error) {
+func (s dynamodbUserRepository) InsertNewUser(ctx context.Context, newUser domain.User) (domain.User, error) {
 	opt := "InsertNewUser"
 	dynamodbUserItem := toDynamoDbUser(newUser)
 	userAttributes, err := attributevalue.MarshalMap(dynamodbUserItem)
@@ -164,7 +164,7 @@ func (s DynamodbUserRepository) InsertNewUser(ctx context.Context, newUser domai
 	return newUser, nil
 }
 
-func (s DynamodbUserRepository) FindUserById(c context.Context, userId uuid.UUID) (domain.User, error) {
+func (s dynamodbUserRepository) FindUserById(c context.Context, userId uuid.UUID) (domain.User, error) {
 	response, err := s.db.Client.GetItem(c, &dynamodb.GetItemInput{
 		TableName: aws.String(userTable),
 		Key: map[string]ddbtypes.AttributeValue{
@@ -190,7 +190,7 @@ func (s DynamodbUserRepository) FindUserById(c context.Context, userId uuid.UUID
 	return domainUser, nil
 }
 
-func (s DynamodbUserRepository) FindUserByUsername(c context.Context, username string) (domain.User, error) {
+func (s dynamodbUserRepository) FindUserByUsername(c context.Context, username string) (domain.User, error) {
 	response, err := s.db.Client.Query(c, &dynamodb.QueryInput{
 		TableName:              aws.String(userTable),
 		IndexName:              aws.String(userUsernameGSI),
@@ -225,7 +225,7 @@ func (s DynamodbUserRepository) FindUserByUsername(c context.Context, username s
 *  there is no partial fetch (like with "scrolling" with token) thus we are loading all comments.
 *  dynamodb has batch request count (max 100 item) and size (16mb) limits to be aware.
  */
-func (s DynamodbUserRepository) FindUserListByUserIDs(ctx context.Context, userIds []uuid.UUID) ([]domain.User, error) {
+func (s dynamodbUserRepository) FindUserListByUserIDs(ctx context.Context, userIds []uuid.UUID) ([]domain.User, error) {
 	// this check is necessary otherwise we will get "ValidationException" from dynamodb
 	// because you must provide a non-empty list of keys to BatchGetItem
 	if len(userIds) == 0 {

@@ -12,28 +12,23 @@ import (
 )
 
 var (
-	//logger = slog.New(devslog.NewHandler(os.Stdout, &devslog.Options{
-	//	HandlerOptions: &slog.HandlerOptions{
-	//		AddSource: true,
-	//		Level:     slog.LevelInfo,
-	//	},
-	//}))
-	//logger = slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
-	//	//AddSource: true,
-	//	Level: slog.LevelDebug,
-	//}))
-	dynamodbStore      = database.NewDynamoDBStore()
-	UserRepository     = repository.NewDynamodbUserRepository(dynamodbStore)
-	UserService        = service.UserService{UserRepository: UserRepository}
-	FollowerRepository = repository.NewDynamodbFollowerRepository(dynamodbStore)
-	ProfileService     = service.ProfileService{FollowerRepository: FollowerRepository, UserRepository: UserRepository}
-	ProfileApi         = api.ProfileApi{ProfileService: ProfileService}
-	UserApi            = api.UserApi{UserService: UserService}
-	ArticleRepository  = repository.NewDynamodbArticleRepository(dynamodbStore)
-	ArticleService     = service.NewArticleService(UserService, ProfileService, ArticleRepository)
-	ArticleApi         = api.NewArticleApi(ArticleService, UserService, ProfileService)
-	UserFeedRepository = repository.NewUserFeedRepository(dynamodbStore)
-	UserFeedService    = service.NewUserFeedService(UserFeedRepository, ArticleService, ProfileService, UserService)
+	dynamodbStore = database.NewDynamoDBStore()
+
+	followerRepository = repository.NewDynamodbFollowerRepository(dynamodbStore)
+
+	userRepository = repository.NewDynamodbUserRepository(dynamodbStore)
+	userService    = service.NewUserService(userRepository)
+	UserApi        = api.NewUserApi(userService)
+
+	articleRepository = repository.NewDynamodbArticleRepository(dynamodbStore)
+	articleService    = service.NewArticleService(userService, profileService, articleRepository)
+	ArticleApi        = api.NewArticleApi(articleService, userService, profileService)
+
+	profileService = service.NewProfileService(followerRepository, userRepository)
+	ProfileApi     = api.NewProfileApi(profileService)
+
+	userFeedRepository = repository.NewUserFeedRepository(dynamodbStore)
+	UserFeedService    = service.NewUserFeedService(userFeedRepository, articleService, profileService, userService)
 	UserFeedApi        = api.NewFeedApi(UserFeedService)
 )
 

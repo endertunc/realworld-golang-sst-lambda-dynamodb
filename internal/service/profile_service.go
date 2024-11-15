@@ -11,9 +11,9 @@ import (
 	"realworld-aws-lambda-dynamodb-golang/internal/repository"
 )
 
-type ProfileService struct {
-	FollowerRepository repository.FollowerRepositoryInterface
-	UserRepository     repository.UserRepositoryInterface
+type profileService struct {
+	followerRepository repository.FollowerRepositoryInterface
+	userRepository     repository.UserRepositoryInterface
 }
 
 type ProfileServiceInterface interface {
@@ -24,18 +24,22 @@ type ProfileServiceInterface interface {
 	IsFollowingBulk(ctx context.Context, follower uuid.UUID, followee []uuid.UUID) (mapset.Set[uuid.UUID], error)
 }
 
-var _ ProfileServiceInterface = ProfileService{}
+var _ ProfileServiceInterface = profileService{}
 
-func (p ProfileService) IsFollowing(ctx context.Context, follower, followee uuid.UUID) (bool, error) {
-	return p.FollowerRepository.IsFollowing(ctx, follower, followee)
+func NewProfileService(followerRepository repository.FollowerRepositoryInterface, userRepository repository.UserRepositoryInterface) ProfileServiceInterface {
+	return profileService{followerRepository: followerRepository, userRepository: userRepository}
 }
 
-func (p ProfileService) IsFollowingBulk(ctx context.Context, follower uuid.UUID, followee []uuid.UUID) (mapset.Set[uuid.UUID], error) {
-	return p.FollowerRepository.BatchIsFollowing(ctx, follower, followee)
+func (p profileService) IsFollowing(ctx context.Context, follower, followee uuid.UUID) (bool, error) {
+	return p.followerRepository.IsFollowing(ctx, follower, followee)
 }
 
-func (p ProfileService) Follow(ctx context.Context, follower uuid.UUID, followeeUsername string) (domain.User, error) {
-	followedUser, err := p.UserRepository.FindUserByUsername(ctx, followeeUsername)
+func (p profileService) IsFollowingBulk(ctx context.Context, follower uuid.UUID, followee []uuid.UUID) (mapset.Set[uuid.UUID], error) {
+	return p.followerRepository.BatchIsFollowing(ctx, follower, followee)
+}
+
+func (p profileService) Follow(ctx context.Context, follower uuid.UUID, followeeUsername string) (domain.User, error) {
+	followedUser, err := p.userRepository.FindUserByUsername(ctx, followeeUsername)
 	if err != nil {
 		return domain.User{}, err
 	}
@@ -44,15 +48,15 @@ func (p ProfileService) Follow(ctx context.Context, follower uuid.UUID, followee
 		return domain.User{}, errutil.ErrCantFollowYourself
 	}
 
-	err = p.FollowerRepository.Follow(ctx, follower, followedUser.Id)
+	err = p.followerRepository.Follow(ctx, follower, followedUser.Id)
 	if err != nil {
 		return domain.User{}, err
 	}
 	return followedUser, nil
 }
 
-func (p ProfileService) UnFollow(ctx context.Context, follower uuid.UUID, followeeUsername string) (domain.User, error) {
-	followedUser, err := p.UserRepository.FindUserByUsername(ctx, followeeUsername)
+func (p profileService) UnFollow(ctx context.Context, follower uuid.UUID, followeeUsername string) (domain.User, error) {
+	followedUser, err := p.userRepository.FindUserByUsername(ctx, followeeUsername)
 	if err != nil {
 		return domain.User{}, err
 	}
@@ -61,15 +65,15 @@ func (p ProfileService) UnFollow(ctx context.Context, follower uuid.UUID, follow
 		return domain.User{}, errutil.ErrCantFollowYourself
 	}
 
-	err = p.FollowerRepository.UnFollow(ctx, follower, followedUser.Id)
+	err = p.followerRepository.UnFollow(ctx, follower, followedUser.Id)
 	if err != nil {
 		return domain.User{}, err
 	}
 	return followedUser, nil
 }
 
-func (p ProfileService) GetUserProfile(ctx context.Context, loggedInUserId *uuid.UUID, username string) (domain.User, bool, error) {
-	followedUser, err := p.UserRepository.FindUserByUsername(ctx, username)
+func (p profileService) GetUserProfile(ctx context.Context, loggedInUserId *uuid.UUID, username string) (domain.User, bool, error) {
+	followedUser, err := p.userRepository.FindUserByUsername(ctx, username)
 	if err != nil {
 		return domain.User{}, false, err
 	}

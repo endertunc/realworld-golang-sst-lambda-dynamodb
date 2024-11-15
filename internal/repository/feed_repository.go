@@ -21,7 +21,7 @@ var (
 	followerFolloweeGSI = "follower_followee_gsi"
 )
 
-type UserFeedRepository struct {
+type userFeedRepository struct {
 	db *database.DynamoDBStore
 }
 
@@ -30,10 +30,10 @@ type UserFeedRepositoryInterface interface {
 	FindArticleIdsInUserFeed(ctx context.Context, userId uuid.UUID, limit int, nextPageToken *string) ([]uuid.UUID, *string, error)
 }
 
-var _ UserFeedRepositoryInterface = UserFeedRepository{}
+var _ UserFeedRepositoryInterface = userFeedRepository{}
 
-func NewUserFeedRepository(db *database.DynamoDBStore) UserFeedRepository {
-	return UserFeedRepository{db: db}
+func NewUserFeedRepository(db *database.DynamoDBStore) UserFeedRepositoryInterface {
+	return userFeedRepository{db: db}
 }
 
 type DynamodbFeedItem struct {
@@ -43,7 +43,7 @@ type DynamodbFeedItem struct {
 	AuthorId  string `dynamodbav:"authorId"`
 }
 
-func (uf UserFeedRepository) FanoutArticle(ctx context.Context, articleId, authorId uuid.UUID, createdAt time.Time) error {
+func (uf userFeedRepository) FanoutArticle(ctx context.Context, articleId, authorId uuid.UUID, createdAt time.Time) error {
 	paginator := dynamodb.NewQueryPaginator(uf.db.Client, &dynamodb.QueryInput{
 		TableName:              aws.String(followerTable),
 		IndexName:              aws.String(followerFolloweeGSI),
@@ -98,7 +98,7 @@ func (uf UserFeedRepository) FanoutArticle(ctx context.Context, articleId, autho
 	return nil
 }
 
-func (uf UserFeedRepository) FindArticleIdsInUserFeed(ctx context.Context, userId uuid.UUID, limit int, nextPageToken *string) ([]uuid.UUID, *string, error) {
+func (uf userFeedRepository) FindArticleIdsInUserFeed(ctx context.Context, userId uuid.UUID, limit int, nextPageToken *string) ([]uuid.UUID, *string, error) {
 	input := &dynamodb.QueryInput{
 		TableName:              aws.String(feedTable),
 		KeyConditionExpression: aws.String("userId = :userId"),

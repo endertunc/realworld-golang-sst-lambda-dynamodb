@@ -37,7 +37,7 @@ func (aa ArticleApi) GetArticle(ctx context.Context, loggedInUserId *uuid.UUID, 
 	if loggedInUserId == nil {
 		return dto.ToArticleResponseBodyDTO(article, author, false, false), nil
 	} else {
-		loggedInUser, err := aa.UserService.GetCurrentUser(ctx, *loggedInUserId)
+		loggedInUser, err := aa.UserService.GetUserByUserId(ctx, *loggedInUserId)
 		if err != nil {
 			return dto.ArticleResponseBodyDTO{}, err
 		}
@@ -65,7 +65,7 @@ func (aa ArticleApi) CreateArticle(ctx context.Context, loggedInUserId uuid.UUID
 	// ToDo @ender [GENERAL] - in this project we don't seem to have much complex data types to pass to services
 	//  thus I skipped creating a struct that "service accepts" and simply passed the params needed to create and article
 	//  Once this list of parameters that needs to be passed to service gets crowded,
-	//  one could introduce intermediate "CreateArticleRequest" that ArticleService accepts
+	//  one could introduce intermediate "CreateArticleRequest" that articleService accepts
 	article, err := aa.ArticleService.CreateArticle(
 		ctx,
 		loggedInUserId,
@@ -77,7 +77,7 @@ func (aa ArticleApi) CreateArticle(ctx context.Context, loggedInUserId uuid.UUID
 		return dto.ArticleResponseBodyDTO{}, err
 	}
 
-	user, err := aa.UserService.GetCurrentUser(ctx, loggedInUserId)
+	user, err := aa.UserService.GetUserByUserId(ctx, loggedInUserId)
 	if err != nil {
 		return dto.ArticleResponseBodyDTO{}, err
 	}
@@ -161,7 +161,7 @@ func (aa ArticleApi) GetArticleComments(ctx context.Context, loggedInUserId *uui
 	if err != nil {
 		return dto.MultiCommentsResponseBodyDTO{}, err
 	}
-	slog.DebugContext(ctx, "comments after ArticleService.GetArticleComments", slog.Any("comments", comments))
+	slog.DebugContext(ctx, "comments after articleService.GetArticleComments", slog.Any("comments", comments))
 	if len(comments) == 0 {
 		return dto.MultiCommentsResponseBodyDTO{Comment: []dto.CommentResponseDTO{}}, nil
 	} else {
@@ -207,7 +207,7 @@ func (aa ArticleApi) AddComment(ctx context.Context, loggedInUserId uuid.UUID, a
 		return dto.SingleCommentResponseBodyDTO{}, err
 	}
 
-	user, err := aa.UserService.GetCurrentUser(ctx, loggedInUserId)
+	user, err := aa.UserService.GetUserByUserId(ctx, loggedInUserId)
 	if err != nil {
 		return dto.SingleCommentResponseBodyDTO{}, err
 	}

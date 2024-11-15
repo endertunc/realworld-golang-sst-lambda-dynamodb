@@ -7,18 +7,18 @@ import (
 	"realworld-aws-lambda-dynamodb-golang/internal/service"
 )
 
-type FeedApi struct {
-	FeedService service.FeedServiceInterface
+type feedApi struct {
+	feedService service.FeedServiceInterface
 }
 
-func NewFeedApi(feedService service.FeedServiceInterface) FeedApi {
-	return FeedApi{
-		FeedService: feedService,
+func NewFeedApi(feedService service.FeedServiceInterface) feedApi {
+	return feedApi{
+		feedService: feedService,
 	}
 }
 
-func (uf FeedApi) FetchUserFeed(ctx context.Context, userId uuid.UUID, limit int, nextPageToken *string) (dto.MultipleArticlesResponseBodyDTO, error) {
-	feedItems, nextToken, err := uf.FeedService.FetchArticlesFromFeed(ctx, userId, limit, nextPageToken)
+func (uf feedApi) FetchUserFeed(ctx context.Context, userId uuid.UUID, limit int, nextPageToken *string) (dto.MultipleArticlesResponseBodyDTO, error) {
+	feedItems, nextToken, err := uf.feedService.FetchArticlesFromFeed(ctx, userId, limit, nextPageToken)
 	if err != nil {
 		return dto.MultipleArticlesResponseBodyDTO{}, err
 	}

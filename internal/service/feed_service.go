@@ -9,11 +9,11 @@ import (
 	"time"
 )
 
-type UserFeedService struct {
-	UserFeedRepository repository.UserFeedRepositoryInterface
-	ArticleService     ArticleServiceInterface
-	ProfileService     ProfileServiceInterface
-	UserService        UserServiceInterface
+type userFeedService struct {
+	userFeedRepository repository.UserFeedRepositoryInterface
+	articleService     ArticleServiceInterface
+	profileService     ProfileServiceInterface
+	userService        UserServiceInterface
 }
 
 type FeedServiceInterface interface {
@@ -21,22 +21,22 @@ type FeedServiceInterface interface {
 	FetchArticlesFromFeed(ctx context.Context, userId uuid.UUID, limit int, nextPageToken *string) ([]domain.FeedItem, *string, error)
 }
 
-var _ FeedServiceInterface = UserFeedService{}
+var _ FeedServiceInterface = userFeedService{}
 
 func NewUserFeedService(
 	userFeedRepository repository.UserFeedRepositoryInterface,
 	articleService ArticleServiceInterface,
 	profileService ProfileServiceInterface,
-	userService UserServiceInterface) UserFeedService {
-	return UserFeedService{
-		UserFeedRepository: userFeedRepository,
-		ArticleService:     articleService,
-		ProfileService:     profileService,
-		UserService:        userService}
+	userService UserServiceInterface) FeedServiceInterface {
+	return userFeedService{
+		userFeedRepository: userFeedRepository,
+		articleService:     articleService,
+		profileService:     profileService,
+		userService:        userService}
 }
 
-func (uf UserFeedService) FanoutArticle(ctx context.Context, articleId, authorId uuid.UUID, createdAt time.Time) error {
-	return uf.UserFeedRepository.FanoutArticle(ctx, articleId, authorId, createdAt)
+func (uf userFeedService) FanoutArticle(ctx context.Context, articleId, authorId uuid.UUID, createdAt time.Time) error {
+	return uf.userFeedRepository.FanoutArticle(ctx, articleId, authorId, createdAt)
 }
 
 /*
@@ -45,13 +45,13 @@ func (uf UserFeedService) FanoutArticle(ctx context.Context, articleId, authorId
  * - FindArticlesByIds and IsFavoritedBulk: both needs articleIds can be fetched in a single query
  * - GetUserListByUserIDs and IsFollowingBulk: both needs uniqueAuthorIdsList and can be fetched in a single query
  */
-func (uf UserFeedService) FetchArticlesFromFeed(ctx context.Context, userId uuid.UUID, limit int, nextPageToken *string) ([]domain.FeedItem, *string, error) {
-	articleIds, nextToken, err := uf.UserFeedRepository.FindArticleIdsInUserFeed(ctx, userId, limit, nextPageToken)
+func (uf userFeedService) FetchArticlesFromFeed(ctx context.Context, userId uuid.UUID, limit int, nextPageToken *string) ([]domain.FeedItem, *string, error) {
+	articleIds, nextToken, err := uf.userFeedRepository.FindArticleIdsInUserFeed(ctx, userId, limit, nextPageToken)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	articles, err := uf.ArticleService.FindArticlesByIds(ctx, articleIds)
+	articles, err := uf.articleService.FindArticlesByIds(ctx, articleIds)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -67,7 +67,7 @@ func (uf UserFeedService) FetchArticlesFromFeed(ctx context.Context, userId uuid
 	uniqueAuthorIdsList := lo.Uniq(authorIdsList)
 
 	// fetch authors (users) in bulk and create a map for lookup by authorId
-	authors, err := uf.UserService.GetUserListByUserIDs(ctx, uniqueAuthorIdsList)
+	authors, err := uf.userService.GetUserListByUserIDs(ctx, uniqueAuthorIdsList)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -78,13 +78,13 @@ func (uf UserFeedService) FetchArticlesFromFeed(ctx context.Context, userId uuid
 	}
 
 	// fetch isFollowing in bulk
-	followedAuthorsSet, err := uf.ProfileService.IsFollowingBulk(ctx, userId, uniqueAuthorIdsList)
+	followedAuthorsSet, err := uf.profileService.IsFollowingBulk(ctx, userId, uniqueAuthorIdsList)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	// fetch isFollowing in bulk
-	favoritedArticlesSet, err := uf.ArticleService.IsFavoritedBulk(ctx, userId, articleIds)
+	favoritedArticlesSet, err := uf.articleService.IsFavoritedBulk(ctx, userId, articleIds)
 	if err != nil {
 		return nil, nil, err
 	}

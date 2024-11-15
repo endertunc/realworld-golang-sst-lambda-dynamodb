@@ -16,12 +16,8 @@ import (
 
 var followerTable = "follower"
 
-type DynamodbFollowerRepository struct {
+type dynamodbFollowerRepository struct {
 	db *database.DynamoDBStore // ToDo @ender should this be pointer or not??? Investigate to understand what is more proper
-}
-
-func NewDynamodbFollowerRepository(db *database.DynamoDBStore) DynamodbFollowerRepository {
-	return DynamodbFollowerRepository{db: db}
 }
 
 type FollowerRepositoryInterface interface {
@@ -31,7 +27,11 @@ type FollowerRepositoryInterface interface {
 	UnFollow(ctx context.Context, follower, followee uuid.UUID) error
 }
 
-var _ FollowerRepositoryInterface = (*DynamodbFollowerRepository)(nil)
+var _ FollowerRepositoryInterface = (*dynamodbFollowerRepository)(nil)
+
+func NewDynamodbFollowerRepository(db *database.DynamoDBStore) FollowerRepositoryInterface {
+	return dynamodbFollowerRepository{db: db}
+}
 
 type DynamodbFollowerItem struct {
 	Follower string `dynamodbav:"follower"`
@@ -39,7 +39,7 @@ type DynamodbFollowerItem struct {
 }
 
 // ToDo @ender - should we use GetItem or QueryInput in this case?
-func (s DynamodbFollowerRepository) IsFollowing(ctx context.Context, follower, followee uuid.UUID) (bool, error) {
+func (s dynamodbFollowerRepository) IsFollowing(ctx context.Context, follower, followee uuid.UUID) (bool, error) {
 	isFollowingQueryInput := &dynamodb.QueryInput{
 		TableName:              aws.String(followerTable),
 		KeyConditionExpression: aws.String("followee = :followee AND follower = :follower"),
@@ -58,7 +58,7 @@ func (s DynamodbFollowerRepository) IsFollowing(ctx context.Context, follower, f
 	return result.Count > 0, nil
 }
 
-func (s DynamodbFollowerRepository) Follow(ctx context.Context, follower, followee uuid.UUID) error {
+func (s dynamodbFollowerRepository) Follow(ctx context.Context, follower, followee uuid.UUID) error {
 	dynamodbFollowerItem := DynamodbFollowerItem{
 		Followee: followee.String(),
 		Follower: follower.String(),
@@ -78,7 +78,7 @@ func (s DynamodbFollowerRepository) Follow(ctx context.Context, follower, follow
 	return nil
 }
 
-func (s DynamodbFollowerRepository) UnFollow(ctx context.Context, follower, followee uuid.UUID) error {
+func (s dynamodbFollowerRepository) UnFollow(ctx context.Context, follower, followee uuid.UUID) error {
 	dynamodbFollowerItem := DynamodbFollowerItem{
 		Follower: follower.String(),
 		Followee: followee.String(),
@@ -100,7 +100,7 @@ func (s DynamodbFollowerRepository) UnFollow(ctx context.Context, follower, foll
 	return nil
 }
 
-func (s DynamodbFollowerRepository) BatchIsFollowing(ctx context.Context, follower uuid.UUID, followees []uuid.UUID) (mapset.Set[uuid.UUID], error) {
+func (s dynamodbFollowerRepository) BatchIsFollowing(ctx context.Context, follower uuid.UUID, followees []uuid.UUID) (mapset.Set[uuid.UUID], error) {
 	set := mapset.NewThreadUnsafeSet[uuid.UUID]()
 	// short circuit if followees is empty, no need to query
 	// also, dynamodb will throw a validation error if we try to query with empty keys

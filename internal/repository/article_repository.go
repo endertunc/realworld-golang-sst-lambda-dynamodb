@@ -21,12 +21,8 @@ import (
 	veqrynslog "github.com/veqryn/slog-context/http"
 )
 
-type DynamodbArticleRepository struct {
+type dynamodbArticleRepository struct {
 	db *database.DynamoDBStore
-}
-
-func NewDynamodbArticleRepository(db *database.DynamoDBStore) DynamodbArticleRepository {
-	return DynamodbArticleRepository{db: db}
 }
 
 type ArticleRepositoryInterface interface {
@@ -47,7 +43,11 @@ type ArticleRepositoryInterface interface {
 	FindArticlesFavoritedByUser(ctx context.Context, userId uuid.UUID, limit int, nextPageToken *string) ([]uuid.UUID, *string, error)
 }
 
-var _ ArticleRepositoryInterface = DynamodbArticleRepository{}
+var _ ArticleRepositoryInterface = dynamodbArticleRepository{}
+
+func NewDynamodbArticleRepository(db *database.DynamoDBStore) ArticleRepositoryInterface {
+	return dynamodbArticleRepository{db: db}
+}
 
 type DynamodbArticleItem struct {
 	Id             string   `dynamodbav:"pk"`
@@ -87,7 +87,7 @@ type DynamodbFavoriteArticleItem struct {
 	CreatedAt int64  `dynamodbav:"createdAt"`
 }
 
-func (d DynamodbArticleRepository) FindArticleBySlug(c context.Context, slug string) (domain.Article, error) {
+func (d dynamodbArticleRepository) FindArticleBySlug(c context.Context, slug string) (domain.Article, error) {
 	input := &dynamodb.QueryInput{
 		TableName:              &articleTable,
 		IndexName:              articleSlugGSI,
@@ -118,7 +118,7 @@ func (d DynamodbArticleRepository) FindArticleBySlug(c context.Context, slug str
 	return domainArticle, nil
 }
 
-func (d DynamodbArticleRepository) FindArticleById(c context.Context, articleId uuid.UUID) (domain.Article, error) {
+func (d dynamodbArticleRepository) FindArticleById(c context.Context, articleId uuid.UUID) (domain.Article, error) {
 	input := &dynamodb.GetItemInput{
 		TableName: &articleTable,
 		Key: map[string]ddbtypes.AttributeValue{
@@ -145,7 +145,7 @@ func (d DynamodbArticleRepository) FindArticleById(c context.Context, articleId 
 }
 
 // ToDo there can only be one article with the same slug
-func (d DynamodbArticleRepository) CreateArticle(ctx context.Context, article domain.Article) (domain.Article, error) {
+func (d dynamodbArticleRepository) CreateArticle(ctx context.Context, article domain.Article) (domain.Article, error) {
 	dynamodbArticleItem := toDynamodbArticleItem(article)
 	articleAttributes, err := attributevalue.MarshalMap(dynamodbArticleItem)
 	if err != nil {
@@ -166,7 +166,7 @@ func (d DynamodbArticleRepository) CreateArticle(ctx context.Context, article do
 	return article, nil
 }
 
-func (d DynamodbArticleRepository) DeleteArticleById(c context.Context, articleId uuid.UUID) error {
+func (d dynamodbArticleRepository) DeleteArticleById(c context.Context, articleId uuid.UUID) error {
 	input := &dynamodb.DeleteItemInput{
 		Key: map[string]ddbtypes.AttributeValue{
 			"pk": &ddbtypes.AttributeValueMemberS{Value: articleId.String()},
@@ -184,7 +184,7 @@ func (d DynamodbArticleRepository) DeleteArticleById(c context.Context, articleI
 
 // ToDo @ender delete only existing comments???
 // ToDo @ender loggedin user id is not used
-func (d DynamodbArticleRepository) DeleteCommentByArticleIdAndCommentId(c context.Context, loggedInUserId uuid.UUID, articleId uuid.UUID, commentId uuid.UUID) error {
+func (d dynamodbArticleRepository) DeleteCommentByArticleIdAndCommentId(c context.Context, loggedInUserId uuid.UUID, articleId uuid.UUID, commentId uuid.UUID) error {
 	input := &dynamodb.DeleteItemInput{
 		TableName: &commentTable,
 		Key: map[string]ddbtypes.AttributeValue{
@@ -206,7 +206,7 @@ func (d DynamodbArticleRepository) DeleteCommentByArticleIdAndCommentId(c contex
  *  it's not necessary in our case but we could sort the comments by createdAt field.
  */
 
-func (d DynamodbArticleRepository) FindCommentsByArticleId(ctx context.Context, articleId uuid.UUID) ([]domain.Comment, error) {
+func (d dynamodbArticleRepository) FindCommentsByArticleId(ctx context.Context, articleId uuid.UUID) ([]domain.Comment, error) {
 
 	input := &dynamodb.QueryInput{
 		TableName:              &commentTable,
@@ -238,7 +238,7 @@ func (d DynamodbArticleRepository) FindCommentsByArticleId(ctx context.Context, 
 	}), nil
 }
 
-func (d DynamodbArticleRepository) CreateComment(ctx context.Context, comment domain.Comment) error {
+func (d dynamodbArticleRepository) CreateComment(ctx context.Context, comment domain.Comment) error {
 	dynamodbCommentItem := toDynamodbCommentItem(comment)
 	commentAttributes, err := attributevalue.MarshalMap(dynamodbCommentItem)
 	if err != nil {
@@ -260,7 +260,7 @@ func (d DynamodbArticleRepository) CreateComment(ctx context.Context, comment do
 
 // UnfavoriteArticle deletes the favorite item from the favorite table and decrements the favoritesCount of the article
 // if the favorite item does not exist, it does not decrement the favoritesCount and returns an ErrAlreadyUnfavorited error
-func (d DynamodbArticleRepository) UnfavoriteArticle(ctx context.Context, loggedInUserId uuid.UUID, articleId uuid.UUID) error {
+func (d dynamodbArticleRepository) UnfavoriteArticle(ctx context.Context, loggedInUserId uuid.UUID, articleId uuid.UUID) error {
 	transactWriteItems := dynamodb.TransactWriteItemsInput{
 		TransactItems: []ddbtypes.TransactWriteItem{
 			{
@@ -308,7 +308,7 @@ func (d DynamodbArticleRepository) UnfavoriteArticle(ctx context.Context, logged
 
 // FavoriteArticle creates a favorite item in the favorite table and increments the favoritesCount of the article
 // if the favorite item already exists, it does not increment the favoritesCount and returns an ErrAlreadyFavorited error
-func (d DynamodbArticleRepository) FavoriteArticle(ctx context.Context, loggedInUserId uuid.UUID, articleId uuid.UUID) error {
+func (d dynamodbArticleRepository) FavoriteArticle(ctx context.Context, loggedInUserId uuid.UUID, articleId uuid.UUID) error {
 	favorite := DynamodbFavoriteArticleItem{
 		UserId:    loggedInUserId.String(),
 		ArticleId: articleId.String(),
@@ -352,7 +352,9 @@ func (d DynamodbArticleRepository) FavoriteArticle(ctx context.Context, loggedIn
 		var transactionCanceledErr *ddbtypes.TransactionCanceledException
 		if errors.As(err, &transactionCanceledErr) {
 			for index, reason := range transactionCanceledErr.CancellationReasons {
-				slog.InfoContext(ctx, "transaction canceled", slog.Any("reason", reason))
+				// ToDo @ender err.Error() doesnt give much information about the nature of the underlying issue.
+				//  we should come up with a better way to retain the root cause of the error inside the CancellationReasons
+				//  in all place where we use transactWriteItems
 				if reason.Code != nil && *reason.Code == conditionalCheckFailed && index == 0 {
 					return fmt.Errorf("%w: %w", errutil.ErrAlreadyFavorited, err)
 				}
@@ -365,7 +367,7 @@ func (d DynamodbArticleRepository) FavoriteArticle(ctx context.Context, loggedIn
 	return nil
 }
 
-func (d DynamodbArticleRepository) FindCommentByCommentIdAndArticleId(ctx context.Context, commentId, articleId uuid.UUID) (domain.Comment, error) {
+func (d dynamodbArticleRepository) FindCommentByCommentIdAndArticleId(ctx context.Context, commentId, articleId uuid.UUID) (domain.Comment, error) {
 	input := &dynamodb.GetItemInput{
 		TableName: &commentTable,
 		Key: map[string]ddbtypes.AttributeValue{
@@ -392,7 +394,7 @@ func (d DynamodbArticleRepository) FindCommentByCommentIdAndArticleId(ctx contex
 	return toDomainComment(dynamodbCommentItem), nil
 }
 
-func (d DynamodbArticleRepository) IsFavorited(ctx context.Context, articleId, userId uuid.UUID) (bool, error) {
+func (d dynamodbArticleRepository) IsFavorited(ctx context.Context, articleId, userId uuid.UUID) (bool, error) {
 
 	input := &dynamodb.QueryInput{
 		TableName:              &favoriteTable,
@@ -412,7 +414,7 @@ func (d DynamodbArticleRepository) IsFavorited(ctx context.Context, articleId, u
 	return result.Count > 0, nil
 }
 
-func (d DynamodbArticleRepository) FindArticlesByIds(ctx context.Context, articleIds []uuid.UUID) ([]domain.Article, error) {
+func (d dynamodbArticleRepository) FindArticlesByIds(ctx context.Context, articleIds []uuid.UUID) ([]domain.Article, error) {
 	// short circuit if articleIds is empty, no need to query
 	// also, dynamodb will throw a validation error if we try to query with empty keys
 	if len(articleIds) == 0 {
@@ -454,7 +456,7 @@ func (d DynamodbArticleRepository) FindArticlesByIds(ctx context.Context, articl
 
 }
 
-func (d DynamodbArticleRepository) IsFavoritedBulk(ctx context.Context, userId uuid.UUID, articleIds []uuid.UUID) (mapset.Set[uuid.UUID], error) {
+func (d dynamodbArticleRepository) IsFavoritedBulk(ctx context.Context, userId uuid.UUID, articleIds []uuid.UUID) (mapset.Set[uuid.UUID], error) {
 	set := mapset.NewThreadUnsafeSet[uuid.UUID]()
 
 	// short circuit if articleIds is empty, no need to query
@@ -497,7 +499,7 @@ func (d DynamodbArticleRepository) IsFavoritedBulk(ctx context.Context, userId u
 	return set, nil
 }
 
-func (d DynamodbArticleRepository) FindArticlesByAuthor(ctx context.Context, authorId uuid.UUID, limit int, nextPageToken *string) ([]domain.Article, *string, error) {
+func (d dynamodbArticleRepository) FindArticlesByAuthor(ctx context.Context, authorId uuid.UUID, limit int, nextPageToken *string) ([]domain.Article, *string, error) {
 	input := &dynamodb.QueryInput{
 		TableName:              aws.String(articleTable),
 		IndexName:              articleAuthorIdGSI,
@@ -548,7 +550,7 @@ func (d DynamodbArticleRepository) FindArticlesByAuthor(ctx context.Context, aut
 	return articles, nextToken, nil
 }
 
-func (d DynamodbArticleRepository) FindArticlesFavoritedByUser(ctx context.Context, userId uuid.UUID, limit int, nextPageToken *string) ([]uuid.UUID, *string, error) {
+func (d dynamodbArticleRepository) FindArticlesFavoritedByUser(ctx context.Context, userId uuid.UUID, limit int, nextPageToken *string) ([]uuid.UUID, *string, error) {
 	input := &dynamodb.QueryInput{
 		TableName:              aws.String(favoriteTable),
 		IndexName:              favoriteUserIdCreatedAtGSI,

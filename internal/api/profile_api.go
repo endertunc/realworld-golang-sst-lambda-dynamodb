@@ -11,6 +11,10 @@ type ProfileApi struct {
 	ProfileService service.ProfileServiceInterface
 }
 
+func NewProfileApi(profileService service.ProfileServiceInterface) ProfileApi {
+	return ProfileApi{ProfileService: profileService}
+}
+
 func (pa ProfileApi) UnfollowUserByUsername(ctx context.Context, loggedInUser uuid.UUID, followerUsername string) (dto.ProfileResponseBodyDTO, error) {
 	user, err := pa.ProfileService.UnFollow(ctx, loggedInUser, followerUsername)
 	if err != nil {

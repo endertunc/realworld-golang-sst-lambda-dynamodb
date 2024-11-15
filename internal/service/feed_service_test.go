@@ -24,11 +24,11 @@ func TestFetchArticlesFromFeed_SuccessfulMultipleArticles(t *testing.T) {
 	mockUserService := mocks.NewMockUserServiceInterface(t)
 
 	// Create a service instance with mock dependencies
-	feedService := UserFeedService{
-		UserFeedRepository: mockUserFeedRepo,
-		ArticleService:     mockArticleService,
-		ProfileService:     mockProfileService,
-		UserService:        mockUserService,
+	feedService := userFeedService{
+		userFeedRepository: mockUserFeedRepo,
+		articleService:     mockArticleService,
+		profileService:     mockProfileService,
+		userService:        mockUserService,
 	}
 
 	// Prepare test data
@@ -46,27 +46,27 @@ func TestFetchArticlesFromFeed_SuccessfulMultipleArticles(t *testing.T) {
 	limit := 10
 	var nextPageToken *string
 
-	// Set up expectations for UserFeedRepository
+	// Set up expectations for userFeedRepository
 	mockUserFeedRepo.EXPECT().
 		FindArticleIdsInUserFeed(mock.Anything, feedUser.Id, limit, nextPageToken).
 		Return([]uuid.UUID{article1.Id, article2.Id}, nextPageToken, nil)
 
-	// Set up expectations for ArticleService
+	// Set up expectations for articleService
 	mockArticleService.EXPECT().
 		FindArticlesByIds(mock.Anything, []uuid.UUID{article1.Id, article2.Id}).
 		Return([]domain.Article{article1, article2}, nil)
 
-	// Set up expectations for UserService
+	// Set up expectations for userService
 	mockUserService.EXPECT().
 		GetUserListByUserIDs(mock.Anything, []uuid.UUID{author1.Id, author2.Id}).
 		Return([]domain.User{author1, author2}, nil)
 
-	// Set up expectations for ProfileService
+	// Set up expectations for profileService
 	mockProfileService.EXPECT().
 		IsFollowingBulk(mock.Anything, feedUser.Id, []uuid.UUID{author1.Id, author2.Id}).
 		Return(mapset.NewSet(author1.Id, author2.Id), nil)
 
-	// Set up expectations for ArticleService
+	// Set up expectations for articleService
 	mockArticleService.EXPECT().
 		IsFavoritedBulk(mock.Anything, feedUser.Id, []uuid.UUID{article1.Id, article2.Id}).
 		Return(mapset.NewSet(article1.Id), nil)
