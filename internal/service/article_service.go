@@ -7,28 +7,29 @@ import (
 	"github.com/google/uuid"
 	"github.com/samber/lo"
 	"realworld-aws-lambda-dynamodb-golang/internal/domain"
-	"realworld-aws-lambda-dynamodb-golang/internal/errutil"
 	"realworld-aws-lambda-dynamodb-golang/internal/repository"
 )
 
 type articleService struct {
+	articleRepository repository.ArticleRepositoryInterface
 	userService       UserServiceInterface
 	profileService    ProfileServiceInterface
-	articleRepository repository.ArticleRepositoryInterface
+	commentRepository repository.CommentRepositoryInterface
 }
 
 type ArticleServiceInterface interface {
 	GetArticle(ctx context.Context, slug string) (domain.Article, error)
+	GetArticlesByIds(ctx context.Context, articleIds []uuid.UUID) ([]domain.Article, error)
+	GetArticleBySlug(ctx context.Context, slug string) (domain.Article, error)
+
 	CreateArticle(ctx context.Context, author uuid.UUID, title, description, body string, tagList []string) (domain.Article, error)
-	AddComment(ctx context.Context, loggedInUserId uuid.UUID, articleSlug string, body string) (domain.Comment, error)
-	GetArticleComments(ctx context.Context, slug string) ([]domain.Comment, error)
-	DeleteComment(ctx context.Context, author uuid.UUID, slug string, commentId uuid.UUID) error
 	DeleteArticle(ctx context.Context, author uuid.UUID, slug string) error
+
 	FavoriteArticle(ctx context.Context, userId uuid.UUID, slug string) (domain.Article, error)
 	UnfavoriteArticle(ctx context.Context, userId uuid.UUID, slug string) (domain.Article, error)
 	IsFavorited(ctx context.Context, articleId, userId uuid.UUID) (bool, error)
-	FindArticlesByIds(ctx context.Context, articleIds []uuid.UUID) ([]domain.Article, error)
 	IsFavoritedBulk(ctx context.Context, userId uuid.UUID, articleIds []uuid.UUID) (mapset.Set[uuid.UUID], error)
+
 	GetMostRecentArticlesByAuthor(ctx context.Context, userId *uuid.UUID, author string, limit int, nextPageToken *string) ([]domain.FeedItem, *string, error)
 	GetMostRecentArticlesFavoritedByUser(ctx context.Context, loggedInUser *uuid.UUID, favoritedByUsername string, limit int, nextPageToken *string) ([]domain.FeedItem, *string, error)
 	GetMostRecentArticlesFavoritedByTag(ctx context.Context, loggedInUser *uuid.UUID, tag string, limit int, nextPageToken *string) ([]domain.FeedItem, *string, error)
@@ -37,7 +38,7 @@ type ArticleServiceInterface interface {
 
 var _ ArticleServiceInterface = articleService{}
 
-func NewArticleService(userService UserServiceInterface, profileService ProfileServiceInterface, articleRepository repository.ArticleRepositoryInterface) ArticleServiceInterface {
+func NewArticleService(articleRepository repository.ArticleRepositoryInterface, userService UserServiceInterface, profileService ProfileServiceInterface) ArticleServiceInterface {
 	return articleService{
 		userService:       userService,
 		profileService:    profileService,
@@ -61,20 +62,6 @@ func (as articleService) CreateArticle(ctx context.Context, author uuid.UUID, ti
 		return domain.Article{}, err
 	}
 	return article, nil
-}
-
-func (as articleService) AddComment(ctx context.Context, author uuid.UUID, articleSlug string, body string) (domain.Comment, error) {
-	article, err := as.articleRepository.FindArticleBySlug(ctx, articleSlug)
-	if err != nil {
-		return domain.Comment{}, err
-	}
-	comment := domain.NewComment(article.Id, author, body)
-
-	err = as.articleRepository.CreateComment(ctx, comment)
-	if err != nil {
-		return domain.Comment{}, err
-	}
-	return comment, nil
 }
 
 func (as articleService) UnfavoriteArticle(ctx context.Context, loggedInUserId uuid.UUID, slug string) (domain.Article, error) {
@@ -106,45 +93,6 @@ func (as articleService) FavoriteArticle(ctx context.Context, loggedInUserId uui
 	return article, nil
 }
 
-// DeleteComment
-/**
- * ToDo @ender We can actually delete a comment only if the comment belongs to the user with a single query
- */
-func (as articleService) DeleteComment(ctx context.Context, loggedInUserId uuid.UUID, slug string, commentId uuid.UUID) error {
-	article, err := as.articleRepository.FindArticleBySlug(ctx, slug)
-	if err != nil {
-		return err
-	}
-	// check if the comment belongs to the article / comment exists
-	comment, err := as.articleRepository.FindCommentByCommentIdAndArticleId(ctx, commentId, article.Id)
-	if err != nil {
-		return err
-	}
-
-	// check if the comment belongs to the user
-	if comment.AuthorId != loggedInUserId {
-		return errutil.ErrCantDeleteOthersComment
-	}
-
-	err = as.articleRepository.DeleteCommentByArticleIdAndCommentId(ctx, loggedInUserId, article.Id, commentId)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (as articleService) GetArticleComments(ctx context.Context, slug string) ([]domain.Comment, error) {
-	article, err := as.articleRepository.FindArticleBySlug(ctx, slug)
-	if err != nil {
-		return []domain.Comment{}, err
-	}
-	comments, err := as.articleRepository.FindCommentsByArticleId(ctx, article.Id)
-	if err != nil {
-		return []domain.Comment{}, err
-	}
-	return comments, nil
-}
-
 func (as articleService) DeleteArticle(ctx context.Context, authorId uuid.UUID, slug string) error {
 	article, err := as.articleRepository.FindArticleBySlug(ctx, slug)
 	if err != nil {
@@ -167,8 +115,12 @@ func (as articleService) IsFavorited(ctx context.Context, articleId, userId uuid
 	return as.articleRepository.IsFavorited(ctx, articleId, userId)
 }
 
-func (as articleService) FindArticlesByIds(ctx context.Context, articleIds []uuid.UUID) ([]domain.Article, error) {
+func (as articleService) GetArticlesByIds(ctx context.Context, articleIds []uuid.UUID) ([]domain.Article, error) {
 	return as.articleRepository.FindArticlesByIds(ctx, articleIds)
+}
+
+func (as articleService) GetArticleBySlug(ctx context.Context, slug string) (domain.Article, error) {
+	return as.articleRepository.FindArticleBySlug(ctx, slug)
 }
 
 func (as articleService) IsFavoritedBulk(ctx context.Context, userId uuid.UUID, articleIds []uuid.UUID) (mapset.Set[uuid.UUID], error) {

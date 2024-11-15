@@ -42,7 +42,7 @@ func (uf userFeedService) FanoutArticle(ctx context.Context, articleId, authorId
 /*
  * FetchUserFeed fetches the user feed for a given user
  * this function could be optimized by combining the following steps into a single BatchGetItems query
- * - FindArticlesByIds and IsFavoritedBulk: both needs articleIds can be fetched in a single query
+ * - GetArticlesByIds and IsFavoritedBulk: both needs articleIds can be fetched in a single query
  * - GetUserListByUserIDs and IsFollowingBulk: both needs uniqueAuthorIdsList and can be fetched in a single query
  */
 func (uf userFeedService) FetchArticlesFromFeed(ctx context.Context, userId uuid.UUID, limit int, nextPageToken *string) ([]domain.FeedItem, *string, error) {
@@ -51,7 +51,7 @@ func (uf userFeedService) FetchArticlesFromFeed(ctx context.Context, userId uuid
 		return nil, nil, err
 	}
 
-	articles, err := uf.articleService.FindArticlesByIds(ctx, articleIds)
+	articles, err := uf.articleService.GetArticlesByIds(ctx, articleIds)
 	if err != nil {
 		return nil, nil, err
 	}

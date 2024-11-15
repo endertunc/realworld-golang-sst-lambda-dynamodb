@@ -26,65 +26,6 @@ func (_m *MockArticleServiceInterface) EXPECT() *MockArticleServiceInterface_Exp
 	return &MockArticleServiceInterface_Expecter{mock: &_m.Mock}
 }
 
-// AddComment provides a mock function with given fields: ctx, loggedInUserId, articleSlug, body
-func (_m *MockArticleServiceInterface) AddComment(ctx context.Context, loggedInUserId uuid.UUID, articleSlug string, body string) (domain.Comment, error) {
-	ret := _m.Called(ctx, loggedInUserId, articleSlug, body)
-
-	if len(ret) == 0 {
-		panic("no return value specified for AddComment")
-	}
-
-	var r0 domain.Comment
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, string, string) (domain.Comment, error)); ok {
-		return rf(ctx, loggedInUserId, articleSlug, body)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, string, string) domain.Comment); ok {
-		r0 = rf(ctx, loggedInUserId, articleSlug, body)
-	} else {
-		r0 = ret.Get(0).(domain.Comment)
-	}
-
-	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID, string, string) error); ok {
-		r1 = rf(ctx, loggedInUserId, articleSlug, body)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// MockArticleServiceInterface_AddComment_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'AddComment'
-type MockArticleServiceInterface_AddComment_Call struct {
-	*mock.Call
-}
-
-// AddComment is a helper method to define mock.On call
-//   - ctx context.Context
-//   - loggedInUserId uuid.UUID
-//   - articleSlug string
-//   - body string
-func (_e *MockArticleServiceInterface_Expecter) AddComment(ctx interface{}, loggedInUserId interface{}, articleSlug interface{}, body interface{}) *MockArticleServiceInterface_AddComment_Call {
-	return &MockArticleServiceInterface_AddComment_Call{Call: _e.mock.On("AddComment", ctx, loggedInUserId, articleSlug, body)}
-}
-
-func (_c *MockArticleServiceInterface_AddComment_Call) Run(run func(ctx context.Context, loggedInUserId uuid.UUID, articleSlug string, body string)) *MockArticleServiceInterface_AddComment_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(uuid.UUID), args[2].(string), args[3].(string))
-	})
-	return _c
-}
-
-func (_c *MockArticleServiceInterface_AddComment_Call) Return(_a0 domain.Comment, _a1 error) *MockArticleServiceInterface_AddComment_Call {
-	_c.Call.Return(_a0, _a1)
-	return _c
-}
-
-func (_c *MockArticleServiceInterface_AddComment_Call) RunAndReturn(run func(context.Context, uuid.UUID, string, string) (domain.Comment, error)) *MockArticleServiceInterface_AddComment_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // CreateArticle provides a mock function with given fields: ctx, author, title, description, body, tagList
 func (_m *MockArticleServiceInterface) CreateArticle(ctx context.Context, author uuid.UUID, title string, description string, body string, tagList []string) (domain.Article, error) {
 	ret := _m.Called(ctx, author, title, description, body, tagList)
@@ -194,55 +135,6 @@ func (_c *MockArticleServiceInterface_DeleteArticle_Call) RunAndReturn(run func(
 	return _c
 }
 
-// DeleteComment provides a mock function with given fields: ctx, author, slug, commentId
-func (_m *MockArticleServiceInterface) DeleteComment(ctx context.Context, author uuid.UUID, slug string, commentId uuid.UUID) error {
-	ret := _m.Called(ctx, author, slug, commentId)
-
-	if len(ret) == 0 {
-		panic("no return value specified for DeleteComment")
-	}
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, string, uuid.UUID) error); ok {
-		r0 = rf(ctx, author, slug, commentId)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
-// MockArticleServiceInterface_DeleteComment_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteComment'
-type MockArticleServiceInterface_DeleteComment_Call struct {
-	*mock.Call
-}
-
-// DeleteComment is a helper method to define mock.On call
-//   - ctx context.Context
-//   - author uuid.UUID
-//   - slug string
-//   - commentId uuid.UUID
-func (_e *MockArticleServiceInterface_Expecter) DeleteComment(ctx interface{}, author interface{}, slug interface{}, commentId interface{}) *MockArticleServiceInterface_DeleteComment_Call {
-	return &MockArticleServiceInterface_DeleteComment_Call{Call: _e.mock.On("DeleteComment", ctx, author, slug, commentId)}
-}
-
-func (_c *MockArticleServiceInterface_DeleteComment_Call) Run(run func(ctx context.Context, author uuid.UUID, slug string, commentId uuid.UUID)) *MockArticleServiceInterface_DeleteComment_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(uuid.UUID), args[2].(string), args[3].(uuid.UUID))
-	})
-	return _c
-}
-
-func (_c *MockArticleServiceInterface_DeleteComment_Call) Return(_a0 error) *MockArticleServiceInterface_DeleteComment_Call {
-	_c.Call.Return(_a0)
-	return _c
-}
-
-func (_c *MockArticleServiceInterface_DeleteComment_Call) RunAndReturn(run func(context.Context, uuid.UUID, string, uuid.UUID) error) *MockArticleServiceInterface_DeleteComment_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // FavoriteArticle provides a mock function with given fields: ctx, userId, slug
 func (_m *MockArticleServiceInterface) FavoriteArticle(ctx context.Context, userId uuid.UUID, slug string) (domain.Article, error) {
 	ret := _m.Called(ctx, userId, slug)
@@ -297,65 +189,6 @@ func (_c *MockArticleServiceInterface_FavoriteArticle_Call) Return(_a0 domain.Ar
 }
 
 func (_c *MockArticleServiceInterface_FavoriteArticle_Call) RunAndReturn(run func(context.Context, uuid.UUID, string) (domain.Article, error)) *MockArticleServiceInterface_FavoriteArticle_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// FindArticlesByIds provides a mock function with given fields: ctx, articleIds
-func (_m *MockArticleServiceInterface) FindArticlesByIds(ctx context.Context, articleIds []uuid.UUID) ([]domain.Article, error) {
-	ret := _m.Called(ctx, articleIds)
-
-	if len(ret) == 0 {
-		panic("no return value specified for FindArticlesByIds")
-	}
-
-	var r0 []domain.Article
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, []uuid.UUID) ([]domain.Article, error)); ok {
-		return rf(ctx, articleIds)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context, []uuid.UUID) []domain.Article); ok {
-		r0 = rf(ctx, articleIds)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]domain.Article)
-		}
-	}
-
-	if rf, ok := ret.Get(1).(func(context.Context, []uuid.UUID) error); ok {
-		r1 = rf(ctx, articleIds)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// MockArticleServiceInterface_FindArticlesByIds_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindArticlesByIds'
-type MockArticleServiceInterface_FindArticlesByIds_Call struct {
-	*mock.Call
-}
-
-// FindArticlesByIds is a helper method to define mock.On call
-//   - ctx context.Context
-//   - articleIds []uuid.UUID
-func (_e *MockArticleServiceInterface_Expecter) FindArticlesByIds(ctx interface{}, articleIds interface{}) *MockArticleServiceInterface_FindArticlesByIds_Call {
-	return &MockArticleServiceInterface_FindArticlesByIds_Call{Call: _e.mock.On("FindArticlesByIds", ctx, articleIds)}
-}
-
-func (_c *MockArticleServiceInterface_FindArticlesByIds_Call) Run(run func(ctx context.Context, articleIds []uuid.UUID)) *MockArticleServiceInterface_FindArticlesByIds_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].([]uuid.UUID))
-	})
-	return _c
-}
-
-func (_c *MockArticleServiceInterface_FindArticlesByIds_Call) Return(_a0 []domain.Article, _a1 error) *MockArticleServiceInterface_FindArticlesByIds_Call {
-	_c.Call.Return(_a0, _a1)
-	return _c
-}
-
-func (_c *MockArticleServiceInterface_FindArticlesByIds_Call) RunAndReturn(run func(context.Context, []uuid.UUID) ([]domain.Article, error)) *MockArticleServiceInterface_FindArticlesByIds_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -417,25 +250,23 @@ func (_c *MockArticleServiceInterface_GetArticle_Call) RunAndReturn(run func(con
 	return _c
 }
 
-// GetArticleComments provides a mock function with given fields: ctx, slug
-func (_m *MockArticleServiceInterface) GetArticleComments(ctx context.Context, slug string) ([]domain.Comment, error) {
+// GetArticleBySlug provides a mock function with given fields: ctx, slug
+func (_m *MockArticleServiceInterface) GetArticleBySlug(ctx context.Context, slug string) (domain.Article, error) {
 	ret := _m.Called(ctx, slug)
 
 	if len(ret) == 0 {
-		panic("no return value specified for GetArticleComments")
+		panic("no return value specified for GetArticleBySlug")
 	}
 
-	var r0 []domain.Comment
+	var r0 domain.Article
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, string) ([]domain.Comment, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, string) (domain.Article, error)); ok {
 		return rf(ctx, slug)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, string) []domain.Comment); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, string) domain.Article); ok {
 		r0 = rf(ctx, slug)
 	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]domain.Comment)
-		}
+		r0 = ret.Get(0).(domain.Article)
 	}
 
 	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
@@ -447,31 +278,90 @@ func (_m *MockArticleServiceInterface) GetArticleComments(ctx context.Context, s
 	return r0, r1
 }
 
-// MockArticleServiceInterface_GetArticleComments_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetArticleComments'
-type MockArticleServiceInterface_GetArticleComments_Call struct {
+// MockArticleServiceInterface_GetArticleBySlug_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetArticleBySlug'
+type MockArticleServiceInterface_GetArticleBySlug_Call struct {
 	*mock.Call
 }
 
-// GetArticleComments is a helper method to define mock.On call
+// GetArticleBySlug is a helper method to define mock.On call
 //   - ctx context.Context
 //   - slug string
-func (_e *MockArticleServiceInterface_Expecter) GetArticleComments(ctx interface{}, slug interface{}) *MockArticleServiceInterface_GetArticleComments_Call {
-	return &MockArticleServiceInterface_GetArticleComments_Call{Call: _e.mock.On("GetArticleComments", ctx, slug)}
+func (_e *MockArticleServiceInterface_Expecter) GetArticleBySlug(ctx interface{}, slug interface{}) *MockArticleServiceInterface_GetArticleBySlug_Call {
+	return &MockArticleServiceInterface_GetArticleBySlug_Call{Call: _e.mock.On("GetArticleBySlug", ctx, slug)}
 }
 
-func (_c *MockArticleServiceInterface_GetArticleComments_Call) Run(run func(ctx context.Context, slug string)) *MockArticleServiceInterface_GetArticleComments_Call {
+func (_c *MockArticleServiceInterface_GetArticleBySlug_Call) Run(run func(ctx context.Context, slug string)) *MockArticleServiceInterface_GetArticleBySlug_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run(args[0].(context.Context), args[1].(string))
 	})
 	return _c
 }
 
-func (_c *MockArticleServiceInterface_GetArticleComments_Call) Return(_a0 []domain.Comment, _a1 error) *MockArticleServiceInterface_GetArticleComments_Call {
+func (_c *MockArticleServiceInterface_GetArticleBySlug_Call) Return(_a0 domain.Article, _a1 error) *MockArticleServiceInterface_GetArticleBySlug_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *MockArticleServiceInterface_GetArticleComments_Call) RunAndReturn(run func(context.Context, string) ([]domain.Comment, error)) *MockArticleServiceInterface_GetArticleComments_Call {
+func (_c *MockArticleServiceInterface_GetArticleBySlug_Call) RunAndReturn(run func(context.Context, string) (domain.Article, error)) *MockArticleServiceInterface_GetArticleBySlug_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetArticlesByIds provides a mock function with given fields: ctx, articleIds
+func (_m *MockArticleServiceInterface) GetArticlesByIds(ctx context.Context, articleIds []uuid.UUID) ([]domain.Article, error) {
+	ret := _m.Called(ctx, articleIds)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetArticlesByIds")
+	}
+
+	var r0 []domain.Article
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, []uuid.UUID) ([]domain.Article, error)); ok {
+		return rf(ctx, articleIds)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, []uuid.UUID) []domain.Article); ok {
+		r0 = rf(ctx, articleIds)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]domain.Article)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, []uuid.UUID) error); ok {
+		r1 = rf(ctx, articleIds)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockArticleServiceInterface_GetArticlesByIds_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetArticlesByIds'
+type MockArticleServiceInterface_GetArticlesByIds_Call struct {
+	*mock.Call
+}
+
+// GetArticlesByIds is a helper method to define mock.On call
+//   - ctx context.Context
+//   - articleIds []uuid.UUID
+func (_e *MockArticleServiceInterface_Expecter) GetArticlesByIds(ctx interface{}, articleIds interface{}) *MockArticleServiceInterface_GetArticlesByIds_Call {
+	return &MockArticleServiceInterface_GetArticlesByIds_Call{Call: _e.mock.On("GetArticlesByIds", ctx, articleIds)}
+}
+
+func (_c *MockArticleServiceInterface_GetArticlesByIds_Call) Run(run func(ctx context.Context, articleIds []uuid.UUID)) *MockArticleServiceInterface_GetArticlesByIds_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].([]uuid.UUID))
+	})
+	return _c
+}
+
+func (_c *MockArticleServiceInterface_GetArticlesByIds_Call) Return(_a0 []domain.Article, _a1 error) *MockArticleServiceInterface_GetArticlesByIds_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockArticleServiceInterface_GetArticlesByIds_Call) RunAndReturn(run func(context.Context, []uuid.UUID) ([]domain.Article, error)) *MockArticleServiceInterface_GetArticlesByIds_Call {
 	_c.Call.Return(run)
 	return _c
 }

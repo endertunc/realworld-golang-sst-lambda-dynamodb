@@ -2,9 +2,7 @@ package api
 
 import (
 	"context"
-	mapset "github.com/deckarep/golang-set/v2"
 	"github.com/google/uuid"
-	"log/slog"
 	"realworld-aws-lambda-dynamodb-golang/internal/domain"
 	"realworld-aws-lambda-dynamodb-golang/internal/domain/dto"
 	"realworld-aws-lambda-dynamodb-golang/internal/service"
@@ -127,93 +125,12 @@ func (aa ArticleApi) FavoriteArticle(ctx context.Context, loggedInUserId uuid.UU
 	return dto.ToArticleResponseBodyDTO(article, author, true, isFollowing), nil
 }
 
-func (aa ArticleApi) DeleteComment(ctx context.Context, loggedInUserId uuid.UUID, slug string, commentId uuid.UUID) error {
-	err := aa.ArticleService.DeleteComment(ctx, loggedInUserId, slug, commentId)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 func (aa ArticleApi) DeleteArticle(ctx context.Context, loggedInUserId uuid.UUID, slug string) error {
 	err := aa.ArticleService.DeleteArticle(ctx, loggedInUserId, slug)
 	if err != nil {
 		return err
 	}
 	return nil
-}
-
-// GetArticleComments
-/**
- * In a "realworld" application, this function could be even optimized further
- * by using a single query to get all authors and their "isFollowing" information using BatchGetItem.
- * Following two queries can be combined into one BatchGetItem query:
- * - fetch users by their ids (it will be used as comment author )
- * - fetch "isFollowing" status for each user (to populate author.following field)
- *
- * However, this complexity might not be needed with an alternative approach such as caching
- * with DAX (DynamoDB Accelerator) or other caching mechanisms.
- *
- * Regardless, one must monitor the performance of the application and optimize accordingly.
- */
-func (aa ArticleApi) GetArticleComments(ctx context.Context, loggedInUserId *uuid.UUID, slug string) (dto.MultiCommentsResponseBodyDTO, error) {
-	comments, err := aa.ArticleService.GetArticleComments(ctx, slug)
-	if err != nil {
-		return dto.MultiCommentsResponseBodyDTO{}, err
-	}
-	slog.DebugContext(ctx, "comments after articleService.GetArticleComments", slog.Any("comments", comments))
-	if len(comments) == 0 {
-		return dto.MultiCommentsResponseBodyDTO{Comment: []dto.CommentResponseDTO{}}, nil
-	} else {
-		// ToDo @ender we would like to extract unique author ids from comments
-		// 	 check if we can simplify this later
-		authorIdsMap := make(map[uuid.UUID]bool) // New empty set
-		for _, comment := range comments {
-			authorIdsMap[comment.AuthorId] = true
-		}
-
-		uniqueAuthorIdsList := make([]uuid.UUID, 0, len(authorIdsMap))
-		for k := range authorIdsMap {
-			uniqueAuthorIdsList = append(uniqueAuthorIdsList, k)
-		}
-
-		authors, err := aa.UserService.GetUserListByUserIDs(ctx, uniqueAuthorIdsList)
-
-		if err != nil {
-			return dto.MultiCommentsResponseBodyDTO{}, err
-		}
-
-		authorIdsToAuthorMap := make(map[uuid.UUID]domain.User, len(authors))
-		for _, author := range authors {
-			authorIdsToAuthorMap[author.Id] = author
-		}
-
-		if loggedInUserId == nil {
-			return dto.ToMultiCommentsResponseBodyDTO(comments, authorIdsToAuthorMap, mapset.NewSetWithSize[uuid.UUID](0)), nil
-		} else {
-			followedAuthorsSet, err := aa.ProfileService.IsFollowingBulk(ctx, *loggedInUserId, uniqueAuthorIdsList)
-			if err != nil {
-				return dto.MultiCommentsResponseBodyDTO{}, err
-			}
-			return dto.ToMultiCommentsResponseBodyDTO(comments, authorIdsToAuthorMap, followedAuthorsSet), nil
-		}
-
-	}
-}
-
-func (aa ArticleApi) AddComment(ctx context.Context, loggedInUserId uuid.UUID, articleSlug string, addCommentRequestDTO dto.AddCommentRequestBodyDTO) (dto.SingleCommentResponseBodyDTO, error) {
-	comment, err := aa.ArticleService.AddComment(ctx, loggedInUserId, articleSlug, addCommentRequestDTO.Comment.Body)
-	if err != nil {
-		return dto.SingleCommentResponseBodyDTO{}, err
-	}
-
-	user, err := aa.UserService.GetUserByUserId(ctx, loggedInUserId)
-	if err != nil {
-		return dto.SingleCommentResponseBodyDTO{}, err
-	}
-	// the current user is the author, and the user can't follow itself,
-	// thus we simply pass isFollowing as false
-	return dto.ToSingleCommentResponseBodyDTO(comment, user, false), nil
 }
 
 type ListArticlesQueryOptions struct {

@@ -41,7 +41,7 @@ func HandlerHTTP(w http.ResponseWriter, r *http.Request, userId uuid.UUID, token
 		return
 	}
 
-	err = functions.ArticleApi.DeleteComment(ctx, userId, slug, commentId)
+	err = functions.CommentApi.DeleteComment(ctx, userId, slug, commentId)
 	if err != nil {
 		if errors.Is(err, errutil.ErrCommentNotFound) {
 			slog.DebugContext(ctx, "comment not found", slog.String("slug", slug), slog.String("commentId", commentId.String()), slog.Any("error", err))
@@ -82,7 +82,7 @@ func Handler(ctx context.Context, request events.APIGatewayProxyRequest, userId 
 		return api.ToSimpleError(ctx, http.StatusBadRequest, "commentId path parameter must be a valid UUID")
 	}
 
-	err = functions.ArticleApi.DeleteComment(ctx, userId, slug, commentId)
+	err = functions.CommentApi.DeleteComment(ctx, userId, slug, commentId)
 	if err != nil {
 		// ToDo slog...
 		if errors.Is(err, errutil.ErrCommentNotFound) {

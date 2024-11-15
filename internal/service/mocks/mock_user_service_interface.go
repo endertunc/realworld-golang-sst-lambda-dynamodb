@@ -24,63 +24,6 @@ func (_m *MockUserServiceInterface) EXPECT() *MockUserServiceInterface_Expecter 
 	return &MockUserServiceInterface_Expecter{mock: &_m.Mock}
 }
 
-// GetCurrentUser provides a mock function with given fields: ctx, userID
-func (_m *MockUserServiceInterface) GetCurrentUser(ctx context.Context, userID uuid.UUID) (domain.User, error) {
-	ret := _m.Called(ctx, userID)
-
-	if len(ret) == 0 {
-		panic("no return value specified for GetCurrentUser")
-	}
-
-	var r0 domain.User
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) (domain.User, error)); ok {
-		return rf(ctx, userID)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) domain.User); ok {
-		r0 = rf(ctx, userID)
-	} else {
-		r0 = ret.Get(0).(domain.User)
-	}
-
-	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID) error); ok {
-		r1 = rf(ctx, userID)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// MockUserServiceInterface_GetCurrentUser_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetCurrentUser'
-type MockUserServiceInterface_GetCurrentUser_Call struct {
-	*mock.Call
-}
-
-// GetCurrentUser is a helper method to define mock.On call
-//   - ctx context.Context
-//   - userID uuid.UUID
-func (_e *MockUserServiceInterface_Expecter) GetCurrentUser(ctx interface{}, userID interface{}) *MockUserServiceInterface_GetCurrentUser_Call {
-	return &MockUserServiceInterface_GetCurrentUser_Call{Call: _e.mock.On("GetCurrentUser", ctx, userID)}
-}
-
-func (_c *MockUserServiceInterface_GetCurrentUser_Call) Run(run func(ctx context.Context, userID uuid.UUID)) *MockUserServiceInterface_GetCurrentUser_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(uuid.UUID))
-	})
-	return _c
-}
-
-func (_c *MockUserServiceInterface_GetCurrentUser_Call) Return(_a0 domain.User, _a1 error) *MockUserServiceInterface_GetCurrentUser_Call {
-	_c.Call.Return(_a0, _a1)
-	return _c
-}
-
-func (_c *MockUserServiceInterface_GetCurrentUser_Call) RunAndReturn(run func(context.Context, uuid.UUID) (domain.User, error)) *MockUserServiceInterface_GetCurrentUser_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // GetUserByUserId provides a mock function with given fields: ctx, userID
 func (_m *MockUserServiceInterface) GetUserByUserId(ctx context.Context, userID uuid.UUID) (domain.User, error) {
 	ret := _m.Called(ctx, userID)

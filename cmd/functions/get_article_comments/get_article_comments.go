@@ -29,7 +29,7 @@ func HandlerHTTP(w http.ResponseWriter, r *http.Request, userId *uuid.UUID, toke
 		return
 	}
 
-	result, err := functions.ArticleApi.GetArticleComments(ctx, userId, slug)
+	result, err := functions.CommentApi.GetArticleComments(ctx, userId, slug)
 
 	if err != nil {
 		if errors.Is(err, errutil.ErrArticleNotFound) {
@@ -59,7 +59,7 @@ func Handler(ctx context.Context, request events.APIGatewayProxyRequest, userId 
 		return *response
 	}
 
-	result, err := functions.ArticleApi.GetArticleComments(ctx, userId, slug)
+	result, err := functions.CommentApi.GetArticleComments(ctx, userId, slug)
 	if err != nil {
 		if errors.Is(err, errutil.ErrArticleNotFound) {
 			slog.DebugContext(ctx, "article not found", slog.String("slug", slug), slog.Any("error", err))

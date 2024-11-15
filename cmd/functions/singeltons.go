@@ -21,11 +21,15 @@ var (
 	UserApi        = api.NewUserApi(userService)
 
 	articleRepository = repository.NewDynamodbArticleRepository(dynamodbStore)
-	articleService    = service.NewArticleService(userService, profileService, articleRepository)
+	articleService    = service.NewArticleService(articleRepository, userService, profileService)
 	ArticleApi        = api.NewArticleApi(articleService, userService, profileService)
 
 	profileService = service.NewProfileService(followerRepository, userRepository)
 	ProfileApi     = api.NewProfileApi(profileService)
+
+	commentRepository = repository.NewDynamodbCommentRepository(dynamodbStore)
+	commentService    = service.NewCommentService(commentRepository, articleService)
+	CommentApi        = api.NewCommentApi(commentService, userService, profileService)
 
 	userFeedRepository = repository.NewUserFeedRepository(dynamodbStore)
 	UserFeedService    = service.NewUserFeedService(userFeedRepository, articleService, profileService, userService)

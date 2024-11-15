@@ -9,9 +9,11 @@ packages:
       FollowerRepositoryInterface:
       UserRepositoryInterface:
       UserFeedRepositoryInterface:
+      CommentRepositoryInterface:
   realworld-aws-lambda-dynamodb-golang/internal/service:
     interfaces:
       ArticleServiceInterface:
       UserServiceInterface:
       FeedServiceInterface:
       ProfileServiceInterface:
+      CommentServiceInterface:

@@ -6,8 +6,6 @@ import (
 	"fmt"
 	mapset "github.com/deckarep/golang-set/v2"
 	"github.com/samber/lo"
-	"github.com/samber/oops"
-	"log/slog"
 	"realworld-aws-lambda-dynamodb-golang/internal/database"
 	"realworld-aws-lambda-dynamodb-golang/internal/domain"
 	"realworld-aws-lambda-dynamodb-golang/internal/errutil"
@@ -18,7 +16,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	ddbtypes "github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/google/uuid"
-	veqrynslog "github.com/veqryn/slog-context/http"
 )
 
 type dynamodbArticleRepository struct {
@@ -29,17 +26,16 @@ type ArticleRepositoryInterface interface {
 	FindArticleBySlug(ctx context.Context, email string) (domain.Article, error)
 	FindArticleById(ctx context.Context, articleId uuid.UUID) (domain.Article, error)
 	FindArticlesByIds(ctx context.Context, articleIds []uuid.UUID) ([]domain.Article, error)
+	FindArticlesByAuthor(ctx context.Context, authorId uuid.UUID, limit int, nextPageToken *string) ([]domain.Article, *string, error)
+
 	CreateArticle(ctx context.Context, article domain.Article) (domain.Article, error)
 	DeleteArticleById(ctx context.Context, articleId uuid.UUID) error
+
 	UnfavoriteArticle(ctx context.Context, loggedInUserId uuid.UUID, articleId uuid.UUID) error
 	FavoriteArticle(ctx context.Context, loggedInUserId uuid.UUID, articleId uuid.UUID) error
-	DeleteCommentByArticleIdAndCommentId(ctx context.Context, loggedInUserId uuid.UUID, articleId uuid.UUID, commentId uuid.UUID) error
-	FindCommentsByArticleId(ctx context.Context, articleId uuid.UUID) ([]domain.Comment, error)
-	CreateComment(ctx context.Context, comment domain.Comment) error
-	FindCommentByCommentIdAndArticleId(ctx context.Context, commentId, articleId uuid.UUID) (domain.Comment, error)
+
 	IsFavorited(ctx context.Context, articleId, userId uuid.UUID) (bool, error)
 	IsFavoritedBulk(ctx context.Context, userId uuid.UUID, articleIds []uuid.UUID) (mapset.Set[uuid.UUID], error)
-	FindArticlesByAuthor(ctx context.Context, authorId uuid.UUID, limit int, nextPageToken *string) ([]domain.Article, *string, error)
 	FindArticlesFavoritedByUser(ctx context.Context, userId uuid.UUID, limit int, nextPageToken *string) ([]uuid.UUID, *string, error)
 }
 
@@ -63,21 +59,10 @@ type DynamodbArticleItem struct {
 	UpdatedAt int64 `dynamodbav:"updatedAt"`
 }
 
-type DynamodbCommentItem struct {
-	Id        string    `dynamodbav:"commentId"`
-	ArticleId string    `dynamodbav:"articleId"`
-	AuthorId  string    `dynamodbav:"authorId"`
-	Body      string    `dynamodbav:"body"`
-	CreatedAt time.Time `dynamodbav:"createdAt,unixtime"`
-	UpdatedAt time.Time `dynamodbav:"updatedAt,unixtime"`
-}
-
 var articleTable = "article"
-var commentTable = "comment"
 var favoriteTable = "favorite"
 
 var articleSlugGSI = aws.String("article_slug_gsi")
-var commentArticleGSI = aws.String("comment_article_gsi")
 var articleAuthorIdGSI = aws.String("article_author_gsi")
 var favoriteUserIdCreatedAtGSI = aws.String("favorite_user_id_created_at_gsi")
 
@@ -175,82 +160,6 @@ func (d dynamodbArticleRepository) DeleteArticleById(c context.Context, articleI
 	}
 
 	_, err := d.db.Client.DeleteItem(c, input)
-	if err != nil {
-		return fmt.Errorf("%w: %w", errutil.ErrDynamoQuery, err)
-	}
-
-	return nil
-}
-
-// ToDo @ender delete only existing comments???
-// ToDo @ender loggedin user id is not used
-func (d dynamodbArticleRepository) DeleteCommentByArticleIdAndCommentId(c context.Context, loggedInUserId uuid.UUID, articleId uuid.UUID, commentId uuid.UUID) error {
-	input := &dynamodb.DeleteItemInput{
-		TableName: &commentTable,
-		Key: map[string]ddbtypes.AttributeValue{
-			"commentId": &ddbtypes.AttributeValueMemberS{Value: commentId.String()},
-			"articleId": &ddbtypes.AttributeValueMemberS{Value: articleId.String()},
-		},
-	}
-
-	_, err := d.db.Client.DeleteItem(c, input)
-	if err != nil {
-		return fmt.Errorf("%w: %w", errutil.ErrDynamoQuery, err)
-	}
-
-	return nil
-}
-
-/*
- * ToDo Ender by design, dynamodb returns item in any order,
- *  it's not necessary in our case but we could sort the comments by createdAt field.
- */
-
-func (d dynamodbArticleRepository) FindCommentsByArticleId(ctx context.Context, articleId uuid.UUID) ([]domain.Comment, error) {
-
-	input := &dynamodb.QueryInput{
-		TableName:              &commentTable,
-		IndexName:              commentArticleGSI,
-		KeyConditionExpression: aws.String("articleId = :articleId"),
-		ExpressionAttributeValues: map[string]ddbtypes.AttributeValue{
-			":articleId": &ddbtypes.AttributeValueMemberS{Value: articleId.String()},
-		},
-	}
-
-	result, err := d.db.Client.Query(ctx, input)
-	if err != nil {
-		return nil, fmt.Errorf("%w: %w", errutil.ErrDynamoQuery, err)
-	}
-
-	dynamodbCommentItems := make([]DynamodbCommentItem, 0, len(result.Items))
-	err = attributevalue.UnmarshalListOfMaps(result.Items, &dynamodbCommentItems)
-	if err != nil {
-		// ToDo @ender experiment with this oops library
-		fancyError := oops.Wrap(fmt.Errorf("%w: %w", errutil.ErrDynamoMarshalling, err))
-		veqrynslog.With(ctx, "regularError", fmt.Errorf("%w: %w", errutil.ErrDynamoMarshalling, err))
-		veqrynslog.With(ctx, "fancyError", fancyError)
-		veqrynslog.With(ctx, slog.Group("errorContext", slog.String("articleId", articleId.String())))
-		return nil, fmt.Errorf("%w: %w", errutil.ErrDynamoMarshalling, err)
-	}
-
-	return lo.Map(dynamodbCommentItems, func(comment DynamodbCommentItem, _ int) domain.Comment {
-		return toDomainComment(comment)
-	}), nil
-}
-
-func (d dynamodbArticleRepository) CreateComment(ctx context.Context, comment domain.Comment) error {
-	dynamodbCommentItem := toDynamodbCommentItem(comment)
-	commentAttributes, err := attributevalue.MarshalMap(dynamodbCommentItem)
-	if err != nil {
-		return fmt.Errorf("%w: %w", errutil.ErrDynamoMarshalling, err)
-	}
-
-	input := &dynamodb.PutItemInput{
-		TableName: &commentTable,
-		Item:      commentAttributes,
-	}
-
-	_, err = d.db.Client.PutItem(ctx, input)
 	if err != nil {
 		return fmt.Errorf("%w: %w", errutil.ErrDynamoQuery, err)
 	}
@@ -365,33 +274,6 @@ func (d dynamodbArticleRepository) FavoriteArticle(ctx context.Context, loggedIn
 	}
 
 	return nil
-}
-
-func (d dynamodbArticleRepository) FindCommentByCommentIdAndArticleId(ctx context.Context, commentId, articleId uuid.UUID) (domain.Comment, error) {
-	input := &dynamodb.GetItemInput{
-		TableName: &commentTable,
-		Key: map[string]ddbtypes.AttributeValue{
-			"commentId": &ddbtypes.AttributeValueMemberS{Value: commentId.String()},
-			"articleId": &ddbtypes.AttributeValueMemberS{Value: articleId.String()},
-		},
-	}
-
-	result, err := d.db.Client.GetItem(ctx, input)
-	if err != nil {
-		return domain.Comment{}, fmt.Errorf("%w: %w", errutil.ErrDynamoQuery, err)
-	}
-
-	if result.Item == nil {
-		return domain.Comment{}, errutil.ErrCommentNotFound
-	}
-
-	dynamodbCommentItem := DynamodbCommentItem{}
-	err = attributevalue.UnmarshalMap(result.Item, &dynamodbCommentItem)
-	if err != nil {
-		return domain.Comment{}, fmt.Errorf("%w: %w", errutil.ErrDynamoMapping, err)
-	}
-
-	return toDomainComment(dynamodbCommentItem), nil
 }
 
 func (d dynamodbArticleRepository) IsFavorited(ctx context.Context, articleId, userId uuid.UUID) (bool, error) {
@@ -628,27 +510,5 @@ func toDomainArticle(article DynamodbArticleItem) domain.Article {
 		AuthorId:       uuid.MustParse(article.AuthorId),
 		CreatedAt:      time.UnixMilli(article.CreatedAt),
 		UpdatedAt:      time.UnixMilli(article.UpdatedAt),
-	}
-}
-
-func toDynamodbCommentItem(article domain.Comment) DynamodbCommentItem {
-	return DynamodbCommentItem{
-		Id:        article.Id.String(),
-		ArticleId: article.ArticleId.String(),
-		AuthorId:  article.AuthorId.String(),
-		Body:      article.Body,
-		CreatedAt: article.CreatedAt,
-		UpdatedAt: article.UpdatedAt,
-	}
-}
-
-func toDomainComment(article DynamodbCommentItem) domain.Comment {
-	return domain.Comment{
-		Id:        uuid.MustParse(article.Id),
-		ArticleId: uuid.MustParse(article.ArticleId),
-		AuthorId:  uuid.MustParse(article.AuthorId),
-		Body:      article.Body,
-		CreatedAt: article.CreatedAt,
-		UpdatedAt: article.UpdatedAt,
 	}
 }
