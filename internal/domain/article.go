@@ -19,6 +19,11 @@ type Article struct {
 	UpdatedAt      time.Time
 }
 
+func init() {
+	// ToDo @ender I think this is a good way to ensure uniqueness. this will give away the creation time of the article tho.
+	slug.AppendTimestamp = true
+}
+
 func NewArticle(title, description, body string, tagList []string, authorId uuid.UUID) Article {
 	now := time.Now()
 	return Article{

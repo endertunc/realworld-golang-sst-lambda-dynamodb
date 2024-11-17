@@ -5,11 +5,11 @@ import (
 	"realworld-aws-lambda-dynamodb-golang/internal/domain/dto"
 )
 
-func GenerateCreateArticleRequestBodyDTO() dto.CreateArticleRequestBodyDTO {
-	return dto.CreateArticleRequestBodyDTO{
-		Article: GenerateCreateArticleRequestDTO(),
-	}
-}
+//func GenerateCreateArticleRequestBodyDTO() dto.CreateArticleRequestBodyDTO {
+//	return dto.CreateArticleRequestBodyDTO{
+//		Article: GenerateCreateArticleRequestDTO(),
+//	}
+//}
 
 func GenerateCreateArticleRequestDTO() dto.CreateArticleRequestDTO {
 	return dto.CreateArticleRequestDTO{

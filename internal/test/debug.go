@@ -2,16 +2,11 @@ package test
 
 import (
 	"encoding/json"
-	"log/slog"
+	"log"
 )
 
 // used for debugging purposes
-func PrintAsJSON(obj interface{}, printer func(value ...any)) {
+func PrintAsJSON(obj interface{}) {
 	bytes, _ := json.MarshalIndent(obj, "\t", "\t")
-	printer(string(bytes))
-}
-
-func SlogAsJSON(obj interface{}) {
-	bytes, _ := json.MarshalIndent(obj, "\t", "\t")
-	slog.Info(string(bytes))
+	log.Println(string(bytes))
 }

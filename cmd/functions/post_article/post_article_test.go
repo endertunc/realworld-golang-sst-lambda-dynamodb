@@ -2,8 +2,8 @@ package main
 
 import (
 	"github.com/stretchr/testify/assert"
-	"net/http"
 	"realworld-aws-lambda-dynamodb-golang/internal/domain/dto"
+	dtogen "realworld-aws-lambda-dynamodb-golang/internal/domain/dto/generator"
 	"realworld-aws-lambda-dynamodb-golang/internal/test"
 	"testing"
 )
@@ -21,19 +21,8 @@ func TestSuccessfulArticleCreation(t *testing.T) {
 		user, token := test.CreateAndLoginUser(t, test.DefaultNewUserRequestUserDto)
 
 		// Create an article
-		article := dto.CreateArticleRequestDTO{
-			Title:       "How to train your dragon",
-			Description: "Ever wonder how?",
-			Body:        "You have to believe",
-			TagList:     []string{"dragons", "training"},
-		}
-
-		reqBody := dto.CreateArticleRequestBodyDTO{
-			Article: article,
-		}
-
-		var respBody dto.ArticleResponseBodyDTO
-		test.MakeAuthenticatedRequestAndParseResponse(t, reqBody, "POST", "/api/articles", http.StatusOK, &respBody, token)
+		article := dtogen.GenerateCreateArticleRequestDTO()
+		respBody := test.CreateArticle(t, article, token)
 
 		// Create expected article response
 		expectedArticle := dto.ArticleResponseDTO{
@@ -50,15 +39,15 @@ func TestSuccessfulArticleCreation(t *testing.T) {
 				Following: false,
 			},
 			// dynamic fields
-			Slug:      respBody.Article.Slug,
-			CreatedAt: respBody.Article.CreatedAt,
-			UpdatedAt: respBody.Article.UpdatedAt,
+			Slug:      respBody.Slug,
+			CreatedAt: respBody.CreatedAt,
+			UpdatedAt: respBody.UpdatedAt,
 		}
 
-		assert.Equal(t, expectedArticle, respBody.Article)
-		assert.NotEmpty(t, respBody.Article.Slug)
-		assert.NotZero(t, respBody.Article.CreatedAt)
-		assert.NotZero(t, respBody.Article.UpdatedAt)
+		assert.Equal(t, expectedArticle, respBody)
+		assert.NotEmpty(t, respBody.Slug)
+		assert.NotZero(t, respBody.CreatedAt)
+		assert.NotZero(t, respBody.UpdatedAt)
 	})
 }
 
@@ -68,32 +57,21 @@ func TestCreateArticlesWithSameTitle(t *testing.T) {
 		user, token := test.CreateAndLoginUser(t, test.DefaultNewUserRequestUserDto)
 
 		// Create first article
-		article := dto.CreateArticleRequestDTO{
-			Title:       "How to train your dragon",
-			Description: "Ever wonder how?",
-			Body:        "You have to believe",
-			TagList:     []string{"dragons", "training"},
-		}
+		article := dtogen.GenerateCreateArticleRequestDTO()
 
-		reqBody := dto.CreateArticleRequestBodyDTO{
-			Article: article,
-		}
+		firstRespBody := test.CreateArticle(t, article, token)
 
-		var firstRespBody dto.ArticleResponseBodyDTO
-		test.MakeAuthenticatedRequestAndParseResponse(t, reqBody, "POST", "/api/articles", http.StatusCreated, &firstRespBody, token)
-
-		// Create second article with the same title
-		var secondRespBody dto.ArticleResponseBodyDTO
-		test.MakeAuthenticatedRequestAndParseResponse(t, reqBody, "POST", "/api/articles", http.StatusCreated, &secondRespBody, token)
+		// Create a second article with the same title
+		secondRespBody := test.CreateArticle(t, article, token)
 
 		// Verify both articles were created successfully
-		assert.Equal(t, article.Title, firstRespBody.Article.Title)
-		assert.Equal(t, article.Title, secondRespBody.Article.Title)
+		assert.Equal(t, article.Title, firstRespBody.Title)
+		assert.Equal(t, article.Title, secondRespBody.Title)
 
 		// Verify they have different slugs
-		assert.NotEqual(t, firstRespBody.Article.Slug, secondRespBody.Article.Slug)
-		assert.NotEmpty(t, firstRespBody.Article.Slug)
-		assert.NotEmpty(t, secondRespBody.Article.Slug)
+		assert.NotEqual(t, firstRespBody.Slug, secondRespBody.Slug)
+		assert.NotEmpty(t, firstRespBody.Slug)
+		assert.NotEmpty(t, secondRespBody.Slug)
 
 		// Verify other fields are set correctly for both articles
 		baseExpectedArticle := dto.ArticleResponseDTO{
@@ -113,17 +91,17 @@ func TestCreateArticlesWithSameTitle(t *testing.T) {
 
 		// Compare non-dynamic fields for first article
 		firstExpected := baseExpectedArticle
-		firstExpected.Slug = firstRespBody.Article.Slug
-		firstExpected.CreatedAt = firstRespBody.Article.CreatedAt
-		firstExpected.UpdatedAt = firstRespBody.Article.UpdatedAt
-		assert.Equal(t, firstExpected, firstRespBody.Article)
+		firstExpected.Slug = firstRespBody.Slug
+		firstExpected.CreatedAt = firstRespBody.CreatedAt
+		firstExpected.UpdatedAt = firstRespBody.UpdatedAt
+		assert.Equal(t, firstExpected, firstRespBody)
 
 		// Compare non-dynamic fields for second article
 		secondExpected := baseExpectedArticle
-		secondExpected.Slug = secondRespBody.Article.Slug
-		secondExpected.CreatedAt = secondRespBody.Article.CreatedAt
-		secondExpected.UpdatedAt = secondRespBody.Article.UpdatedAt
-		assert.Equal(t, secondExpected, secondRespBody.Article)
+		secondExpected.Slug = secondRespBody.Slug
+		secondExpected.CreatedAt = secondRespBody.CreatedAt
+		secondExpected.UpdatedAt = secondRespBody.UpdatedAt
+		assert.Equal(t, secondExpected, secondRespBody)
 	})
 }
 
@@ -133,18 +111,10 @@ func TestCreateArticleWithoutTags(t *testing.T) {
 		user, token := test.CreateAndLoginUser(t, test.DefaultNewUserRequestUserDto)
 
 		// Create an article without tags
-		article := dto.CreateArticleRequestDTO{
-			Title:       "How to train your dragon",
-			Description: "Ever wonder how?",
-			Body:        "You have to believe",
-		}
+		article := dtogen.GenerateCreateArticleRequestDTO()
+		article.TagList = nil
 
-		reqBody := dto.CreateArticleRequestBodyDTO{
-			Article: article,
-		}
-
-		var respBody dto.ArticleResponseBodyDTO
-		test.MakeAuthenticatedRequestAndParseResponse(t, reqBody, "POST", "/api/articles", http.StatusOK, &respBody, token)
+		respBody := test.CreateArticle(t, article, token)
 
 		// Create expected article response
 		expectedArticle := dto.ArticleResponseDTO{
@@ -160,12 +130,12 @@ func TestCreateArticleWithoutTags(t *testing.T) {
 				Image:     nil,
 				Following: false,
 			},
-			Slug:      respBody.Article.Slug,
-			CreatedAt: respBody.Article.CreatedAt,
-			UpdatedAt: respBody.Article.UpdatedAt,
+			Slug:      respBody.Slug,
+			CreatedAt: respBody.CreatedAt,
+			UpdatedAt: respBody.UpdatedAt,
 		}
 
-		assert.Equal(t, expectedArticle, respBody.Article)
+		assert.Equal(t, expectedArticle, respBody)
 	})
 }
 
@@ -175,26 +145,17 @@ func TestCreateArticleWithEmptyTags(t *testing.T) {
 		user, token := test.CreateAndLoginUser(t, test.DefaultNewUserRequestUserDto)
 
 		// Create an article with empty tags array
-		article := dto.CreateArticleRequestDTO{
-			Title:       "How to train your dragon",
-			Description: "Ever wonder how?",
-			Body:        "You have to believe",
-			TagList:     []string{},
-		}
+		article := dtogen.GenerateCreateArticleRequestDTO()
+		article.TagList = []string{}
 
-		reqBody := dto.CreateArticleRequestBodyDTO{
-			Article: article,
-		}
-
-		var respBody dto.ArticleResponseBodyDTO
-		test.MakeAuthenticatedRequestAndParseResponse(t, reqBody, "POST", "/api/articles", http.StatusCreated, &respBody, token)
+		respBody := test.CreateArticle(t, article, token)
 
 		// Create expected article response
 		expectedArticle := dto.ArticleResponseDTO{
 			Title:          article.Title,
 			Description:    article.Description,
 			Body:           article.Body,
-			TagList:        article.TagList,
+			TagList:        []string{},
 			Favorited:      false,
 			FavoritesCount: 0,
 			Author: dto.AuthorDTO{
@@ -203,11 +164,11 @@ func TestCreateArticleWithEmptyTags(t *testing.T) {
 				Image:     nil,
 				Following: false,
 			},
-			Slug:      respBody.Article.Slug,
-			CreatedAt: respBody.Article.CreatedAt,
-			UpdatedAt: respBody.Article.UpdatedAt,
+			Slug:      respBody.Slug,
+			CreatedAt: respBody.CreatedAt,
+			UpdatedAt: respBody.UpdatedAt,
 		}
 
-		assert.Equal(t, expectedArticle, respBody.Article)
+		assert.Equal(t, expectedArticle, respBody)
 	})
 }

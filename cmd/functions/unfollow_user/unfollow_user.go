@@ -37,8 +37,8 @@ func HandlerHTTP(w http.ResponseWriter, r *http.Request, userId uuid.UUID, _ dom
 			api.ToSimpleHTTPError(w, http.StatusNotFound, "user not found")
 			return
 		} else if errors.Is(err, errutil.ErrCantFollowYourself) {
-			slog.DebugContext(ctx, "user is already unfollowed", slog.String("username", username), slog.String("userId", userId.String()))
-			api.ToSimpleHTTPError(w, http.StatusConflict, "user is already unfollowed")
+			slog.DebugContext(ctx, "user tried to unfollow itself", slog.String("username", username), slog.String("userId", userId.String()))
+			api.ToSimpleHTTPError(w, http.StatusConflict, "cannot unfollow yourself")
 			return
 		} else {
 			api.ToInternalServerHTTPError(w, err)

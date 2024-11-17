@@ -4,6 +4,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"net/http"
 	"realworld-aws-lambda-dynamodb-golang/internal/domain/dto"
+	dtogenerator "realworld-aws-lambda-dynamodb-golang/internal/domain/dto/generator"
 	"realworld-aws-lambda-dynamodb-golang/internal/errutil"
 	"realworld-aws-lambda-dynamodb-golang/internal/test"
 	"testing"
@@ -20,14 +21,15 @@ func TestSuccessfulCommentCreation(t *testing.T) {
 	test.WithSetupAndTeardown(t, func() {
 		// Create a user and an article
 		user, token := test.CreateAndLoginUser(t, test.DefaultNewUserRequestUserDto)
-		article := test.CreateDefaultArticle(t, token)
+		article := test.CreateArticle(t, dtogenerator.GenerateCreateArticleRequestDTO(), token)
 
-		// Create a comment
-		comment := test.CreateDefaultComment(t, article.Slug, token)
+		// Create a commentResp
+		commentReq := dtogenerator.GenerateAddCommentRequestDTO()
+		commentResp := test.CreateComment(t, article.Slug, commentReq, token)
 
-		// Create expected comment response
+		// Create expected commentResp response
 		expectedComment := dto.CommentResponseDTO{
-			Body: test.DefaultAddCommentRequestDTO.Body,
+			Body: commentReq.Body,
 			Author: dto.AuthorDTO{
 				Username:  user.Username,
 				Bio:       nil,
@@ -35,21 +37,21 @@ func TestSuccessfulCommentCreation(t *testing.T) {
 				Following: false,
 			},
 			// dynamic fields
-			Id:        comment.Id,
-			CreatedAt: comment.CreatedAt,
-			UpdatedAt: comment.UpdatedAt,
+			Id:        commentResp.Id,
+			CreatedAt: commentResp.CreatedAt,
+			UpdatedAt: commentResp.UpdatedAt,
 		}
 
 		// Compare the entire struct
-		assert.Equal(t, expectedComment, comment)
+		assert.Equal(t, expectedComment, commentResp)
 
 		// Verify dynamic fields separately
-		assert.NotEmpty(t, comment.Id)
-		assert.NotZero(t, comment.CreatedAt)
-		assert.NotZero(t, comment.UpdatedAt)
+		assert.NotEmpty(t, commentResp.Id)
+		assert.NotZero(t, commentResp.CreatedAt)
+		assert.NotZero(t, commentResp.UpdatedAt)
 
-		// Verify the comment appears in the article's comments
-		test.VerifyCommentExists(t, article.Slug, comment.Id, token)
+		// Verify the commentResp appears in the article's comments
+		test.VerifyCommentExists(t, article.Slug, commentResp.Id, token)
 	})
 }
 
@@ -59,19 +61,9 @@ func TestCommentOnNonExistentArticle(t *testing.T) {
 		_, token := test.CreateAndLoginUser(t, test.DefaultNewUserRequestUserDto)
 
 		// Try to comment on a non-existent article
-		comment := dto.AddCommentRequestDTO{
-			Body: "This is a great article!",
-		}
+		reqBody := dtogenerator.GenerateAddCommentRequestDTO()
 
-		reqBody := dto.AddCommentRequestBodyDTO{
-			Comment: comment,
-		}
-
-		respBody := errutil.SimpleError{}
-		test.MakeAuthenticatedRequestAndParseResponse(t, reqBody, "POST",
-			"/api/articles/non-existent-article/comments",
-			http.StatusNotFound, &respBody, token)
-
+		respBody := test.CreateCommentWithResponse[errutil.SimpleError](t, "non-existent-article", reqBody, token, http.StatusNotFound)
 		assert.Equal(t, "article not found", respBody.Message)
 	})
 }

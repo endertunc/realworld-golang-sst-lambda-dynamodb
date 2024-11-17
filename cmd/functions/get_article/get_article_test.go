@@ -1,10 +1,9 @@
 package main
 
 import (
-	"fmt"
 	"github.com/stretchr/testify/assert"
 	"net/http"
-	"realworld-aws-lambda-dynamodb-golang/internal/domain/dto"
+	dtogen "realworld-aws-lambda-dynamodb-golang/internal/domain/dto/generator"
 	"realworld-aws-lambda-dynamodb-golang/internal/errutil"
 	"realworld-aws-lambda-dynamodb-golang/internal/test"
 	"testing"
@@ -13,8 +12,7 @@ import (
 func TestGetNonExistentArticle(t *testing.T) {
 	test.WithSetupAndTeardown(t, func() {
 		nonExistentSlug := "non-existent-article"
-		var respBody errutil.SimpleError
-		test.MakeRequestAndParseResponse(t, nil, "GET", fmt.Sprintf("/api/articles/%s", nonExistentSlug), http.StatusNotFound, &respBody)
+		respBody := test.GetArticleWithResponse[errutil.SimpleError](t, nonExistentSlug, nil, http.StatusNotFound)
 		assert.Equal(t, "article not found", respBody.Message)
 	})
 }
@@ -23,17 +21,16 @@ func TestGetArticleUnauthenticated(t *testing.T) {
 	test.WithSetupAndTeardown(t, func() {
 		// Create a user and article
 		_, token := test.CreateAndLoginUser(t, test.DefaultNewUserRequestUserDto)
-		createdArticle := test.CreateArticleEntity(t, test.DefaultCreateArticleRequestDTO, token)
+		createdArticle := test.CreateArticle(t, dtogen.GenerateCreateArticleRequestDTO(), token)
 
 		// Get article without authentication
-		var respBody dto.ArticleResponseBodyDTO
-		test.MakeRequestAndParseResponse(t, nil, "GET", fmt.Sprintf("/api/articles/%s", createdArticle.Slug), http.StatusOK, &respBody)
+		respBody := test.GetArticle(t, createdArticle.Slug, nil)
 
 		// Verify response
-		assert.Equal(t, createdArticle.Slug, respBody.Article.Slug)
-		assert.False(t, respBody.Article.Favorited)
-		assert.False(t, respBody.Article.Author.Following)
-		assert.Equal(t, 0, respBody.Article.FavoritesCount)
+		assert.Equal(t, createdArticle.Slug, respBody.Slug)
+		assert.False(t, respBody.Favorited)
+		assert.False(t, respBody.Author.Following)
+		assert.Equal(t, 0, respBody.FavoritesCount)
 	})
 }
 
@@ -41,24 +38,19 @@ func TestGetArticleNotFollowingNotFavorited(t *testing.T) {
 	test.WithSetupAndTeardown(t, func() {
 		// Create author and article
 		_, authorToken := test.CreateAndLoginUser(t, test.DefaultNewUserRequestUserDto)
-		createdArticle := test.CreateArticleEntity(t, test.DefaultCreateArticleRequestDTO, authorToken)
+		createdArticle := test.CreateArticle(t, dtogen.GenerateCreateArticleRequestDTO(), authorToken)
 
 		// Create reader
-		_, readerToken := test.CreateAndLoginUser(t, dto.NewUserRequestUserDto{
-			Username: "reader",
-			Email:    "reader@test.com",
-			Password: "password123",
-		})
+		_, readerToken := test.CreateAndLoginUser(t, dtogen.GenerateNewUserRequestUserDto())
 
 		// Get article as reader
-		var respBody dto.ArticleResponseBodyDTO
-		test.MakeAuthenticatedRequestAndParseResponse(t, nil, "GET", fmt.Sprintf("/api/articles/%s", createdArticle.Slug), http.StatusOK, &respBody, readerToken)
+		respBody := test.GetArticle(t, createdArticle.Slug, &readerToken)
 
 		// Verify response
-		assert.Equal(t, createdArticle.Slug, respBody.Article.Slug)
-		assert.False(t, respBody.Article.Favorited)
-		assert.False(t, respBody.Article.Author.Following)
-		assert.Equal(t, 0, respBody.Article.FavoritesCount)
+		assert.Equal(t, createdArticle.Slug, respBody.Slug)
+		assert.False(t, respBody.Favorited)
+		assert.False(t, respBody.Author.Following)
+		assert.Equal(t, 0, respBody.FavoritesCount)
 	})
 }
 
@@ -66,30 +58,24 @@ func TestGetArticleFollowingAndFavorited(t *testing.T) {
 	test.WithSetupAndTeardown(t, func() {
 		// Create author and article
 		author, authorToken := test.CreateAndLoginUser(t, test.DefaultNewUserRequestUserDto)
-		createdArticle := test.CreateArticleEntity(t, test.DefaultCreateArticleRequestDTO, authorToken)
+		createdArticle := test.CreateArticle(t, dtogen.GenerateCreateArticleRequestDTO(), authorToken)
 
 		// Create reader
-		_, readerToken := test.CreateAndLoginUser(t, dto.NewUserRequestUserDto{
-			Username: "reader",
-			Email:    "reader@test.com",
-			Password: "password123",
-		})
+		_, readerToken := test.CreateAndLoginUser(t, dtogen.GenerateNewUserRequestUserDto())
 
 		// Follow the author
-		test.MakeAuthenticatedRequestAndParseResponse(t, nil, "POST", fmt.Sprintf("/api/profiles/%s/follow", author.Username), http.StatusOK, nil, readerToken)
-
+		test.FollowUser(t, author.Username, readerToken)
 		// Favorite the article
-		test.MakeAuthenticatedRequestAndParseResponse(t, nil, "POST", fmt.Sprintf("/api/articles/%s/favorite", createdArticle.Slug), http.StatusOK, nil, readerToken)
+		test.FavoriteArticle(t, createdArticle.Slug, readerToken)
 
 		// Get article as reader
-		var respBody dto.ArticleResponseBodyDTO
-		test.MakeAuthenticatedRequestAndParseResponse(t, nil, "GET", fmt.Sprintf("/api/articles/%s", createdArticle.Slug), http.StatusOK, &respBody, readerToken)
+		respBody := test.GetArticle(t, createdArticle.Slug, &readerToken)
 
 		// Verify response
-		assert.Equal(t, createdArticle.Slug, respBody.Article.Slug)
-		assert.True(t, respBody.Article.Favorited)
-		assert.True(t, respBody.Article.Author.Following)
-		assert.Equal(t, 1, respBody.Article.FavoritesCount)
+		assert.Equal(t, createdArticle.Slug, respBody.Slug)
+		assert.True(t, respBody.Favorited)
+		assert.True(t, respBody.Author.Following)
+		assert.Equal(t, 1, respBody.FavoritesCount)
 	})
 }
 
@@ -97,17 +83,16 @@ func TestGetOwnArticleNotFavorited(t *testing.T) {
 	test.WithSetupAndTeardown(t, func() {
 		// Create author and article
 		_, token := test.CreateAndLoginUser(t, test.DefaultNewUserRequestUserDto)
-		createdArticle := test.CreateArticleEntity(t, test.DefaultCreateArticleRequestDTO, token)
+		createdArticle := test.CreateArticle(t, dtogen.GenerateCreateArticleRequestDTO(), token)
 
 		// Get own article
-		var respBody dto.ArticleResponseBodyDTO
-		test.MakeAuthenticatedRequestAndParseResponse(t, nil, "GET", fmt.Sprintf("/api/articles/%s", createdArticle.Slug), http.StatusOK, &respBody, token)
+		respBody := test.GetArticle(t, createdArticle.Slug, &token)
 
 		// Verify response
-		assert.Equal(t, createdArticle.Slug, respBody.Article.Slug)
-		assert.False(t, respBody.Article.Favorited)
-		assert.False(t, respBody.Article.Author.Following) // You don't follow yourself
-		assert.Equal(t, 0, respBody.Article.FavoritesCount)
+		assert.Equal(t, createdArticle.Slug, respBody.Slug)
+		assert.False(t, respBody.Favorited)
+		assert.False(t, respBody.Author.Following) // You don't follow yourself
+		assert.Equal(t, 0, respBody.FavoritesCount)
 	})
 }
 
@@ -115,19 +100,17 @@ func TestGetOwnArticleFavorited(t *testing.T) {
 	test.WithSetupAndTeardown(t, func() {
 		// Create author and article
 		_, token := test.CreateAndLoginUser(t, test.DefaultNewUserRequestUserDto)
-		createdArticle := test.CreateArticleEntity(t, test.DefaultCreateArticleRequestDTO, token)
+		createdArticle := test.CreateArticle(t, dtogen.GenerateCreateArticleRequestDTO(), token)
 
 		// Favorite own article
-		test.MakeAuthenticatedRequestAndParseResponse(t, nil, "POST", fmt.Sprintf("/api/articles/%s/favorite", createdArticle.Slug), http.StatusOK, nil, token)
-
+		test.FavoriteArticle(t, createdArticle.Slug, token)
 		// Get own article
-		var respBody dto.ArticleResponseBodyDTO
-		test.MakeAuthenticatedRequestAndParseResponse(t, nil, "GET", fmt.Sprintf("/api/articles/%s", createdArticle.Slug), http.StatusOK, &respBody, token)
+		respBody := test.GetArticle(t, createdArticle.Slug, &token)
 
 		// Verify response
-		assert.Equal(t, createdArticle.Slug, respBody.Article.Slug)
-		assert.True(t, respBody.Article.Favorited)
-		assert.False(t, respBody.Article.Author.Following) // You don't follow yourself
-		assert.Equal(t, 1, respBody.Article.FavoritesCount)
+		assert.Equal(t, createdArticle.Slug, respBody.Slug)
+		assert.True(t, respBody.Favorited)
+		assert.False(t, respBody.Author.Following) // You don't follow yourself
+		assert.Equal(t, 1, respBody.FavoritesCount)
 	})
 }

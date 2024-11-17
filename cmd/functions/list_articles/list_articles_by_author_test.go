@@ -30,17 +30,17 @@ func TestListArticlesByAuthorWithoutAuth(t *testing.T) {
 
 		// create first articles for both authors
 		article1 := generator.GenerateCreateArticleRequestDTO()
-		createdArticle1 := test.CreateArticleEntity(t, article1, author1Token)
+		createdArticle1 := test.CreateArticle(t, article1, author1Token)
 
 		article2 := generator.GenerateCreateArticleRequestDTO()
-		createdArticle2 := test.CreateArticleEntity(t, article2, author2Token)
+		createdArticle2 := test.CreateArticle(t, article2, author2Token)
 
 		// create second articles for both authors
 		article3 := generator.GenerateCreateArticleRequestDTO()
-		createdArticle3 := test.CreateArticleEntity(t, article3, author1Token)
+		createdArticle3 := test.CreateArticle(t, article3, author1Token)
 
 		article4 := generator.GenerateCreateArticleRequestDTO()
-		createdArticle4 := test.CreateArticleEntity(t, article4, author2Token)
+		createdArticle4 := test.CreateArticle(t, article4, author2Token)
 
 		// viewer follows author1 and favorites articles
 		test.MakeAuthenticatedRequestAndParseResponse(t, nil, "POST",
@@ -111,17 +111,17 @@ func TestListArticlesByAuthorWithoutFollowingAndFavorite(t *testing.T) {
 
 		// create first articles for both authors
 		article1 := generator.GenerateCreateArticleRequestDTO()
-		createdArticle1 := test.CreateArticleEntity(t, article1, author1Token)
+		createdArticle1 := test.CreateArticle(t, article1, author1Token)
 
 		article2 := generator.GenerateCreateArticleRequestDTO()
-		createdArticle2 := test.CreateArticleEntity(t, article2, author2Token)
+		createdArticle2 := test.CreateArticle(t, article2, author2Token)
 
 		// create second articles for both authors
 		article3 := generator.GenerateCreateArticleRequestDTO()
-		createdArticle3 := test.CreateArticleEntity(t, article3, author1Token)
+		createdArticle3 := test.CreateArticle(t, article3, author1Token)
 
 		article4 := generator.GenerateCreateArticleRequestDTO()
-		createdArticle4 := test.CreateArticleEntity(t, article4, author2Token)
+		createdArticle4 := test.CreateArticle(t, article4, author2Token)
 
 		// viewer follows author1 and favorites articles
 		test.MakeAuthenticatedRequestAndParseResponse(t, nil, "POST",
@@ -192,17 +192,17 @@ func TestListArticlesByAuthorWithFollowing(t *testing.T) {
 
 		// create first articles for both authors
 		article1 := generator.GenerateCreateArticleRequestDTO()
-		createdArticle1 := test.CreateArticleEntity(t, article1, author1Token)
+		createdArticle1 := test.CreateArticle(t, article1, author1Token)
 
 		article2 := generator.GenerateCreateArticleRequestDTO()
-		createdArticle2 := test.CreateArticleEntity(t, article2, author2Token)
+		createdArticle2 := test.CreateArticle(t, article2, author2Token)
 
 		// create second articles for both authors
 		article3 := generator.GenerateCreateArticleRequestDTO()
-		createdArticle3 := test.CreateArticleEntity(t, article3, author1Token)
+		createdArticle3 := test.CreateArticle(t, article3, author1Token)
 
 		article4 := generator.GenerateCreateArticleRequestDTO()
-		createdArticle4 := test.CreateArticleEntity(t, article4, author2Token)
+		createdArticle4 := test.CreateArticle(t, article4, author2Token)
 
 		// viewer follows author1 and favorites articles
 		test.MakeAuthenticatedRequestAndParseResponse(t, nil, "POST",
@@ -278,17 +278,17 @@ func TestListArticlesByAuthorWithFavorite(t *testing.T) {
 
 		// create first articles for both authors
 		article1 := generator.GenerateCreateArticleRequestDTO()
-		createdArticle1 := test.CreateArticleEntity(t, article1, author1Token)
+		createdArticle1 := test.CreateArticle(t, article1, author1Token)
 
 		article2 := generator.GenerateCreateArticleRequestDTO()
-		createdArticle2 := test.CreateArticleEntity(t, article2, author2Token)
+		createdArticle2 := test.CreateArticle(t, article2, author2Token)
 
 		// create second articles for both authors
 		article3 := generator.GenerateCreateArticleRequestDTO()
-		createdArticle3 := test.CreateArticleEntity(t, article3, author1Token)
+		createdArticle3 := test.CreateArticle(t, article3, author1Token)
 
 		article4 := generator.GenerateCreateArticleRequestDTO()
-		createdArticle4 := test.CreateArticleEntity(t, article4, author2Token)
+		createdArticle4 := test.CreateArticle(t, article4, author2Token)
 
 		// viewer follows author1 and favorites articles
 		test.MakeAuthenticatedRequestAndParseResponse(t, nil, "POST",
@@ -360,17 +360,17 @@ func TestListArticlesByAuthorWithNoOverlap(t *testing.T) {
 
 		// create first articles for both authors
 		article1 := generator.GenerateCreateArticleRequestDTO()
-		createdArticle1 := test.CreateArticleEntity(t, article1, author1Token)
+		createdArticle1 := test.CreateArticle(t, article1, author1Token)
 
 		article2 := generator.GenerateCreateArticleRequestDTO()
-		createdArticle2 := test.CreateArticleEntity(t, article2, author2Token)
+		createdArticle2 := test.CreateArticle(t, article2, author2Token)
 
 		// create second articles for both authors
 		article3 := generator.GenerateCreateArticleRequestDTO()
-		createdArticle3 := test.CreateArticleEntity(t, article3, author1Token)
+		createdArticle3 := test.CreateArticle(t, article3, author1Token)
 
 		article4 := generator.GenerateCreateArticleRequestDTO()
-		createdArticle4 := test.CreateArticleEntity(t, article4, author2Token)
+		createdArticle4 := test.CreateArticle(t, article4, author2Token)
 
 		// viewer follows author1 and favorites articles from both authors
 		test.MakeAuthenticatedRequestAndParseResponse(t, nil, "POST",

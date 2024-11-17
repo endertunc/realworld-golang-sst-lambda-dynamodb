@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/awslabs/aws-lambda-go-api-proxy/httpadapter"
 	sloghttp "github.com/samber/slog-http"
@@ -12,9 +13,6 @@ import (
 	"realworld-aws-lambda-dynamodb-golang/internal/api"
 	"realworld-aws-lambda-dynamodb-golang/internal/domain/dto"
 	"realworld-aws-lambda-dynamodb-golang/internal/errutil"
-	"realworld-aws-lambda-dynamodb-golang/internal/test"
-
-	"github.com/aws/aws-lambda-go/events"
 )
 
 const handlerName = "RegisterUserHandler"
@@ -56,10 +54,6 @@ func HandlerHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func Handler(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	test.SlogAsJSON(request)
-
-	slog.Info("", slog.Any("request", request))
-
 	newUserRequestBodyDTO, errResponse := api.ParseBodyAs[dto.NewUserRequestBodyDTO](ctx, request)
 
 	if errResponse != nil {

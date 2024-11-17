@@ -41,12 +41,12 @@ var (
 )
 
 type DynamodbCommentItem struct {
-	Id        string    `dynamodbav:"commentId"`
-	ArticleId string    `dynamodbav:"articleId"`
-	AuthorId  string    `dynamodbav:"authorId"`
-	Body      string    `dynamodbav:"body"`
-	CreatedAt time.Time `dynamodbav:"createdAt,unixtime"`
-	UpdatedAt time.Time `dynamodbav:"updatedAt,unixtime"`
+	Id        string `dynamodbav:"commentId"`
+	ArticleId string `dynamodbav:"articleId"`
+	AuthorId  string `dynamodbav:"authorId"`
+	Body      string `dynamodbav:"body"`
+	CreatedAt int64  `dynamodbav:"createdAt"`
+	UpdatedAt int64  `dynamodbav:"updatedAt"`
 }
 
 // ToDo @ender delete only existing comments???
@@ -157,18 +157,18 @@ func toDynamodbCommentItem(article domain.Comment) DynamodbCommentItem {
 		ArticleId: article.ArticleId.String(),
 		AuthorId:  article.AuthorId.String(),
 		Body:      article.Body,
-		CreatedAt: article.CreatedAt,
-		UpdatedAt: article.UpdatedAt,
+		CreatedAt: article.CreatedAt.UnixMilli(),
+		UpdatedAt: article.UpdatedAt.UnixMilli(),
 	}
 }
 
-func toDomainComment(article DynamodbCommentItem) domain.Comment {
+func toDomainComment(comment DynamodbCommentItem) domain.Comment {
 	return domain.Comment{
-		Id:        uuid.MustParse(article.Id),
-		ArticleId: uuid.MustParse(article.ArticleId),
-		AuthorId:  uuid.MustParse(article.AuthorId),
-		Body:      article.Body,
-		CreatedAt: article.CreatedAt,
-		UpdatedAt: article.UpdatedAt,
+		Id:        uuid.MustParse(comment.Id),
+		ArticleId: uuid.MustParse(comment.ArticleId),
+		AuthorId:  uuid.MustParse(comment.AuthorId),
+		Body:      comment.Body,
+		CreatedAt: time.UnixMilli(comment.CreatedAt),
+		UpdatedAt: time.UnixMilli(comment.UpdatedAt),
 	}
 }

@@ -4,6 +4,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"net/http"
 	"realworld-aws-lambda-dynamodb-golang/internal/domain/dto"
+	dtogen "realworld-aws-lambda-dynamodb-golang/internal/domain/dto/generator"
 	"realworld-aws-lambda-dynamodb-golang/internal/errutil"
 	"realworld-aws-lambda-dynamodb-golang/internal/test"
 	"testing"
@@ -11,64 +12,39 @@ import (
 
 func TestSuccessfulLogin(t *testing.T) {
 	test.WithSetupAndTeardown(t, func() {
-		user := test.DefaultNewUserRequestUserDto
+		// Create a user
+		user := dtogen.GenerateNewUserRequestUserDto()
 		test.CreateUserEntity(t, user)
-		reqBody := dto.LoginRequestBodyDTO{
-			User: dto.LoginRequestUserDto{
-				Email:    user.Email,
-				Password: user.Password,
-			},
-		}
 
-		var respBody dto.UserResponseBodyDTO
-		test.MakeRequestAndParseResponse(t, reqBody, "POST", "/api/users/login", http.StatusOK, &respBody)
-		assert.Equal(t, user.Email, respBody.User.Email)
-		assert.Equal(t, user.Username, respBody.User.Username)
-		assert.NotEmpty(t, respBody.User.Token)
+		// Login the user
+		loginRequest := dto.LoginRequestUserDto{
+			Email:    user.Email,
+			Password: user.Password,
+		}
+		respBody := test.LoginUser(t, loginRequest)
+
+		// Verify the response
+		assert.Equal(t, user.Email, respBody.Email)
+		assert.Equal(t, user.Username, respBody.Username)
+		assert.NotEmpty(t, respBody.Token)
 	})
 
 }
 
-//func TestInvalidRequestBodyMissingPassword(t *testing.T) {
-//	t.Skip()
-//	test.WithSetupAndTeardown(t, func() {
-//		reqBody := dto.LoginRequestBodyDTO{
-//			User: dto.LoginRequestUserDto{
-//				Email: "test@example.com",
-//			},
-//		}
-//		test.MakeRequestAndCheckError(t, reqBody, "/api/users/login", http.StatusBadRequest, "error decoding request body")
-//	})
-//
-//}
-//
-//func TestInvalidRequestBodyMissingEmail(t *testing.T) {
-//	t.Skip()
-//	test.WithSetupAndTeardown(t, func() {
-//		reqBody := dto.LoginRequestBodyDTO{
-//			User: dto.LoginRequestUserDto{
-//				Password: "123456",
-//			},
-//		}
-//		test.MakeRequestAndCheckError(t, reqBody, "/api/users/login", http.StatusBadRequest, "error decoding request body")
-//	})
-//
-//}
-
 func TestInvalidPassword(t *testing.T) {
 	test.WithSetupAndTeardown(t, func() {
 		// make sure that at least one user exists
-		user := test.DefaultNewUserRequestUserDto
+		user := dtogen.GenerateNewUserRequestUserDto()
 		test.CreateUserEntity(t, user)
 
-		reqWithInvalidPassword := dto.LoginRequestBodyDTO{
-			User: dto.LoginRequestUserDto{
-				Email:    user.Email,
-				Password: "p@sswOrd",
-			},
+		// Login with invalid password
+		reqWithInvalidPassword := dto.LoginRequestUserDto{
+			Email:    user.Email,
+			Password: "p@sswOrd",
 		}
-		var respBody errutil.SimpleError
-		test.MakeRequestAndParseResponse(t, reqWithInvalidPassword, "POST", "/api/users/login", http.StatusUnauthorized, &respBody)
+		respBody := test.LoginUserWithResponse[errutil.SimpleError](t, reqWithInvalidPassword, http.StatusUnauthorized)
+
+		// Verify the response
 		assert.Equal(t, "invalid credentials", respBody.Message)
 	})
 }
@@ -76,17 +52,17 @@ func TestInvalidPassword(t *testing.T) {
 func TestInvalidEmail(t *testing.T) {
 	test.WithSetupAndTeardown(t, func() {
 		// make sure that at least one user exists
-		user := test.DefaultNewUserRequestUserDto
+		user := dtogen.GenerateNewUserRequestUserDto()
 		test.CreateUserEntity(t, user)
 
-		reqWithInvalidPassword := dto.LoginRequestBodyDTO{
-			User: dto.LoginRequestUserDto{
-				Email:    "invalid@email.com",
-				Password: user.Password,
-			},
+		// Login with invalid email
+		reqWithInvalidEmail := dto.LoginRequestUserDto{
+			Email:    "invalid@email.com",
+			Password: user.Password,
 		}
-		var respBody errutil.SimpleError
-		test.MakeRequestAndParseResponse(t, reqWithInvalidPassword, "POST", "/api/users/login", http.StatusUnauthorized, &respBody)
+		respBody := test.LoginUserWithResponse[errutil.SimpleError](t, reqWithInvalidEmail, http.StatusUnauthorized)
+
+		// Verify the response
 		assert.Equal(t, "invalid credentials", respBody.Message)
 	})
 }

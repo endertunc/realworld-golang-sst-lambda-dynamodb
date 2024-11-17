@@ -39,7 +39,7 @@ func TestGetUserFeed(t *testing.T) {
 		test.MakeAuthenticatedRequestAndParseResponse(t, nil, "POST", fmt.Sprintf("/api/profiles/%s/follow", secondAuthor.Username), http.StatusOK, nil, viewerToken)
 
 		// Create first article (older)
-		firstArticle := test.CreateArticleEntity(t, dto.CreateArticleRequestDTO{
+		firstArticle := test.CreateArticle(t, dto.CreateArticleRequestDTO{
 			Title:       "First Article",
 			Description: "First Description",
 			Body:        "First Body",
@@ -50,7 +50,7 @@ func TestGetUserFeed(t *testing.T) {
 		time.Sleep(100 * time.Millisecond)
 
 		// Create second article (newer)
-		secondArticle := test.CreateArticleEntity(t, dto.CreateArticleRequestDTO{
+		secondArticle := test.CreateArticle(t, dto.CreateArticleRequestDTO{
 			Title:       "Second Article",
 			Description: "Second Description",
 			Body:        "Second Body",
@@ -112,26 +112,26 @@ func TestGetUserFeedPagination(t *testing.T) {
 		test.MakeAuthenticatedRequestAndParseResponse(t, nil, "POST", fmt.Sprintf("/api/profiles/%s/follow", secondAuthor.Username), http.StatusOK, nil, viewerToken)
 
 		// First author creates two articles
-		firstAuthorArticle1 := test.CreateArticleEntity(t, dto.CreateArticleRequestDTO{
+		firstAuthorArticle1 := test.CreateArticle(t, dto.CreateArticleRequestDTO{
 			Title:       "First Author Article 1",
 			Description: "First Author Description 1",
 			Body:        "First Author Body 1",
 			TagList:     []string{"first-1"},
 		}, firstAuthorToken)
-		firstAuthorArticle2 := test.CreateArticleEntity(t, dto.CreateArticleRequestDTO{
+		firstAuthorArticle2 := test.CreateArticle(t, dto.CreateArticleRequestDTO{
 			Title:       "First Author Article 2",
 			Description: "First Author Description 2",
 			Body:        "First Author Body 2",
 			TagList:     []string{"first-2"},
 		}, firstAuthorToken)
 		// Second author creates two articles
-		secondAuthorArticle1 := test.CreateArticleEntity(t, dto.CreateArticleRequestDTO{
+		secondAuthorArticle1 := test.CreateArticle(t, dto.CreateArticleRequestDTO{
 			Title:       "Second Author Article 1",
 			Description: "Second Author Description 1",
 			Body:        "Second Author Body 1",
 			TagList:     []string{"second-1"},
 		}, secondAuthorToken)
-		secondAuthorArticle2 := test.CreateArticleEntity(t, dto.CreateArticleRequestDTO{
+		secondAuthorArticle2 := test.CreateArticle(t, dto.CreateArticleRequestDTO{
 			Title:       "Second Author Article 2",
 			Description: "Second Author Description 2",
 			Body:        "Second Author Body 2",

@@ -1,10 +1,8 @@
 package main
 
 import (
-	"fmt"
 	"github.com/stretchr/testify/assert"
 	"net/http"
-	"realworld-aws-lambda-dynamodb-golang/internal/domain/dto"
 	"realworld-aws-lambda-dynamodb-golang/internal/errutil"
 	"realworld-aws-lambda-dynamodb-golang/internal/test"
 	"testing"
@@ -23,24 +21,23 @@ func TestSuccessfulFavorite(t *testing.T) {
 		_, token := test.CreateAndLoginUser(t, test.DefaultNewUserRequestUserDto)
 
 		// Create an article
-		article := test.DefaultCreateArticleRequestDTO
+		article := dtogen.GenerateCreateArticleRequestDTO()
 
-		createdArticle := test.CreateArticleEntity(t, article, token)
+		createdArticle := test.CreateArticle(t, article, token)
 
 		// Favorite the article
-		var favoriteRespBody dto.ArticleResponseBodyDTO
-		test.MakeAuthenticatedRequestAndParseResponse(t, nil, "POST", fmt.Sprintf("/api/articles/%s/favorite", createdArticle.Slug), http.StatusOK, &favoriteRespBody, token)
+		favoriteRespBody := test.FavoriteArticle(t, createdArticle.Slug, token)
 
 		// Verify the response
-		assert.Equal(t, createdArticle.Slug, favoriteRespBody.Article.Slug)
-		assert.True(t, favoriteRespBody.Article.Favorited)
-		assert.Equal(t, 1, favoriteRespBody.Article.FavoritesCount)
+		assert.Equal(t, createdArticle.Slug, favoriteRespBody.Slug)
+		assert.True(t, favoriteRespBody.Favorited)
+		assert.Equal(t, 1, favoriteRespBody.FavoritesCount)
 
 		// Verify the favorite status by getting the article
-		var articleRespBody dto.ArticleResponseBodyDTO
-		test.MakeAuthenticatedRequestAndParseResponse(t, nil, "GET", fmt.Sprintf("/api/articles/%s", createdArticle.Slug), http.StatusOK, &articleRespBody, token)
-		assert.True(t, articleRespBody.Article.Favorited)
-		assert.Equal(t, 1, articleRespBody.Article.FavoritesCount)
+		articleRespBody := test.GetArticle(t, createdArticle.Slug, &token)
+		assert.True(t, articleRespBody.Favorited)
+		assert.Equal(t, createdArticle.Slug, articleRespBody.Slug)
+		assert.Equal(t, 1, articleRespBody.FavoritesCount)
 	})
 }
 
@@ -51,8 +48,7 @@ func TestFavoriteNonExistentArticle(t *testing.T) {
 
 		// Try to favorite non-existent article
 		nonExistentSlug := "non-existent-article"
-		var respBody errutil.SimpleError
-		test.MakeAuthenticatedRequestAndParseResponse(t, nil, "POST", fmt.Sprintf("/api/articles/%s/favorite", nonExistentSlug), http.StatusNotFound, &respBody, token)
+		respBody := test.GetArticleWithResponse[errutil.SimpleError](t, nonExistentSlug, &token, http.StatusNotFound)
 		assert.Equal(t, "article not found", respBody.Message)
 	})
 }
@@ -63,27 +59,25 @@ func TestFavoriteAlreadyFavoritedArticle(t *testing.T) {
 		_, token := test.CreateAndLoginUser(t, test.DefaultNewUserRequestUserDto)
 
 		// Create an article
-		article := test.DefaultCreateArticleRequestDTO
+		article := dtogen.GenerateCreateArticleRequestDTO()
 
-		createdArticle := test.CreateArticleEntity(t, article, token)
+		createdArticle := test.CreateArticle(t, article, token)
 
 		// Favorite the article first time
-		var favoriteRespBody dto.ArticleResponseBodyDTO
-		test.MakeAuthenticatedRequestAndParseResponse(t, nil, "POST", fmt.Sprintf("/api/articles/%s/favorite", createdArticle.Slug), http.StatusOK, &favoriteRespBody, token)
+		favoriteRespBody := test.FavoriteArticle(t, createdArticle.Slug, token)
 
 		// Verify initial favorite
-		assert.True(t, favoriteRespBody.Article.Favorited)
-		assert.Equal(t, 1, favoriteRespBody.Article.FavoritesCount)
+		assert.True(t, favoriteRespBody.Favorited)
+		assert.Equal(t, 1, favoriteRespBody.FavoritesCount)
 
 		// Favorite the article second time
-		errorRespBody := errutil.SimpleError{}
-		test.MakeAuthenticatedRequestAndParseResponse(t, nil, "POST", fmt.Sprintf("/api/articles/%s/favorite", createdArticle.Slug), http.StatusConflict, &errorRespBody, token)
-		assert.Equal(t, "article already favorited", errorRespBody.Message)
+		respBody := test.FavoriteArticleWithResponse[errutil.SimpleError](t, createdArticle.Slug, token, http.StatusConflict)
+		assert.Equal(t, "article already favorited", respBody.Message)
 
 		// Verify the favorite status remains the same by getting the article
-		var articleRespBody dto.ArticleResponseBodyDTO
-		test.MakeAuthenticatedRequestAndParseResponse(t, nil, "GET", fmt.Sprintf("/api/articles/%s", createdArticle.Slug), http.StatusOK, &articleRespBody, token)
-		assert.True(t, articleRespBody.Article.Favorited)
-		assert.Equal(t, 1, articleRespBody.Article.FavoritesCount)
+		articleRespBody := test.GetArticle(t, createdArticle.Slug, &token)
+		assert.True(t, articleRespBody.Favorited)
+		assert.Equal(t, createdArticle.Slug, articleRespBody.Slug)
+		assert.Equal(t, 1, articleRespBody.FavoritesCount)
 	})
 }

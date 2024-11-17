@@ -1,10 +1,9 @@
 package main
 
 import (
-	"fmt"
 	"github.com/stretchr/testify/assert"
 	"net/http"
-	"realworld-aws-lambda-dynamodb-golang/internal/domain/dto"
+	dtogen "realworld-aws-lambda-dynamodb-golang/internal/domain/dto/generator"
 	"realworld-aws-lambda-dynamodb-golang/internal/errutil"
 	"realworld-aws-lambda-dynamodb-golang/internal/test"
 	"testing"
@@ -15,12 +14,10 @@ import (
 func TestAnonymousUserFetchExistingProfile(t *testing.T) {
 	test.WithSetupAndTeardown(t, func() {
 		// Create a user whose profile we'll fetch
-		user := test.DefaultNewUserRequestUserDto
-		test.CreateUserEntity(t, user)
+		user := test.CreateUserEntity(t, dtogen.GenerateNewUserRequestUserDto())
 
 		// Fetch the profile without authentication
-		var respBody dto.ProfileResponseBodyDTO
-		test.MakeRequestAndParseResponse(t, nil, "GET", fmt.Sprintf("/api/profiles/%s", user.Username), http.StatusOK, &respBody)
+		respBody := test.GetUserProfile(t, user.Username, nil)
 
 		// Verify the response
 		assert.Equal(t, user.Username, respBody.Profile.Username)
@@ -31,41 +28,21 @@ func TestAnonymousUserFetchExistingProfile(t *testing.T) {
 func TestAnonymousUserFetchNonExistingProfile(t *testing.T) {
 	test.WithSetupAndTeardown(t, func() {
 		nonExistingUsername := "non-existing-user"
-
-		var respBody errutil.SimpleError
-		test.MakeRequestAndParseResponse(t, nil, "GET", fmt.Sprintf("/api/profiles/%s", nonExistingUsername), http.StatusNotFound, &respBody)
-
+		respBody := test.GetUserProfileWithResponse[errutil.SimpleError](t, nonExistingUsername, nil, http.StatusNotFound)
 		assert.Equal(t, "user not found", respBody.Message)
 	})
 }
 
 func TestAuthenticatedUserFetchExistingProfile(t *testing.T) {
 	test.WithSetupAndTeardown(t, func() {
-		// Create two users: one who will do the fetching (logged in user) and one whose profile will be fetched
-		loggedInUser := test.DefaultNewUserRequestUserDto
-		test.CreateUserEntity(t, loggedInUser)
+		// Create two users: one who will do the fetching (logged-in user) and one whose profile will be fetched
+		_, token := test.CreateAndLoginUser(t, dtogen.GenerateNewUserRequestUserDto())
 
-		targetUser := dto.NewUserRequestUserDto{
-			Username: "target-user",
-			Email:    "target@example.com",
-			Password: "password123",
-		}
+		targetUser := dtogen.GenerateNewUserRequestUserDto()
 		test.CreateUserEntity(t, targetUser)
 
-		// Login to get the token
-		loginReqBody := dto.LoginRequestBodyDTO{
-			User: dto.LoginRequestUserDto{
-				Email:    loggedInUser.Email,
-				Password: loggedInUser.Password,
-			},
-		}
-		var loginRespBody dto.UserResponseBodyDTO
-		test.MakeRequestAndParseResponse(t, loginReqBody, "POST", "/api/users/login", http.StatusOK, &loginRespBody)
-		token := loginRespBody.User.Token
-
 		// Fetch the profile with authentication
-		var respBody dto.ProfileResponseBodyDTO
-		test.MakeAuthenticatedRequestAndParseResponse(t, nil, "GET", fmt.Sprintf("/api/profiles/%s", targetUser.Username), http.StatusOK, &respBody, token)
+		respBody := test.GetUserProfile(t, targetUser.Username, &token)
 
 		// Verify the response
 		assert.Equal(t, targetUser.Username, respBody.Profile.Username)
@@ -76,25 +53,12 @@ func TestAuthenticatedUserFetchExistingProfile(t *testing.T) {
 func TestAuthenticatedUserFetchNonExistingProfile(t *testing.T) {
 	test.WithSetupAndTeardown(t, func() {
 		// Create and login a user
-		loggedInUser := test.DefaultNewUserRequestUserDto
-		test.CreateUserEntity(t, loggedInUser)
-
-		loginReqBody := dto.LoginRequestBodyDTO{
-			User: dto.LoginRequestUserDto{
-				Email:    loggedInUser.Email,
-				Password: loggedInUser.Password,
-			},
-		}
-		var loginRespBody dto.UserResponseBodyDTO
-		test.MakeRequestAndParseResponse(t, loginReqBody, "POST", "/api/users/login", http.StatusOK, &loginRespBody)
-		token := loginRespBody.User.Token
+		_, token := test.CreateAndLoginUser(t, dtogen.GenerateNewUserRequestUserDto())
 
 		// Try to fetch a non-existing profile
 		nonExistingUsername := "non-existing-user"
 
-		var respBody errutil.SimpleError
-		test.MakeAuthenticatedRequestAndParseResponse(t, nil, "GET", fmt.Sprintf("/api/profiles/%s", nonExistingUsername), http.StatusNotFound, &respBody, token)
-
+		respBody := test.GetUserProfileWithResponse[errutil.SimpleError](t, nonExistingUsername, &token, http.StatusNotFound)
 		assert.Equal(t, "user not found", respBody.Message)
 	})
 }

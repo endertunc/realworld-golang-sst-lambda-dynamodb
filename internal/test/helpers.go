@@ -134,18 +134,13 @@ func WithSetupAndTeardown(t *testing.T, testFunc func()) {
 
 // CreateAndLoginUser creates a new user and logs them in, returning the user data and authentication token
 func CreateAndLoginUser(t *testing.T, user dto.NewUserRequestUserDto) (dto.NewUserRequestUserDto, string) {
-	CreateUserEntity(t, user)
+	RegisterUser(t, user)
+	loginRespBody := LoginUser(t, dto.LoginRequestUserDto{
+		Email:    user.Email,
+		Password: user.Password,
+	})
 
-	loginReqBody := dto.LoginRequestBodyDTO{
-		User: dto.LoginRequestUserDto{
-			Email:    user.Email,
-			Password: user.Password,
-		},
-	}
-	var loginRespBody dto.UserResponseBodyDTO
-	MakeRequestAndParseResponse(t, loginReqBody, "POST", "/api/users/login", http.StatusOK, &loginRespBody)
-
-	return user, loginRespBody.User.Token
+	return user, loginRespBody.Token
 }
 
 func MakeRequestAndParseResponse(t *testing.T, reqBody interface{}, method, path string, expectedStatusCode int, respBody interface{}) {
@@ -202,23 +197,4 @@ func MakeAuthenticatedRequestAndParseResponse(t *testing.T, reqBody interface{},
 			t.Fatalf("failed to parse response: %v", err)
 		}
 	}
-}
-
-func MakeRequestAndCheckError(t *testing.T, reqBody interface{}, method, path string, expectedStatusCode int, expectedMessage string) {
-	jsonData, _ := json.Marshal(reqBody)
-	req, _ := http.NewRequest(method, apiUrl()+path, bytes.NewBuffer(jsonData))
-	req.Header.Set("Content-Type", "application/json")
-
-	client := &http.Client{} // ToDo should be created once...
-	resp, err := client.Do(req)
-	if err != nil {
-		t.Fatalf("failed to make request: %v", err)
-	}
-	defer resp.Body.Close()
-
-	bodyBytes, _ := io.ReadAll(resp.Body)
-	bodyString := string(bodyBytes)
-
-	assert.Equal(t, expectedStatusCode, resp.StatusCode)
-	assert.Contains(t, bodyString, expectedMessage)
 }

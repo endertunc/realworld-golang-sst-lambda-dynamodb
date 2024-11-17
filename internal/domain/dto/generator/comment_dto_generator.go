@@ -5,11 +5,11 @@ import (
 	"realworld-aws-lambda-dynamodb-golang/internal/domain/dto"
 )
 
-func GenerateAddCommentRequestBodyDTO() dto.AddCommentRequestBodyDTO {
-	return dto.AddCommentRequestBodyDTO{
-		Comment: GenerateAddCommentRequestDTO(),
-	}
-}
+//func GenerateAddCommentRequestBodyDTO() dto.AddCommentRequestBodyDTO {
+//	return dto.AddCommentRequestBodyDTO{
+//		Comment: GenerateAddCommentRequestDTO(),
+//	}
+//}
 
 func GenerateAddCommentRequestDTO() dto.AddCommentRequestDTO {
 	return dto.AddCommentRequestDTO{
