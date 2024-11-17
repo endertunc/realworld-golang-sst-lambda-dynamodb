@@ -80,7 +80,6 @@ func (d dynamodbArticleRepository) FindArticleBySlug(c context.Context, slug str
 		ExpressionAttributeValues: map[string]ddbtypes.AttributeValue{
 			":slug": &ddbtypes.AttributeValueMemberS{Value: slug},
 		},
-		Select: ddbtypes.SelectAllAttributes,
 	}
 
 	result, err := d.db.Client.Query(c, input)
@@ -101,6 +100,19 @@ func (d dynamodbArticleRepository) FindArticleBySlug(c context.Context, slug str
 	domainArticle := toDomainArticle(dynamodbArticle)
 
 	return domainArticle, nil
+}
+
+func (d dynamodbArticleRepository) FindArticleBySlugTBD(ctx context.Context, slug string) (domain.Article, error) {
+	input := &dynamodb.QueryInput{
+		TableName:              &articleTable,
+		IndexName:              articleSlugGSI,
+		KeyConditionExpression: aws.String("slug = :slug"),
+		ExpressionAttributeValues: map[string]ddbtypes.AttributeValue{
+			":slug": &ddbtypes.AttributeValueMemberS{Value: slug},
+		},
+	}
+	// ToDo @ender - it should map ErrItemNotFound to ErrArticleNotFound
+	return QueryOne(ctx, d.db.Client, input, toDomainArticle)
 }
 
 func (d dynamodbArticleRepository) FindArticleById(c context.Context, articleId uuid.UUID) (domain.Article, error) {

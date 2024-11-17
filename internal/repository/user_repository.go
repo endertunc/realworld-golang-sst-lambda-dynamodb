@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	"realworld-aws-lambda-dynamodb-golang/internal/database"
 	"realworld-aws-lambda-dynamodb-golang/internal/domain"
 	"realworld-aws-lambda-dynamodb-golang/internal/errutil"
@@ -68,7 +67,6 @@ func (s dynamodbUserRepository) FindUserByEmail(c context.Context, email string)
 	})
 
 	if err != nil {
-		slog.ErrorContext(c, "query error", slog.Any("error", err))
 		return domain.User{}, fmt.Errorf("%w: %w", errutil.ErrDynamoQuery, err)
 	}
 
@@ -80,15 +78,14 @@ func (s dynamodbUserRepository) FindUserByEmail(c context.Context, email string)
 	err = attributevalue.UnmarshalMap(response.Items[0], &dynamodbUser)
 
 	if err != nil {
-		slog.ErrorContext(c, "mapping error", slog.Any("error", err))
 		return domain.User{}, fmt.Errorf("%w: %w", errutil.ErrDynamoMapping, err)
 	}
+
 	domainUser := toDomainUser(dynamodbUser)
 	return domainUser, nil
 }
 
 func (s dynamodbUserRepository) InsertNewUser(ctx context.Context, newUser domain.User) (domain.User, error) {
-	opt := "InsertNewUser"
 	dynamodbUserItem := toDynamoDbUser(newUser)
 	userAttributes, err := attributevalue.MarshalMap(dynamodbUserItem)
 
@@ -129,30 +126,13 @@ func (s dynamodbUserRepository) InsertNewUser(ctx context.Context, newUser domai
 	_, err = s.db.Client.TransactWriteItems(ctx, &transactWriteItems)
 
 	if err != nil {
-		//slog.WarnContext(ctx, "failed to insert new user",
-		//	slog.String("func", opt),
-		//	slog.Any("error", err),
-		//)
 		var canceledException *ddbtypes.TransactionCanceledException
 		if errors.As(err, &canceledException) {
 			for index, reason := range canceledException.CancellationReasons {
-				//jsonData, _ := json.MarshalIndent(reason, "", "  ")
 				if reason.Code != nil && *reason.Code == conditionalCheckFailed && index == 1 {
-					slog.WarnContext(ctx, "username already exists",
-						slog.String("func", opt),
-						slog.Any("reason", reason),
-						slog.Any("error", err),
-						slog.Group("context", slog.String("username", newUser.Username)),
-					)
 					return domain.User{}, fmt.Errorf("%w: %w", errutil.ErrUsernameAlreadyExists, err)
 				}
 				if reason.Code != nil && *reason.Code == conditionalCheckFailed && index == 2 {
-					slog.WarnContext(ctx, "email already exists",
-						slog.String("func", opt),
-						slog.Any("reason", reason),
-						slog.Any("error", err),
-						slog.Group("context", slog.String("email", newUser.Email)),
-					)
 					return domain.User{}, fmt.Errorf("%w: %w", errutil.ErrEmailAlreadyExists, err)
 				}
 			}
@@ -186,20 +166,22 @@ func (s dynamodbUserRepository) FindUserById(c context.Context, userId uuid.UUID
 	if err != nil {
 		return domain.User{}, fmt.Errorf("%w: %w", errutil.ErrDynamoMapping, err)
 	}
+
 	domainUser := toDomainUser(dynamodbUser)
 	return domainUser, nil
 }
 
-func (s dynamodbUserRepository) FindUserByUsername(c context.Context, username string) (domain.User, error) {
-	response, err := s.db.Client.Query(c, &dynamodb.QueryInput{
+func (s dynamodbUserRepository) FindUserByUsername(ctx context.Context, username string) (domain.User, error) {
+	input := &dynamodb.QueryInput{
 		TableName:              aws.String(userTable),
 		IndexName:              aws.String(userUsernameGSI),
 		KeyConditionExpression: aws.String("username = :username"),
 		ExpressionAttributeValues: map[string]ddbtypes.AttributeValue{
 			":username": &ddbtypes.AttributeValueMemberS{Value: username},
 		},
-		Select: ddbtypes.SelectAllAttributes,
-	})
+	}
+
+	response, err := s.db.Client.Query(ctx, input)
 
 	if err != nil {
 		return domain.User{}, fmt.Errorf("%w: %w", errutil.ErrDynamoQuery, err)
@@ -217,6 +199,20 @@ func (s dynamodbUserRepository) FindUserByUsername(c context.Context, username s
 	}
 	user := toDomainUser(dynamodbUser)
 	return user, nil
+}
+
+func (s dynamodbUserRepository) FindUserByUsernameTBD(ctx context.Context, username string) (domain.User, error) {
+	input := &dynamodb.QueryInput{
+		TableName:              aws.String(userTable),
+		IndexName:              aws.String(userUsernameGSI),
+		KeyConditionExpression: aws.String("username = :username"),
+		ExpressionAttributeValues: map[string]ddbtypes.AttributeValue{
+			":username": &ddbtypes.AttributeValueMemberS{Value: username},
+		},
+		Limit: aws.Int32(1),
+	}
+	// ToDo @ender should map ErrItemNotFound error to ErrUserNotFound
+	return QueryOne(ctx, s.db.Client, input, toDomainUser)
 }
 
 // FindUserListByUserIDs

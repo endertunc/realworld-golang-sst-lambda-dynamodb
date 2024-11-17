@@ -74,7 +74,6 @@ func (c dynamodbCommentRepository) DeleteCommentByArticleIdAndCommentId(ctx cont
  */
 
 func (c dynamodbCommentRepository) FindCommentsByArticleId(ctx context.Context, articleId uuid.UUID) ([]domain.Comment, error) {
-
 	input := &dynamodb.QueryInput{
 		TableName:              &commentTable,
 		IndexName:              &commentArticleGSI,

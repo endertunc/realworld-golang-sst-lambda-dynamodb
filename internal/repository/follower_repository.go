@@ -9,7 +9,6 @@ import (
 	ddbtypes "github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	mapset "github.com/deckarep/golang-set/v2"
 	"github.com/google/uuid"
-	"log/slog"
 	"realworld-aws-lambda-dynamodb-golang/internal/database"
 	"realworld-aws-lambda-dynamodb-golang/internal/errutil"
 )
@@ -69,7 +68,8 @@ func (s dynamodbFollowerRepository) Follow(ctx context.Context, follower, follow
 		return fmt.Errorf("%w: %w", errutil.ErrDynamoMapping, err)
 	}
 
-	_, err = s.db.Client.PutItem(ctx, &dynamodb.PutItemInput{Item: followerAttributes, TableName: aws.String(followerTable)})
+	input := &dynamodb.PutItemInput{Item: followerAttributes, TableName: aws.String(followerTable)}
+	_, err = s.db.Client.PutItem(ctx, input)
 
 	if err != nil {
 		return fmt.Errorf("%w: %w", errutil.ErrDynamoQuery, err)
@@ -91,7 +91,8 @@ func (s dynamodbFollowerRepository) UnFollow(ctx context.Context, follower, foll
 
 	// ToDo @ender we can't tell whether something was actually deleted or not.
 	// 	It's doable, however, it doesn't seem to be relevant in our case
-	_, err = s.db.Client.DeleteItem(ctx, &dynamodb.DeleteItemInput{Key: followerAttributes, TableName: aws.String(followerTable)})
+	input := &dynamodb.DeleteItemInput{Key: followerAttributes, TableName: aws.String(followerTable)}
+	_, err = s.db.Client.DeleteItem(ctx, input)
 
 	if err != nil {
 		return fmt.Errorf("%w: %w", errutil.ErrDynamoQuery, err)
@@ -101,11 +102,11 @@ func (s dynamodbFollowerRepository) UnFollow(ctx context.Context, follower, foll
 }
 
 func (s dynamodbFollowerRepository) BatchIsFollowing(ctx context.Context, follower uuid.UUID, followees []uuid.UUID) (mapset.Set[uuid.UUID], error) {
-	set := mapset.NewThreadUnsafeSet[uuid.UUID]()
+	resultSet := mapset.NewThreadUnsafeSet[uuid.UUID]()
 	// short circuit if followees is empty, no need to query
 	// also, dynamodb will throw a validation error if we try to query with empty keys
 	if len(followees) == 0 {
-		return set, nil
+		return resultSet, nil
 	}
 
 	keys := make([]map[string]ddbtypes.AttributeValue, 0, len(follower))
@@ -116,8 +117,6 @@ func (s dynamodbFollowerRepository) BatchIsFollowing(ctx context.Context, follow
 		})
 	}
 
-	slog.DebugContext(ctx, "IsFollowingBulk keys", slog.Any("keys", keys))
-
 	response, err := s.db.Client.BatchGetItem(ctx, &dynamodb.BatchGetItemInput{
 		RequestItems: map[string]ddbtypes.KeysAndAttributes{
 			followerTable: {
@@ -126,20 +125,21 @@ func (s dynamodbFollowerRepository) BatchIsFollowing(ctx context.Context, follow
 		},
 	})
 	if err != nil {
-		return set, fmt.Errorf("%w: %w", errutil.ErrDynamoQuery, err)
+		return resultSet, fmt.Errorf("%w: %w", errutil.ErrDynamoQuery, err)
 	}
 
 	followersItems := response.Responses[followerTable]
 
-	for _, item := range followersItems {
-		dynamodbFollowerItem := DynamodbFollowerItem{}
-		err = attributevalue.UnmarshalMap(item, &dynamodbFollowerItem)
-		if err != nil {
-			return nil, fmt.Errorf("%w: %w", errutil.ErrDynamoMapping, err)
-		}
-		// ToDo @ender do not use MustParse - it panics if the string is not a valid UUID
-		set.Add(uuid.MustParse(dynamodbFollowerItem.Followee))
+	dynamodbFollowerItems := make([]DynamodbFollowerItem, 0, len(followersItems))
+	err = attributevalue.UnmarshalListOfMaps(followersItems, &dynamodbFollowerItems)
+
+	if err != nil {
+		return nil, fmt.Errorf("%w: %w", errutil.ErrDynamoMapping, err)
 	}
 
-	return set, nil
+	for _, item := range dynamodbFollowerItems {
+		resultSet.Add(uuid.MustParse(item.Followee))
+	}
+
+	return resultSet, nil
 }

@@ -20,13 +20,13 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/gosimple/slug v1.14.0
 	github.com/opensearch-project/opensearch-go/v4 v4.3.0
-	github.com/samber/lo v1.47.0 // indirect
+	github.com/samber/lo v1.47.0
 	github.com/samber/slog-http v1.4.4
 	//github.com/steinfletcher/apitest v1.5.16
 	github.com/stretchr/testify v1.9.0
+	github.com/swaggest/openapi-go v0.2.54
 	github.com/veqryn/slog-context v0.7.0
 	golang.org/x/crypto v0.28.0
-
 )
 
 require (
@@ -69,6 +69,8 @@ require (
 	github.com/perimeterx/marshmallow v1.1.5 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
+	github.com/swaggest/jsonschema-go v0.3.72 // indirect
+	github.com/swaggest/refl v1.3.0 // indirect
 	go.opentelemetry.io/otel v1.29.0 // indirect
 	go.opentelemetry.io/otel/trace v1.29.0 // indirect
 	golang.org/x/mod v0.18.0 // indirect
