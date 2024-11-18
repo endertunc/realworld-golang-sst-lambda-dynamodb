@@ -28,7 +28,6 @@ func TestSuccessfulLogin(t *testing.T) {
 		assert.Equal(t, user.Username, respBody.Username)
 		assert.NotEmpty(t, respBody.Token)
 	})
-
 }
 
 func TestInvalidPassword(t *testing.T) {

@@ -41,12 +41,12 @@ var (
 )
 
 type DynamodbCommentItem struct {
-	Id        string `dynamodbav:"commentId"`
-	ArticleId string `dynamodbav:"articleId"`
-	AuthorId  string `dynamodbav:"authorId"`
-	Body      string `dynamodbav:"body"`
-	CreatedAt int64  `dynamodbav:"createdAt"`
-	UpdatedAt int64  `dynamodbav:"updatedAt"`
+	Id        DynamodbUUID `dynamodbav:"commentId"`
+	ArticleId DynamodbUUID `dynamodbav:"articleId"`
+	AuthorId  DynamodbUUID `dynamodbav:"authorId"`
+	Body      string       `dynamodbav:"body"`
+	CreatedAt int64        `dynamodbav:"createdAt"`
+	UpdatedAt int64        `dynamodbav:"updatedAt"`
 }
 
 // ToDo @ender delete only existing comments???
@@ -153,9 +153,9 @@ func (c dynamodbCommentRepository) FindCommentByCommentIdAndArticleId(ctx contex
 
 func toDynamodbCommentItem(article domain.Comment) DynamodbCommentItem {
 	return DynamodbCommentItem{
-		Id:        article.Id.String(),
-		ArticleId: article.ArticleId.String(),
-		AuthorId:  article.AuthorId.String(),
+		Id:        DynamodbUUID(article.Id),
+		ArticleId: DynamodbUUID(article.ArticleId),
+		AuthorId:  DynamodbUUID(article.AuthorId),
 		Body:      article.Body,
 		CreatedAt: article.CreatedAt.UnixMilli(),
 		UpdatedAt: article.UpdatedAt.UnixMilli(),
@@ -164,9 +164,9 @@ func toDynamodbCommentItem(article domain.Comment) DynamodbCommentItem {
 
 func toDomainComment(comment DynamodbCommentItem) domain.Comment {
 	return domain.Comment{
-		Id:        uuid.MustParse(comment.Id),
-		ArticleId: uuid.MustParse(comment.ArticleId),
-		AuthorId:  uuid.MustParse(comment.AuthorId),
+		Id:        uuid.UUID(comment.Id),
+		ArticleId: uuid.UUID(comment.ArticleId),
+		AuthorId:  uuid.UUID(comment.AuthorId),
 		Body:      comment.Body,
 		CreatedAt: time.UnixMilli(comment.CreatedAt),
 		UpdatedAt: time.UnixMilli(comment.UpdatedAt),

@@ -46,14 +46,14 @@ func NewDynamodbArticleRepository(db *database.DynamoDBStore) ArticleRepositoryI
 }
 
 type DynamodbArticleItem struct {
-	Id             string   `dynamodbav:"pk"`
-	Title          string   `dynamodbav:"title"`
-	Slug           string   `dynamodbav:"slug"`
-	Description    string   `dynamodbav:"description"`
-	Body           string   `dynamodbav:"body"`
-	TagList        []string `dynamodbav:"tagList"`
-	FavoritesCount int      `dynamodbav:"favoritesCount"`
-	AuthorId       string   `dynamodbav:"authorId"`
+	Id             DynamodbUUID `dynamodbav:"pk"`
+	Title          string       `dynamodbav:"title"`
+	Slug           string       `dynamodbav:"slug"`
+	Description    string       `dynamodbav:"description"`
+	Body           string       `dynamodbav:"body"`
+	TagList        []string     `dynamodbav:"tagList"`
+	FavoritesCount int          `dynamodbav:"favoritesCount"`
+	AuthorId       DynamodbUUID `dynamodbav:"authorId"`
 	// ToDo @ender should we convert everything to milliseconds precision?
 	CreatedAt int64 `dynamodbav:"createdAt"`
 	UpdatedAt int64 `dynamodbav:"updatedAt"`
@@ -111,8 +111,14 @@ func (d dynamodbArticleRepository) FindArticleBySlugTBD(ctx context.Context, slu
 			":slug": &ddbtypes.AttributeValueMemberS{Value: slug},
 		},
 	}
-	// ToDo @ender - it should map ErrItemNotFound to ErrArticleNotFound
-	return QueryOne(ctx, d.db.Client, input, toDomainArticle)
+	article, err := QueryOne(ctx, d.db.Client, input, toDomainArticle)
+	if err != nil {
+		if errors.Is(err, ErrDynamodbItemNotFound) {
+			return domain.Article{}, errutil.ErrArticleNotFound
+		}
+		return domain.Article{}, err
+	}
+	return article, nil
 }
 
 func (d dynamodbArticleRepository) FindArticleById(c context.Context, articleId uuid.UUID) (domain.Article, error) {
@@ -497,14 +503,14 @@ func (d dynamodbArticleRepository) FindArticlesFavoritedByUser(ctx context.Conte
 
 func toDynamodbArticleItem(article domain.Article) DynamodbArticleItem {
 	return DynamodbArticleItem{
-		Id:             article.Id.String(),
+		Id:             DynamodbUUID(article.Id),
 		Title:          article.Title,
 		Slug:           article.Slug,
 		Description:    article.Description,
 		Body:           article.Body,
 		TagList:        article.TagList,
 		FavoritesCount: article.FavoritesCount,
-		AuthorId:       article.AuthorId.String(),
+		AuthorId:       DynamodbUUID(article.AuthorId),
 		CreatedAt:      article.CreatedAt.UnixMilli(),
 		UpdatedAt:      article.UpdatedAt.UnixMilli(),
 	}
@@ -512,14 +518,14 @@ func toDynamodbArticleItem(article domain.Article) DynamodbArticleItem {
 
 func toDomainArticle(article DynamodbArticleItem) domain.Article {
 	return domain.Article{
-		Id:             uuid.MustParse(article.Id), // ToDo @ender we should never use uuid.MustParse - it panics
+		Id:             uuid.UUID(article.Id), // ToDo @ender we should never use uuid.MustParse - it panics
 		Title:          article.Title,
 		Slug:           article.Slug,
 		Description:    article.Description,
 		Body:           article.Body,
 		TagList:        article.TagList,
 		FavoritesCount: article.FavoritesCount,
-		AuthorId:       uuid.MustParse(article.AuthorId),
+		AuthorId:       uuid.UUID(article.AuthorId),
 		CreatedAt:      time.UnixMilli(article.CreatedAt),
 		UpdatedAt:      time.UnixMilli(article.UpdatedAt),
 	}

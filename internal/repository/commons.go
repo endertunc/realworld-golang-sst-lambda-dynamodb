@@ -2,15 +2,22 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/google/uuid"
+	"github.com/samber/lo"
 	"realworld-aws-lambda-dynamodb-golang/internal/errutil"
+	"reflect"
 )
 
-func QueryOne[DomainType interface{}, DynamodbType interface{}](ctx context.Context, client *dynamodb.Client, input *dynamodb.QueryInput, mapper func(input DynamodbType) DomainType) (DomainType, error) {
+var (
+	ErrDynamodbItemNotFound = errors.New("dynamodb item not found")
+)
+
+func QueryOne[DomainType any, DynamodbType any](ctx context.Context, client *dynamodb.Client, input *dynamodb.QueryInput, mapper func(input DynamodbType) DomainType) (DomainType, error) {
 	var result DomainType
 	response, err := client.Query(ctx, input)
 
@@ -19,7 +26,7 @@ func QueryOne[DomainType interface{}, DynamodbType interface{}](ctx context.Cont
 	}
 
 	if len(response.Items) == 0 {
-		return result, errutil.ErrUserNotFound // ToDo @ender this should be item not found or let the caller decide
+		return result, ErrDynamodbItemNotFound
 	}
 
 	var dynamodbItem DynamodbType
@@ -32,25 +39,54 @@ func QueryOne[DomainType interface{}, DynamodbType interface{}](ctx context.Cont
 	return result, nil
 }
 
+func QueryMany[DomainType any, DynamodbType any](ctx context.Context, client *dynamodb.Client, input *dynamodb.QueryInput, mapper func(input DynamodbType) DomainType) ([]DomainType, error) {
+	response, err := client.Query(ctx, input)
+
+	if err != nil {
+		return nil, fmt.Errorf("%w: %w", errutil.ErrDynamoQuery, err)
+	}
+
+	dynamodbItems := make([]DynamodbType, 0, len(response.Items))
+	err = attributevalue.UnmarshalListOfMaps(response.Items, &dynamodbItems)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %w", errutil.ErrDynamoMapping, err)
+	}
+
+	return lo.Map(dynamodbItems, func(dynamodbItem DynamodbType, _ int) DomainType {
+		return mapper(dynamodbItem)
+	}), nil
+}
+
 type DynamodbUUID uuid.UUID
 
+var uuidType = reflect.TypeOf(uuid.UUID{})
+
 // UnmarshalDynamoDBAttributeValue converts a DynamoDB string to UUID
+// adopted from UnixTime implementation in aws-sdk-go-v2
 func (u *DynamodbUUID) UnmarshalDynamoDBAttributeValue(av types.AttributeValue) error {
 	avS, ok := av.(*types.AttributeValueMemberS)
 	if !ok {
-		return fmt.Errorf("unexpected dynamodb attribute value type: %T", av)
+		return &attributevalue.UnmarshalTypeError{
+			Value: fmt.Sprintf("%T", av),
+			Type:  reflect.TypeOf((*uuid.UUID)(nil)),
+		}
 	}
 
-	parsed, err := uuid.Parse(avS.Value)
+	parsedUuid, err := uuid.Parse(avS.Value)
 	if err != nil {
-		return fmt.Errorf("failed to parse UUID: %w", err)
+		return &attributevalue.UnmarshalError{
+			Err: err, Value: avS.Value, Type: uuidType,
+		}
 	}
 
-	*u = DynamodbUUID(parsed)
+	*u = DynamodbUUID(parsedUuid)
 	return nil
 }
 
-// String returns the string representation of the Status
-func (u *DynamodbUUID) String() string {
-	return u.String()
+// MarshalDynamoDBAttributeValue converts UUID to DynamoDB String
+// adopted from UnixTime implementation in aws-sdk-go-v2
+func (u DynamodbUUID) MarshalDynamoDBAttributeValue() (types.AttributeValue, error) {
+	return &types.AttributeValueMemberS{
+		Value: uuid.UUID(u).String(),
+	}, nil
 }

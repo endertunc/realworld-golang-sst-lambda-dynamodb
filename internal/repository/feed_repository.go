@@ -37,10 +37,10 @@ func NewUserFeedRepository(db *database.DynamoDBStore) UserFeedRepositoryInterfa
 }
 
 type DynamodbFeedItem struct {
-	UserId    string `dynamodbav:"userId"`    // pk
-	CreatedAt int64  `dynamodbav:"createdAt"` // sk
-	ArticleId string `dynamodbav:"articleId"`
-	AuthorId  string `dynamodbav:"authorId"`
+	UserId    DynamodbUUID `dynamodbav:"userId"`    // pk
+	CreatedAt int64        `dynamodbav:"createdAt"` // sk
+	ArticleId DynamodbUUID `dynamodbav:"articleId"`
+	AuthorId  DynamodbUUID `dynamodbav:"authorId"`
 }
 
 func (uf userFeedRepository) FanoutArticle(ctx context.Context, articleId, authorId uuid.UUID, createdAt time.Time) error {
@@ -71,8 +71,8 @@ func (uf userFeedRepository) FanoutArticle(ctx context.Context, articleId, autho
 			dynamodbFeedItem := DynamodbFeedItem{
 				UserId:    dynamodbFollowerItem.Follower,
 				CreatedAt: createdAt.UnixMilli(),
-				ArticleId: articleId.String(),
-				AuthorId:  authorId.String(),
+				ArticleId: DynamodbUUID(articleId),
+				AuthorId:  DynamodbUUID(authorId),
 			}
 			feedItemAttributes, err := attributevalue.MarshalMap(dynamodbFeedItem)
 			if err != nil {
@@ -138,11 +138,7 @@ func (uf userFeedRepository) FindArticleIdsInUserFeed(ctx context.Context, userI
 	// convert to article ids
 	articleIds := make([]uuid.UUID, 0, len(dynamodbFeedItems))
 	for _, item := range dynamodbFeedItems {
-		articleId, err := uuid.Parse(item.ArticleId)
-		if err != nil {
-			return nil, nil, fmt.Errorf("%w: %w", errutil.ErrDynamoMapping, err)
-		}
-		articleIds = append(articleIds, articleId)
+		articleIds = append(articleIds, uuid.UUID(item.ArticleId))
 	}
 
 	// prepare next page token if there are more results

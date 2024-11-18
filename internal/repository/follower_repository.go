@@ -33,8 +33,8 @@ func NewDynamodbFollowerRepository(db *database.DynamoDBStore) FollowerRepositor
 }
 
 type DynamodbFollowerItem struct {
-	Follower string `dynamodbav:"follower"`
-	Followee string `dynamodbav:"followee"`
+	Follower DynamodbUUID `dynamodbav:"follower"`
+	Followee DynamodbUUID `dynamodbav:"followee"`
 }
 
 // ToDo @ender - should we use GetItem or QueryInput in this case?
@@ -58,10 +58,7 @@ func (s dynamodbFollowerRepository) IsFollowing(ctx context.Context, follower, f
 }
 
 func (s dynamodbFollowerRepository) Follow(ctx context.Context, follower, followee uuid.UUID) error {
-	dynamodbFollowerItem := DynamodbFollowerItem{
-		Followee: followee.String(),
-		Follower: follower.String(),
-	}
+	dynamodbFollowerItem := toDynamodbFollowerItem(follower, followee)
 	followerAttributes, err := attributevalue.MarshalMap(dynamodbFollowerItem)
 
 	if err != nil {
@@ -79,10 +76,7 @@ func (s dynamodbFollowerRepository) Follow(ctx context.Context, follower, follow
 }
 
 func (s dynamodbFollowerRepository) UnFollow(ctx context.Context, follower, followee uuid.UUID) error {
-	dynamodbFollowerItem := DynamodbFollowerItem{
-		Follower: follower.String(),
-		Followee: followee.String(),
-	}
+	dynamodbFollowerItem := toDynamodbFollowerItem(follower, followee)
 	followerAttributes, err := attributevalue.MarshalMap(dynamodbFollowerItem)
 
 	if err != nil {
@@ -138,8 +132,15 @@ func (s dynamodbFollowerRepository) BatchIsFollowing(ctx context.Context, follow
 	}
 
 	for _, item := range dynamodbFollowerItems {
-		resultSet.Add(uuid.MustParse(item.Followee))
+		resultSet.Add(uuid.UUID(item.Followee))
 	}
 
 	return resultSet, nil
+}
+
+func toDynamodbFollowerItem(follower, followee uuid.UUID) DynamodbFollowerItem {
+	return DynamodbFollowerItem{
+		Follower: DynamodbUUID(follower),
+		Followee: DynamodbUUID(followee),
+	}
 }

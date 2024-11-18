@@ -42,14 +42,14 @@ func NewDynamodbUserRepository(db *database.DynamoDBStore) UserRepositoryInterfa
 }
 
 type DynamodbUserItem struct {
-	Id             string    `dynamodbav:"pk"`
-	Email          string    `dynamodbav:"email"`
-	HashedPassword string    `dynamodbav:"hashedPassword"`
-	Username       string    `dynamodbav:"username"`
-	Bio            *string   `dynamodbav:"bio,omitempty"`
-	Image          *string   `dynamodbav:"image,omitempty"`
-	CreatedAt      time.Time `dynamodbav:"createdAt,unixtime"`
-	UpdatedAt      time.Time `dynamodbav:"updatedAt,unixtime"`
+	Id             DynamodbUUID `dynamodbav:"pk"`
+	Email          string       `dynamodbav:"email"`
+	HashedPassword string       `dynamodbav:"hashedPassword"`
+	Username       string       `dynamodbav:"username"`
+	Bio            *string      `dynamodbav:"bio,omitempty"`
+	Image          *string      `dynamodbav:"image,omitempty"`
+	CreatedAt      time.Time    `dynamodbav:"createdAt,unixtime"`
+	UpdatedAt      time.Time    `dynamodbav:"updatedAt,unixtime"`
 }
 
 var _ UserRepositoryInterface = (*dynamodbUserRepository)(nil)
@@ -211,8 +211,14 @@ func (s dynamodbUserRepository) FindUserByUsernameTBD(ctx context.Context, usern
 		},
 		Limit: aws.Int32(1),
 	}
-	// ToDo @ender should map ErrItemNotFound error to ErrUserNotFound
-	return QueryOne(ctx, s.db.Client, input, toDomainUser)
+	user, err := QueryOne(ctx, s.db.Client, input, toDomainUser)
+	if err != nil {
+		if errors.Is(err, ErrDynamodbItemNotFound) {
+			return domain.User{}, errutil.ErrUserNotFound
+		}
+		return domain.User{}, err
+	}
+	return user, nil
 }
 
 // FindUserListByUserIDs
@@ -249,13 +255,6 @@ func (s dynamodbUserRepository) FindUserListByUserIDs(ctx context.Context, userI
 		return nil, fmt.Errorf("%w: %w", errutil.ErrDynamoQuery, err)
 	}
 
-	// ToDo @ender this logic seem to be wrong.
-	//  We try to get list of users by their ids. Why is it an "error" if we can't find any user?
-	//  It's not a concern for this method at least.
-	//if len(response.Responses[userTable]) == 0 {
-	//	return nil, errutil.ErrUserNotFound
-	//}
-
 	users := make([]domain.User, 0, len(response.Responses[userTable]))
 	for _, item := range response.Responses[userTable] {
 		dynamodbUser := DynamodbUserItem{}
@@ -272,7 +271,7 @@ func (s dynamodbUserRepository) FindUserListByUserIDs(ctx context.Context, userI
 
 func toDynamoDbUser(user domain.User) DynamodbUserItem {
 	return DynamodbUserItem{
-		Id:             user.Id.String(),
+		Id:             DynamodbUUID(user.Id),
 		Email:          user.Email,
 		HashedPassword: user.HashedPassword,
 		Username:       user.Username,
@@ -285,7 +284,7 @@ func toDynamoDbUser(user domain.User) DynamodbUserItem {
 
 func toDomainUser(user DynamodbUserItem) domain.User {
 	return domain.User{
-		Id:             uuid.MustParse(user.Id),
+		Id:             uuid.UUID(user.Id),
 		Email:          user.Email,
 		HashedPassword: user.HashedPassword,
 		Username:       user.Username,
