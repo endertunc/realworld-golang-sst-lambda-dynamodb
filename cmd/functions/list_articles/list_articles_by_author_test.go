@@ -1,9 +1,6 @@
 package main
 
 import (
-	"fmt"
-	"net/http"
-	"realworld-aws-lambda-dynamodb-golang/internal/domain/dto"
 	"realworld-aws-lambda-dynamodb-golang/internal/domain/dto/generator"
 	"realworld-aws-lambda-dynamodb-golang/internal/test"
 	"testing"
@@ -43,23 +40,12 @@ func TestListArticlesByAuthorWithoutAuth(t *testing.T) {
 		createdArticle4 := test.CreateArticle(t, article4, author2Token)
 
 		// viewer follows author1 and favorites articles
-		test.MakeAuthenticatedRequestAndParseResponse(t, nil, "POST",
-			fmt.Sprintf("/api/profiles/%s/follow", author1User.Username),
-			http.StatusOK, nil, viewerToken)
-
-		test.MakeAuthenticatedRequestAndParseResponse(t, nil, "POST",
-			fmt.Sprintf("/api/articles/%s/favorite", createdArticle1.Slug),
-			http.StatusOK, nil, viewerToken)
-
-		test.MakeAuthenticatedRequestAndParseResponse(t, nil, "POST",
-			fmt.Sprintf("/api/articles/%s/favorite", createdArticle4.Slug),
-			http.StatusOK, nil, viewerToken)
+		test.FollowUser(t, author1User.Username, viewerToken)
+		test.FavoriteArticle(t, createdArticle1.Slug, viewerToken)
+		test.FavoriteArticle(t, createdArticle4.Slug, viewerToken)
 
 		// test listing articles by author1 without auth
-		var listResponseNoAuth dto.MultipleArticlesResponseBodyDTO
-		test.MakeRequestAndParseResponse(t, nil, "GET",
-			fmt.Sprintf("/api/articles?author=%s", author1User.Username),
-			http.StatusOK, &listResponseNoAuth)
+		listResponseNoAuth := test.ListArticles(t, nil, test.ArticleQueryParams{Author: &author1User.Username})
 
 		// verify response without auth for author1
 		assert.Equal(t, 2, len(listResponseNoAuth.Articles))
@@ -73,10 +59,7 @@ func TestListArticlesByAuthorWithoutAuth(t *testing.T) {
 		assert.False(t, listResponseNoAuth.Articles[1].Author.Following)
 
 		// test listing articles by author2 without auth
-		var listResponseNoAuth2 dto.MultipleArticlesResponseBodyDTO
-		test.MakeRequestAndParseResponse(t, nil, "GET",
-			fmt.Sprintf("/api/articles?author=%s", author2User.Username),
-			http.StatusOK, &listResponseNoAuth2)
+		listResponseNoAuth2 := test.ListArticles(t, nil, test.ArticleQueryParams{Author: &author2User.Username})
 
 		// verify response without auth for author2
 		assert.Equal(t, 2, len(listResponseNoAuth2.Articles))
@@ -124,23 +107,12 @@ func TestListArticlesByAuthorWithoutFollowingAndFavorite(t *testing.T) {
 		createdArticle4 := test.CreateArticle(t, article4, author2Token)
 
 		// viewer follows author1 and favorites articles
-		test.MakeAuthenticatedRequestAndParseResponse(t, nil, "POST",
-			fmt.Sprintf("/api/profiles/%s/follow", author1User.Username),
-			http.StatusOK, nil, viewerToken)
-
-		test.MakeAuthenticatedRequestAndParseResponse(t, nil, "POST",
-			fmt.Sprintf("/api/articles/%s/favorite", createdArticle1.Slug),
-			http.StatusOK, nil, viewerToken)
-
-		test.MakeAuthenticatedRequestAndParseResponse(t, nil, "POST",
-			fmt.Sprintf("/api/articles/%s/favorite", createdArticle4.Slug),
-			http.StatusOK, nil, viewerToken)
+		test.FollowUser(t, author1User.Username, viewerToken)
+		test.FavoriteArticle(t, createdArticle1.Slug, viewerToken)
+		test.FavoriteArticle(t, createdArticle4.Slug, viewerToken)
 
 		// test listing articles by author1 with visitor auth
-		var listResponseWithAuth dto.MultipleArticlesResponseBodyDTO
-		test.MakeAuthenticatedRequestAndParseResponse(t, nil, "GET",
-			fmt.Sprintf("/api/articles?author=%s", author1User.Username),
-			http.StatusOK, &listResponseWithAuth, visitorToken)
+		listResponseWithAuth := test.ListArticles(t, &visitorToken, test.ArticleQueryParams{Author: &author1User.Username})
 
 		// verify response with visitor auth for author1
 		assert.Equal(t, 2, len(listResponseWithAuth.Articles))
@@ -154,10 +126,7 @@ func TestListArticlesByAuthorWithoutFollowingAndFavorite(t *testing.T) {
 		assert.False(t, listResponseWithAuth.Articles[1].Author.Following)
 
 		// test listing articles by author2 with visitor auth
-		var listResponseWithAuth2 dto.MultipleArticlesResponseBodyDTO
-		test.MakeAuthenticatedRequestAndParseResponse(t, nil, "GET",
-			fmt.Sprintf("/api/articles?author=%s", author2User.Username),
-			http.StatusOK, &listResponseWithAuth2, visitorToken)
+		listResponseWithAuth2 := test.ListArticles(t, &visitorToken, test.ArticleQueryParams{Author: &author2User.Username})
 
 		// verify response with visitor auth for author2
 		assert.Equal(t, 2, len(listResponseWithAuth2.Articles))
@@ -205,28 +174,15 @@ func TestListArticlesByAuthorWithFollowing(t *testing.T) {
 		createdArticle4 := test.CreateArticle(t, article4, author2Token)
 
 		// viewer follows author1 and favorites articles
-		test.MakeAuthenticatedRequestAndParseResponse(t, nil, "POST",
-			fmt.Sprintf("/api/profiles/%s/follow", author1User.Username),
-			http.StatusOK, nil, viewerToken)
-
-		test.MakeAuthenticatedRequestAndParseResponse(t, nil, "POST",
-			fmt.Sprintf("/api/articles/%s/favorite", createdArticle1.Slug),
-			http.StatusOK, nil, viewerToken)
-
-		test.MakeAuthenticatedRequestAndParseResponse(t, nil, "POST",
-			fmt.Sprintf("/api/articles/%s/favorite", createdArticle4.Slug),
-			http.StatusOK, nil, viewerToken)
+		test.FollowUser(t, author1User.Username, viewerToken)
+		test.FavoriteArticle(t, createdArticle1.Slug, viewerToken)
+		test.FavoriteArticle(t, createdArticle4.Slug, viewerToken)
 
 		// visitor follows author1
-		test.MakeAuthenticatedRequestAndParseResponse(t, nil, "POST",
-			fmt.Sprintf("/api/profiles/%s/follow", author1User.Username),
-			http.StatusOK, nil, visitorToken)
+		test.FollowUser(t, author1User.Username, visitorToken)
 
 		// test listing articles by author1 with visitor auth
-		var listResponse dto.MultipleArticlesResponseBodyDTO
-		test.MakeAuthenticatedRequestAndParseResponse(t, nil, "GET",
-			fmt.Sprintf("/api/articles?author=%s", author1User.Username),
-			http.StatusOK, &listResponse, visitorToken)
+		listResponse := test.ListArticles(t, &visitorToken, test.ArticleQueryParams{Author: &author1User.Username})
 
 		// verify response for followed author
 		assert.Equal(t, 2, len(listResponse.Articles))
@@ -240,10 +196,7 @@ func TestListArticlesByAuthorWithFollowing(t *testing.T) {
 		assert.True(t, listResponse.Articles[1].Author.Following)
 
 		// test listing articles by author2 with visitor auth
-		var listResponse2 dto.MultipleArticlesResponseBodyDTO
-		test.MakeAuthenticatedRequestAndParseResponse(t, nil, "GET",
-			fmt.Sprintf("/api/articles?author=%s", author2User.Username),
-			http.StatusOK, &listResponse2, visitorToken)
+		listResponse2 := test.ListArticles(t, &visitorToken, test.ArticleQueryParams{Author: &author2User.Username})
 
 		// verify response for non-followed author
 		assert.Equal(t, 2, len(listResponse2.Articles))
@@ -291,28 +244,15 @@ func TestListArticlesByAuthorWithFavorite(t *testing.T) {
 		createdArticle4 := test.CreateArticle(t, article4, author2Token)
 
 		// viewer follows author1 and favorites articles
-		test.MakeAuthenticatedRequestAndParseResponse(t, nil, "POST",
-			fmt.Sprintf("/api/profiles/%s/follow", author1User.Username),
-			http.StatusOK, nil, viewerToken)
-
-		test.MakeAuthenticatedRequestAndParseResponse(t, nil, "POST",
-			fmt.Sprintf("/api/articles/%s/favorite", createdArticle1.Slug),
-			http.StatusOK, nil, viewerToken)
-
-		test.MakeAuthenticatedRequestAndParseResponse(t, nil, "POST",
-			fmt.Sprintf("/api/articles/%s/favorite", createdArticle4.Slug),
-			http.StatusOK, nil, viewerToken)
+		test.FollowUser(t, author1User.Username, viewerToken)
+		test.FavoriteArticle(t, createdArticle1.Slug, viewerToken)
+		test.FavoriteArticle(t, createdArticle4.Slug, viewerToken)
 
 		// visitor favorites author1's first article
-		test.MakeAuthenticatedRequestAndParseResponse(t, nil, "POST",
-			fmt.Sprintf("/api/articles/%s/favorite", createdArticle1.Slug),
-			http.StatusOK, nil, visitorToken)
+		test.FavoriteArticle(t, createdArticle1.Slug, visitorToken)
 
 		// test listing articles by author1 with visitor auth
-		var listResponse dto.MultipleArticlesResponseBodyDTO
-		test.MakeAuthenticatedRequestAndParseResponse(t, nil, "GET",
-			fmt.Sprintf("/api/articles?author=%s", author1User.Username),
-			http.StatusOK, &listResponse, visitorToken)
+		listResponse := test.ListArticles(t, &visitorToken, test.ArticleQueryParams{Author: &author1User.Username})
 
 		// verify response for author with favorited article
 		assert.Equal(t, 2, len(listResponse.Articles))
@@ -324,10 +264,7 @@ func TestListArticlesByAuthorWithFavorite(t *testing.T) {
 		assert.Equal(t, 2, listResponse.Articles[1].FavoritesCount) // both viewer and visitor favorited
 
 		// test listing articles by author2 with visitor auth
-		var listResponse2 dto.MultipleArticlesResponseBodyDTO
-		test.MakeAuthenticatedRequestAndParseResponse(t, nil, "GET",
-			fmt.Sprintf("/api/articles?author=%s", author2User.Username),
-			http.StatusOK, &listResponse2, visitorToken)
+		listResponse2 := test.ListArticles(t, &visitorToken, test.ArticleQueryParams{Author: &author2User.Username})
 
 		// verify response for author without favorited articles
 		assert.Equal(t, 2, len(listResponse2.Articles))
@@ -373,36 +310,17 @@ func TestListArticlesByAuthorWithNoOverlap(t *testing.T) {
 		createdArticle4 := test.CreateArticle(t, article4, author2Token)
 
 		// viewer follows author1 and favorites articles from both authors
-		test.MakeAuthenticatedRequestAndParseResponse(t, nil, "POST",
-			fmt.Sprintf("/api/profiles/%s/follow", author1User.Username),
-			http.StatusOK, nil, viewerToken)
-
-		test.MakeAuthenticatedRequestAndParseResponse(t, nil, "POST",
-			fmt.Sprintf("/api/articles/%s/favorite", createdArticle1.Slug),
-			http.StatusOK, nil, viewerToken)
-
-		test.MakeAuthenticatedRequestAndParseResponse(t, nil, "POST",
-			fmt.Sprintf("/api/articles/%s/favorite", createdArticle4.Slug),
-			http.StatusOK, nil, viewerToken)
+		test.FollowUser(t, author1User.Username, viewerToken)
+		test.FavoriteArticle(t, createdArticle1.Slug, viewerToken)
+		test.FavoriteArticle(t, createdArticle4.Slug, viewerToken)
 
 		// visitor follows author2 and favorites articles from both authors
-		test.MakeAuthenticatedRequestAndParseResponse(t, nil, "POST",
-			fmt.Sprintf("/api/profiles/%s/follow", author2User.Username),
-			http.StatusOK, nil, visitorToken)
-
-		test.MakeAuthenticatedRequestAndParseResponse(t, nil, "POST",
-			fmt.Sprintf("/api/articles/%s/favorite", createdArticle2.Slug),
-			http.StatusOK, nil, visitorToken)
-
-		test.MakeAuthenticatedRequestAndParseResponse(t, nil, "POST",
-			fmt.Sprintf("/api/articles/%s/favorite", createdArticle3.Slug),
-			http.StatusOK, nil, visitorToken)
+		test.FollowUser(t, author2User.Username, visitorToken)
+		test.FavoriteArticle(t, createdArticle2.Slug, visitorToken)
+		test.FavoriteArticle(t, createdArticle3.Slug, visitorToken)
 
 		// test listing articles by author1 with visitor auth
-		var listResponse dto.MultipleArticlesResponseBodyDTO
-		test.MakeAuthenticatedRequestAndParseResponse(t, nil, "GET",
-			fmt.Sprintf("/api/articles?author=%s", author1User.Username),
-			http.StatusOK, &listResponse, visitorToken)
+		listResponse := test.ListArticles(t, &visitorToken, test.ArticleQueryParams{Author: &author1User.Username})
 
 		// verify response for author with favorited article
 		assert.Equal(t, 2, len(listResponse.Articles))
@@ -416,10 +334,7 @@ func TestListArticlesByAuthorWithNoOverlap(t *testing.T) {
 		assert.False(t, listResponse.Articles[1].Author.Following)
 
 		// test listing articles by author2 with visitor auth
-		var listResponse2 dto.MultipleArticlesResponseBodyDTO
-		test.MakeAuthenticatedRequestAndParseResponse(t, nil, "GET",
-			fmt.Sprintf("/api/articles?author=%s", author2User.Username),
-			http.StatusOK, &listResponse2, visitorToken)
+		listResponse2 := test.ListArticles(t, &visitorToken, test.ArticleQueryParams{Author: &author2User.Username})
 
 		// verify response for author without favorited articles
 		assert.Equal(t, 2, len(listResponse2.Articles))

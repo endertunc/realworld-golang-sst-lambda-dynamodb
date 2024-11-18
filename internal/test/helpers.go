@@ -15,14 +15,11 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"realworld-aws-lambda-dynamodb-golang/internal/domain/dto"
-
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	ddbtypes "github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/joho/godotenv"
-	"github.com/stretchr/testify/assert"
 )
 
 // ToDo @ender this actually doesn't work...
@@ -66,7 +63,9 @@ func truncateTable(t *testing.T, tableName string, pkName string, skName *string
 
 	// Batch delete items
 	var writeRequests []ddbtypes.WriteRequest
-	for _, item := range result.Items {
+	totalItemsToDelete := len(result.Items)
+
+	for i, item := range result.Items {
 		key := make(map[string]ddbtypes.AttributeValue)
 
 		// Extract the primary key
@@ -91,19 +90,19 @@ func truncateTable(t *testing.T, tableName string, pkName string, skName *string
 			},
 		})
 
-	}
-
-	// Perform the batch delete operation
-	if len(writeRequests) > 0 {
-		_, err = dynamodbClient().BatchWriteItem(ctx, &dynamodb.BatchWriteItemInput{
-			RequestItems: map[string][]ddbtypes.WriteRequest{
-				tableName: writeRequests,
-			},
-		})
-
-		if err != nil {
-			t.Fatalf("failed to batch delete items: %v", err)
+		// Perform the batch delete operation with 25 items at a time
+		if len(writeRequests) == 25 || totalItemsToDelete == i+1 {
+			_, err = dynamodbClient().BatchWriteItem(ctx, &dynamodb.BatchWriteItemInput{
+				RequestItems: map[string][]ddbtypes.WriteRequest{
+					tableName: writeRequests,
+				},
+			})
+			if err != nil {
+				t.Fatalf("failed to batch delete items: %v", err)
+			}
+			writeRequests = make([]ddbtypes.WriteRequest, 0)
 		}
+
 	}
 }
 
@@ -132,23 +131,27 @@ func WithSetupAndTeardown(t *testing.T, testFunc func()) {
 	testFunc()
 }
 
-// CreateAndLoginUser creates a new user and logs them in, returning the user data and authentication token
-func CreateAndLoginUser(t *testing.T, user dto.NewUserRequestUserDto) (dto.NewUserRequestUserDto, string) {
-	RegisterUser(t, user)
-	loginRespBody := LoginUser(t, dto.LoginRequestUserDto{
-		Email:    user.Email,
-		Password: user.Password,
-	})
+var client = &http.Client{}
 
-	return user, loginRespBody.Token
-}
+// Nothing is used to indicate that the response body should not be parsed
+type Nothing struct{}
 
-func MakeRequestAndParseResponse(t *testing.T, reqBody interface{}, method, path string, expectedStatusCode int, respBody interface{}) {
-	jsonData, _ := json.Marshal(reqBody)
-	req, _ := http.NewRequest(method, apiUrl()+path, bytes.NewBuffer(jsonData))
+// ExecuteRequest will skip parsing the response body if the generic response type is Nothing
+func ExecuteRequest[T any](t *testing.T, method, path string, reqBody any, expectedStatusCode int, token *string) T {
+	var respBody T
+	jsonData, err := json.Marshal(reqBody)
+	if err != nil {
+		t.Fatalf("failed to marshal request body: %v", err)
+	}
+	req, err := http.NewRequest(method, apiUrl()+path, bytes.NewBuffer(jsonData))
+	if err != nil {
+		t.Fatalf("failed to create request: %v", err)
+	}
 	req.Header.Set("Content-Type", "application/json")
+	if token != nil {
+		req.Header.Set("Authorization", "Token "+*token)
+	}
 
-	client := &http.Client{} // ToDo should be created once...
 	resp, err := client.Do(req)
 	if err != nil {
 		t.Fatalf("failed to make request: %v", err)
@@ -158,43 +161,83 @@ func MakeRequestAndParseResponse(t *testing.T, reqBody interface{}, method, path
 	if expectedStatusCode != resp.StatusCode {
 		buf := new(strings.Builder)
 		_, _ = io.Copy(buf, resp.Body)
-		t.Logf("response body: %v", buf.String())
+		t.Logf("didn't get expected status code. response body was: %v", buf.String())
 	}
 
 	require.Equal(t, expectedStatusCode, resp.StatusCode)
 
-	if respBody != nil {
-		err = json.NewDecoder(resp.Body).Decode(respBody)
+	switch any(respBody).(type) {
+	case Nothing:
+		return respBody // skip parsing the response body
+	default:
+		err = json.NewDecoder(resp.Body).Decode(&respBody)
 		if err != nil {
 			t.Fatalf("failed to parse response: %v", err)
 		}
+		return respBody
 	}
 }
 
-func MakeAuthenticatedRequestAndParseResponse(t *testing.T, reqBody interface{}, method, path string, expectedStatusCode int, respBody interface{}, token string) {
-	jsonData, _ := json.Marshal(reqBody)
-	req, _ := http.NewRequest(method, apiUrl()+path, bytes.NewBuffer(jsonData))
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Token "+token)
+//func MakeRequestAndParseResponse(t *testing.T, reqBody interface{}, method, path string, expectedStatusCode int, respBody interface{}, token *string) {
+//	jsonData, err := json.Marshal(reqBody)
+//	if err != nil {
+//		t.Fatalf("failed to marshal request body: %v", err)
+//	}
+//	req, err := http.NewRequest(method, apiUrl()+path, bytes.NewBuffer(jsonData))
+//	if err != nil {
+//		t.Fatalf("failed to create request: %v", err)
+//	}
+//	req.Header.Set("Content-Type", "application/json")
+//	if token != nil {
+//		req.Header.Set("Authorization", "Token "+*token)
+//	}
+//
+//	resp, err := client.Do(req)
+//	if err != nil {
+//		t.Fatalf("failed to make request: %v", err)
+//	}
+//	defer resp.Body.Close()
+//
+//	if expectedStatusCode != resp.StatusCode {
+//		buf := new(strings.Builder)
+//		_, _ = io.Copy(buf, resp.Body)
+//		t.Logf("didn't get expected status code. response body was: %v", buf.String())
+//	}
+//
+//	require.Equal(t, expectedStatusCode, resp.StatusCode)
+//
+//	if respBody != nil {
+//		err = json.NewDecoder(resp.Body).Decode(respBody)
+//		if err != nil {
+//			t.Fatalf("failed to parse response: %v", err)
+//		}
+//	}
+//}
 
-	client := &http.Client{} // ToDo should be created once...
-	resp, err := client.Do(req)
-	if err != nil {
-		t.Fatalf("failed to make request: %v", err)
-	}
-	defer resp.Body.Close()
-
-	if expectedStatusCode != resp.StatusCode {
-		buf := new(strings.Builder)
-		_, _ = io.Copy(buf, resp.Body)
-		t.Logf("response body: %v", buf.String())
-	}
-	assert.Equal(t, expectedStatusCode, resp.StatusCode)
-
-	if respBody != nil {
-		err = json.NewDecoder(resp.Body).Decode(respBody)
-		if err != nil {
-			t.Fatalf("failed to parse response: %v", err)
-		}
-	}
-}
+//func MakeAuthenticatedRequestAndParseResponse(t *testing.T, reqBody interface{}, method, path string, expectedStatusCode int, respBody interface{}, token string) {
+//	jsonData, _ := json.Marshal(reqBody)
+//	req, _ := http.NewRequest(method, apiUrl()+path, bytes.NewBuffer(jsonData))
+//	req.Header.Set("Content-Type", "application/json")
+//	req.Header.Set("Authorization", "Token "+token)
+//
+//	client := &http.Client{} // ToDo should be created once...
+//	resp, err := client.Do(req)
+//	if err != nil {
+//		t.Fatalf("failed to make request: %v", err)
+//	}
+//	defer resp.Body.Close()
+//
+//	if expectedStatusCode != resp.StatusCode {
+//		buf := new(strings.Builder)
+//		_, _ = io.Copy(buf, resp.Body)
+//		t.Logf("response body: %v", buf.String())
+//	}
+//	assert.Equal(t, expectedStatusCode, resp.StatusCode)
+//
+//	if respBody != nil {
+//		err = json.NewDecoder(resp.Body).Decode(respBody)
+//		if err != nil {
+//			t.Fatalf("failed to parse response: %v", err)
+//		}
+//	}
+//}

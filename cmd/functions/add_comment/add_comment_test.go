@@ -4,7 +4,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"net/http"
 	"realworld-aws-lambda-dynamodb-golang/internal/domain/dto"
-	dtogenerator "realworld-aws-lambda-dynamodb-golang/internal/domain/dto/generator"
+	dtogen "realworld-aws-lambda-dynamodb-golang/internal/domain/dto/generator"
 	"realworld-aws-lambda-dynamodb-golang/internal/errutil"
 	"realworld-aws-lambda-dynamodb-golang/internal/test"
 	"testing"
@@ -20,11 +20,11 @@ func TestAuthenticationScenarios(t *testing.T) {
 func TestSuccessfulCommentCreation(t *testing.T) {
 	test.WithSetupAndTeardown(t, func() {
 		// Create a user and an article
-		user, token := test.CreateAndLoginUser(t, test.DefaultNewUserRequestUserDto)
-		article := test.CreateArticle(t, dtogenerator.GenerateCreateArticleRequestDTO(), token)
+		user, token := test.CreateAndLoginUser(t, dtogen.GenerateNewUserRequestUserDto())
+		article := test.CreateArticle(t, dtogen.GenerateCreateArticleRequestDTO(), token)
 
 		// Create a commentResp
-		commentReq := dtogenerator.GenerateAddCommentRequestDTO()
+		commentReq := dtogen.GenerateAddCommentRequestDTO()
 		commentResp := test.CreateComment(t, article.Slug, commentReq, token)
 
 		// Create expected commentResp response
@@ -58,10 +58,10 @@ func TestSuccessfulCommentCreation(t *testing.T) {
 func TestCommentOnNonExistentArticle(t *testing.T) {
 	test.WithSetupAndTeardown(t, func() {
 		// Create a user
-		_, token := test.CreateAndLoginUser(t, test.DefaultNewUserRequestUserDto)
+		_, token := test.CreateAndLoginUser(t, dtogen.GenerateNewUserRequestUserDto())
 
 		// Try to comment on a non-existent article
-		reqBody := dtogenerator.GenerateAddCommentRequestDTO()
+		reqBody := dtogen.GenerateAddCommentRequestDTO()
 
 		respBody := test.CreateCommentWithResponse[errutil.SimpleError](t, "non-existent-article", reqBody, token, http.StatusNotFound)
 		assert.Equal(t, "article not found", respBody.Message)

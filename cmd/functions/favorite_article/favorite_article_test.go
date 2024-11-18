@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/stretchr/testify/assert"
 	"net/http"
+	dtogen "realworld-aws-lambda-dynamodb-golang/internal/domain/dto/generator"
 	"realworld-aws-lambda-dynamodb-golang/internal/errutil"
 	"realworld-aws-lambda-dynamodb-golang/internal/test"
 	"testing"
@@ -18,7 +19,7 @@ func TestAuthenticationScenarios(t *testing.T) {
 func TestSuccessfulFavorite(t *testing.T) {
 	test.WithSetupAndTeardown(t, func() {
 		// Create and login a user
-		_, token := test.CreateAndLoginUser(t, test.DefaultNewUserRequestUserDto)
+		_, token := test.CreateAndLoginUser(t, dtogen.GenerateNewUserRequestUserDto())
 
 		// Create an article
 		article := dtogen.GenerateCreateArticleRequestDTO()
@@ -44,7 +45,7 @@ func TestSuccessfulFavorite(t *testing.T) {
 func TestFavoriteNonExistentArticle(t *testing.T) {
 	test.WithSetupAndTeardown(t, func() {
 		// Create and login a user
-		_, token := test.CreateAndLoginUser(t, test.DefaultNewUserRequestUserDto)
+		_, token := test.CreateAndLoginUser(t, dtogen.GenerateNewUserRequestUserDto())
 
 		// Try to favorite non-existent article
 		nonExistentSlug := "non-existent-article"
@@ -56,7 +57,7 @@ func TestFavoriteNonExistentArticle(t *testing.T) {
 func TestFavoriteAlreadyFavoritedArticle(t *testing.T) {
 	test.WithSetupAndTeardown(t, func() {
 		// Create and login a user
-		_, token := test.CreateAndLoginUser(t, test.DefaultNewUserRequestUserDto)
+		_, token := test.CreateAndLoginUser(t, dtogen.GenerateNewUserRequestUserDto())
 
 		// Create an article
 		article := dtogen.GenerateCreateArticleRequestDTO()

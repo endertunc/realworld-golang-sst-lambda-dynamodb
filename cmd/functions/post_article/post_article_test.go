@@ -18,7 +18,7 @@ func TestAuthenticationScenarios(t *testing.T) {
 func TestSuccessfulArticleCreation(t *testing.T) {
 	test.WithSetupAndTeardown(t, func() {
 		// Create and login a user
-		user, token := test.CreateAndLoginUser(t, test.DefaultNewUserRequestUserDto)
+		user, token := test.CreateAndLoginUser(t, dtogen.GenerateNewUserRequestUserDto())
 
 		// Create an article
 		article := dtogen.GenerateCreateArticleRequestDTO()
@@ -54,7 +54,7 @@ func TestSuccessfulArticleCreation(t *testing.T) {
 func TestCreateArticlesWithSameTitle(t *testing.T) {
 	test.WithSetupAndTeardown(t, func() {
 		// Create and login a user
-		user, token := test.CreateAndLoginUser(t, test.DefaultNewUserRequestUserDto)
+		user, token := test.CreateAndLoginUser(t, dtogen.GenerateNewUserRequestUserDto())
 
 		// Create first article
 		article := dtogen.GenerateCreateArticleRequestDTO()
@@ -108,7 +108,7 @@ func TestCreateArticlesWithSameTitle(t *testing.T) {
 func TestCreateArticleWithoutTags(t *testing.T) {
 	test.WithSetupAndTeardown(t, func() {
 		// Create and login a user
-		user, token := test.CreateAndLoginUser(t, test.DefaultNewUserRequestUserDto)
+		user, token := test.CreateAndLoginUser(t, dtogen.GenerateNewUserRequestUserDto())
 
 		// Create an article without tags
 		article := dtogen.GenerateCreateArticleRequestDTO()
@@ -142,7 +142,7 @@ func TestCreateArticleWithoutTags(t *testing.T) {
 func TestCreateArticleWithEmptyTags(t *testing.T) {
 	test.WithSetupAndTeardown(t, func() {
 		// Create and login a user
-		user, token := test.CreateAndLoginUser(t, test.DefaultNewUserRequestUserDto)
+		user, token := test.CreateAndLoginUser(t, dtogen.GenerateNewUserRequestUserDto())
 
 		// Create an article with empty tags array
 		article := dtogen.GenerateCreateArticleRequestDTO()

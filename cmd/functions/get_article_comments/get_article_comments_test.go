@@ -13,7 +13,7 @@ import (
 func TestGetCommentsForArticleWithNoComments(t *testing.T) {
 	test.WithSetupAndTeardown(t, func() {
 		// Create a user and article
-		_, token := test.CreateAndLoginUser(t, test.DefaultNewUserRequestUserDto)
+		_, token := test.CreateAndLoginUser(t, dtogen.GenerateNewUserRequestUserDto())
 		article := test.CreateArticle(t, dtogen.GenerateCreateArticleRequestDTO(), token)
 
 		// Get comments
@@ -27,7 +27,7 @@ func TestGetCommentsForArticleWithNoComments(t *testing.T) {
 func TestGetCommentsForArticleWithMultipleComments(t *testing.T) {
 	test.WithSetupAndTeardown(t, func() {
 		// Create a user and article
-		user, token := test.CreateAndLoginUser(t, test.DefaultNewUserRequestUserDto)
+		user, token := test.CreateAndLoginUser(t, dtogen.GenerateNewUserRequestUserDto())
 		article := test.CreateArticle(t, dtogen.GenerateCreateArticleRequestDTO(), token)
 
 		// Add multiple comments

@@ -1,9 +1,8 @@
 package main
 
 import (
-	"fmt"
-	"net/http"
 	"realworld-aws-lambda-dynamodb-golang/internal/domain/dto"
+	dtogen "realworld-aws-lambda-dynamodb-golang/internal/domain/dto/generator"
 	"realworld-aws-lambda-dynamodb-golang/internal/test"
 	"testing"
 	"time"
@@ -14,37 +13,20 @@ import (
 func TestGetUserFeed(t *testing.T) {
 	test.WithSetupAndTeardown(t, func() {
 		// Create viewer user
-		_, viewerToken := test.CreateAndLoginUser(t, dto.NewUserRequestUserDto{
-			Username: "viewer",
-			Email:    "viewer@test.com",
-			Password: "password123",
-		})
+		_, viewerToken := test.CreateAndLoginUser(t, dtogen.GenerateNewUserRequestUserDto())
 
 		// Create first followed user
-		firstAuthor, firstAuthorToken := test.CreateAndLoginUser(t, dto.NewUserRequestUserDto{
-			Username: "first-author",
-			Email:    "first.author@test.com",
-			Password: "password123",
-		})
+		firstAuthor, firstAuthorToken := test.CreateAndLoginUser(t, dtogen.GenerateNewUserRequestUserDto())
 
 		// Create second followed user
-		secondAuthor, secondAuthorToken := test.CreateAndLoginUser(t, dto.NewUserRequestUserDto{
-			Username: "second-author",
-			Email:    "second.author@test.com",
-			Password: "password123",
-		})
+		secondAuthor, secondAuthorToken := test.CreateAndLoginUser(t, dtogen.GenerateNewUserRequestUserDto())
 
 		// Viewer follows both authors
-		test.MakeAuthenticatedRequestAndParseResponse(t, nil, "POST", fmt.Sprintf("/api/profiles/%s/follow", firstAuthor.Username), http.StatusOK, nil, viewerToken)
-		test.MakeAuthenticatedRequestAndParseResponse(t, nil, "POST", fmt.Sprintf("/api/profiles/%s/follow", secondAuthor.Username), http.StatusOK, nil, viewerToken)
+		test.FollowUser(t, firstAuthor.Username, viewerToken)
+		test.FollowUser(t, secondAuthor.Username, viewerToken)
 
 		// Create first article (older)
-		firstArticle := test.CreateArticle(t, dto.CreateArticleRequestDTO{
-			Title:       "First Article",
-			Description: "First Description",
-			Body:        "First Body",
-			TagList:     []string{"first"},
-		}, firstAuthorToken)
+		firstArticle := test.CreateArticle(t, dtogen.GenerateCreateArticleRequestDTO(), firstAuthorToken)
 
 		// Wait a bit to ensure different creation times
 		time.Sleep(100 * time.Millisecond)
@@ -58,27 +40,25 @@ func TestGetUserFeed(t *testing.T) {
 		}, secondAuthorToken)
 
 		// Favorite the first article
-		test.MakeAuthenticatedRequestAndParseResponse(t, nil, "POST", fmt.Sprintf("/api/articles/%s/favorite", firstArticle.Slug), http.StatusOK, nil, viewerToken)
+		test.FavoriteArticle(t, firstArticle.Slug, viewerToken)
 
 		// Check feed with retries
 		assert.EventuallyWithT(t, func(testingT *assert.CollectT) {
-
-			var feedResp dto.MultipleArticlesResponseBodyDTO
-			test.MakeAuthenticatedRequestAndParseResponse(t, nil, "GET", "/api/articles/feed", http.StatusOK, &feedResp, viewerToken)
+			feedResp := test.GetUserFeedWithPagination(t, viewerToken, 20, nil)
 
 			// Check if we have both articles
 			assert.Equal(testingT, 2, len(feedResp.Articles))
 
 			// Check ordering (newest first)
 			firstArticleFromFeed := feedResp.Articles[0]
-			assert.Equal(testingT, firstArticle.Slug, firstArticleFromFeed.Slug)
-			assert.True(testingT, firstArticleFromFeed.Favorited)
-			assert.Equal(testingT, 1, firstArticleFromFeed.FavoritesCount)
+			assert.Equal(testingT, secondArticle.Slug, firstArticleFromFeed.Slug)
+			assert.False(testingT, firstArticleFromFeed.Favorited)
+			assert.Equal(testingT, 0, firstArticleFromFeed.FavoritesCount)
 
 			secondArticleFromFeed := feedResp.Articles[1]
-			assert.Equal(testingT, secondArticle.Slug, secondArticleFromFeed.Slug)
-			assert.False(testingT, secondArticleFromFeed.Favorited)
-			assert.Equal(testingT, 0, secondArticleFromFeed.FavoritesCount)
+			assert.Equal(testingT, firstArticle.Slug, secondArticleFromFeed.Slug)
+			assert.True(testingT, secondArticleFromFeed.Favorited)
+			assert.Equal(testingT, 1, secondArticleFromFeed.FavoritesCount)
 
 		}, 5*time.Second, 1*time.Second, "feed should contain expected articles in correct order")
 	})
@@ -87,61 +67,28 @@ func TestGetUserFeed(t *testing.T) {
 func TestGetUserFeedPagination(t *testing.T) {
 	test.WithSetupAndTeardown(t, func() {
 		// Create viewer user
-		_, viewerToken := test.CreateAndLoginUser(t, dto.NewUserRequestUserDto{
-			Username: "viewer",
-			Email:    "viewer@test.com",
-			Password: "password123",
-		})
+		_, viewerToken := test.CreateAndLoginUser(t, dtogen.GenerateNewUserRequestUserDto())
 
 		// Create first author
-		firstAuthor, firstAuthorToken := test.CreateAndLoginUser(t, dto.NewUserRequestUserDto{
-			Username: "first-author",
-			Email:    "first.author@test.com",
-			Password: "password123",
-		})
+		firstAuthor, firstAuthorToken := test.CreateAndLoginUser(t, dtogen.GenerateNewUserRequestUserDto())
 
 		// Create second author
-		secondAuthor, secondAuthorToken := test.CreateAndLoginUser(t, dto.NewUserRequestUserDto{
-			Username: "second-author",
-			Email:    "second.author@test.com",
-			Password: "password123",
-		})
+		secondAuthor, secondAuthorToken := test.CreateAndLoginUser(t, dtogen.GenerateNewUserRequestUserDto())
 
 		// Viewer follows both authors
-		test.MakeAuthenticatedRequestAndParseResponse(t, nil, "POST", fmt.Sprintf("/api/profiles/%s/follow", firstAuthor.Username), http.StatusOK, nil, viewerToken)
-		test.MakeAuthenticatedRequestAndParseResponse(t, nil, "POST", fmt.Sprintf("/api/profiles/%s/follow", secondAuthor.Username), http.StatusOK, nil, viewerToken)
+		test.FollowUser(t, firstAuthor.Username, viewerToken)
+		test.FollowUser(t, secondAuthor.Username, viewerToken)
 
 		// First author creates two articles
-		firstAuthorArticle1 := test.CreateArticle(t, dto.CreateArticleRequestDTO{
-			Title:       "First Author Article 1",
-			Description: "First Author Description 1",
-			Body:        "First Author Body 1",
-			TagList:     []string{"first-1"},
-		}, firstAuthorToken)
-		firstAuthorArticle2 := test.CreateArticle(t, dto.CreateArticleRequestDTO{
-			Title:       "First Author Article 2",
-			Description: "First Author Description 2",
-			Body:        "First Author Body 2",
-			TagList:     []string{"first-2"},
-		}, firstAuthorToken)
+		firstAuthorArticle1 := test.CreateArticle(t, dtogen.GenerateCreateArticleRequestDTO(), firstAuthorToken)
+		firstAuthorArticle2 := test.CreateArticle(t, dtogen.GenerateCreateArticleRequestDTO(), firstAuthorToken)
 		// Second author creates two articles
-		secondAuthorArticle1 := test.CreateArticle(t, dto.CreateArticleRequestDTO{
-			Title:       "Second Author Article 1",
-			Description: "Second Author Description 1",
-			Body:        "Second Author Body 1",
-			TagList:     []string{"second-1"},
-		}, secondAuthorToken)
-		secondAuthorArticle2 := test.CreateArticle(t, dto.CreateArticleRequestDTO{
-			Title:       "Second Author Article 2",
-			Description: "Second Author Description 2",
-			Body:        "Second Author Body 2",
-			TagList:     []string{"second-2"},
-		}, secondAuthorToken)
+		secondAuthorArticle1 := test.CreateArticle(t, dtogen.GenerateCreateArticleRequestDTO(), secondAuthorToken)
+		secondAuthorArticle2 := test.CreateArticle(t, dtogen.GenerateCreateArticleRequestDTO(), secondAuthorToken)
 
 		// Check first page with retries (limit=3)
 		assert.EventuallyWithT(t, func(testingT *assert.CollectT) {
-			var firstPageResp dto.MultipleArticlesResponseBodyDTO
-			test.MakeAuthenticatedRequestAndParseResponse(t, nil, "GET", "/api/articles/feed?limit=3", http.StatusOK, &firstPageResp, viewerToken)
+			firstPageResp := test.GetUserFeedWithPagination(t, viewerToken, 3, nil)
 
 			//assert.Equal(testingT, 3, len(firstPageResp.Articles))
 			assert.Len(testingT, firstPageResp.Articles, 3)
@@ -153,8 +100,7 @@ func TestGetUserFeedPagination(t *testing.T) {
 			assert.Equal(testingT, firstAuthorArticle2.Slug, firstPageResp.Articles[2].Slug)
 
 			// Get second page using nextPageToken
-			var secondPageResp dto.MultipleArticlesResponseBodyDTO
-			test.MakeAuthenticatedRequestAndParseResponse(t, nil, "GET", fmt.Sprintf("/api/articles/feed?limit=3&offset=%s", *firstPageResp.NextPageToken), http.StatusOK, &secondPageResp, viewerToken)
+			secondPageResp := test.GetUserFeedWithPagination(t, viewerToken, 3, firstPageResp.NextPageToken)
 
 			// Check the second page
 			//require.Equal(t, 1, len(secondPageResp.Articles))
@@ -163,7 +109,7 @@ func TestGetUserFeedPagination(t *testing.T) {
 			assert.Nil(t, secondPageResp.NextPageToken)
 			assert.Equal(t, firstAuthorArticle1.Slug, secondPageResp.Articles[0].Slug)
 
-		}, 5*time.Second, 1*time.Second, "first page should contain 3 newest articles")
+		}, 5*time.Second, 2*time.Second, "first page should contain 3 newest articles")
 
 	})
 }

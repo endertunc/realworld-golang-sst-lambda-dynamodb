@@ -20,7 +20,7 @@ func TestGetNonExistentArticle(t *testing.T) {
 func TestGetArticleUnauthenticated(t *testing.T) {
 	test.WithSetupAndTeardown(t, func() {
 		// Create a user and article
-		_, token := test.CreateAndLoginUser(t, test.DefaultNewUserRequestUserDto)
+		_, token := test.CreateAndLoginUser(t, dtogen.GenerateNewUserRequestUserDto())
 		createdArticle := test.CreateArticle(t, dtogen.GenerateCreateArticleRequestDTO(), token)
 
 		// Get article without authentication
@@ -37,7 +37,7 @@ func TestGetArticleUnauthenticated(t *testing.T) {
 func TestGetArticleNotFollowingNotFavorited(t *testing.T) {
 	test.WithSetupAndTeardown(t, func() {
 		// Create author and article
-		_, authorToken := test.CreateAndLoginUser(t, test.DefaultNewUserRequestUserDto)
+		_, authorToken := test.CreateAndLoginUser(t, dtogen.GenerateNewUserRequestUserDto())
 		createdArticle := test.CreateArticle(t, dtogen.GenerateCreateArticleRequestDTO(), authorToken)
 
 		// Create reader
@@ -57,7 +57,7 @@ func TestGetArticleNotFollowingNotFavorited(t *testing.T) {
 func TestGetArticleFollowingAndFavorited(t *testing.T) {
 	test.WithSetupAndTeardown(t, func() {
 		// Create author and article
-		author, authorToken := test.CreateAndLoginUser(t, test.DefaultNewUserRequestUserDto)
+		author, authorToken := test.CreateAndLoginUser(t, dtogen.GenerateNewUserRequestUserDto())
 		createdArticle := test.CreateArticle(t, dtogen.GenerateCreateArticleRequestDTO(), authorToken)
 
 		// Create reader
@@ -82,7 +82,7 @@ func TestGetArticleFollowingAndFavorited(t *testing.T) {
 func TestGetOwnArticleNotFavorited(t *testing.T) {
 	test.WithSetupAndTeardown(t, func() {
 		// Create author and article
-		_, token := test.CreateAndLoginUser(t, test.DefaultNewUserRequestUserDto)
+		_, token := test.CreateAndLoginUser(t, dtogen.GenerateNewUserRequestUserDto())
 		createdArticle := test.CreateArticle(t, dtogen.GenerateCreateArticleRequestDTO(), token)
 
 		// Get own article
@@ -99,7 +99,7 @@ func TestGetOwnArticleNotFavorited(t *testing.T) {
 func TestGetOwnArticleFavorited(t *testing.T) {
 	test.WithSetupAndTeardown(t, func() {
 		// Create author and article
-		_, token := test.CreateAndLoginUser(t, test.DefaultNewUserRequestUserDto)
+		_, token := test.CreateAndLoginUser(t, dtogen.GenerateNewUserRequestUserDto())
 		createdArticle := test.CreateArticle(t, dtogen.GenerateCreateArticleRequestDTO(), token)
 
 		// Favorite own article

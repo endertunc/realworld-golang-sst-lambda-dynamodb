@@ -19,7 +19,7 @@ func TestAuthenticationScenarios(t *testing.T) {
 func TestSuccessfulUnfollow(t *testing.T) {
 	test.WithSetupAndTeardown(t, func() {
 		// Create and login the follower user
-		_, token := test.CreateAndLoginUser(t, test.DefaultNewUserRequestUserDto)
+		_, token := test.CreateAndLoginUser(t, dtogen.GenerateNewUserRequestUserDto())
 
 		// Create the user to be followed/unfollowed
 		userToUnfollow := dtogen.GenerateNewUserRequestUserDto()
@@ -45,7 +45,7 @@ func TestSuccessfulUnfollow(t *testing.T) {
 func TestUnfollowNonExistentUser(t *testing.T) {
 	test.WithSetupAndTeardown(t, func() {
 		// Create and login a user
-		_, token := test.CreateAndLoginUser(t, test.DefaultNewUserRequestUserDto)
+		_, token := test.CreateAndLoginUser(t, dtogen.GenerateNewUserRequestUserDto())
 
 		// Try to unfollow non-existent user
 		nonExistentUsername := "non-existent-user"
@@ -57,7 +57,7 @@ func TestUnfollowNonExistentUser(t *testing.T) {
 func TestUnfollowYourself(t *testing.T) {
 	test.WithSetupAndTeardown(t, func() {
 		// Create and login a user
-		user, token := test.CreateAndLoginUser(t, test.DefaultNewUserRequestUserDto)
+		user, token := test.CreateAndLoginUser(t, dtogen.GenerateNewUserRequestUserDto())
 
 		// Try to unfollow yourself
 		respBody := test.UnfollowUserWithResponse[errutil.SimpleError](t, user.Username, token, http.StatusConflict)
@@ -68,7 +68,7 @@ func TestUnfollowYourself(t *testing.T) {
 func TestUnfollowUserYouDontFollow(t *testing.T) {
 	test.WithSetupAndTeardown(t, func() {
 		// Create and login the follower user
-		_, token := test.CreateAndLoginUser(t, test.DefaultNewUserRequestUserDto)
+		_, token := test.CreateAndLoginUser(t, dtogen.GenerateNewUserRequestUserDto())
 
 		// Create another user
 		userToUnfollow := dtogen.GenerateNewUserRequestUserDto()

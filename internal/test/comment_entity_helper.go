@@ -1,7 +1,6 @@
 package test
 
 import (
-	"fmt"
 	"github.com/stretchr/testify/require"
 	"net/http"
 	"realworld-aws-lambda-dynamodb-golang/internal/domain/dto"
@@ -33,10 +32,9 @@ func CreateComment(t *testing.T, articleSlug string, reqBody dto.AddCommentReque
 	return CreateCommentWithResponse[dto.SingleCommentResponseBodyDTO](t, articleSlug, reqBody, token, http.StatusOK).Comment
 }
 
-func CreateCommentWithResponse[T interface{}](t *testing.T, articleSlug string, reqBody dto.AddCommentRequestDTO, token string, expectedStatusCode int) T {
-	var respBody T
-	MakeAuthenticatedRequestAndParseResponse(t, dto.AddCommentRequestBodyDTO{Comment: reqBody}, "POST", "/api/articles/"+articleSlug+"/comments", expectedStatusCode, &respBody, token)
-	return respBody
+func CreateCommentWithResponse[T interface{}](t *testing.T, articleSlug string, comment dto.AddCommentRequestDTO, token string, expectedStatusCode int) T {
+	reqBody := dto.AddCommentRequestBodyDTO{Comment: comment}
+	return ExecuteRequest[T](t, "POST", "/api/articles/"+articleSlug+"/comments", reqBody, expectedStatusCode, &token)
 }
 
 // GetArticleComments retrieves all comments for an article
@@ -45,27 +43,16 @@ func GetArticleComments(t *testing.T, articleSlug string, token *string) []dto.C
 }
 
 func GetArticleCommentsWithResponse[T interface{}](t *testing.T, articleSlug string, token *string, expectedStatusCode int) T {
-	var respBody T
-	path := fmt.Sprintf("/api/articles/%s/comments", articleSlug)
-	if token == nil {
-		MakeRequestAndParseResponse(t, nil, "GET", path, http.StatusOK, &respBody)
-	} else {
-		MakeAuthenticatedRequestAndParseResponse(t, nil, "GET", path, expectedStatusCode, &respBody, *token)
-	}
-	return respBody
+	return ExecuteRequest[T](t, "GET", "/api/articles/"+articleSlug+"/comments", nil, expectedStatusCode, token)
 }
 
 // DeleteComment deletes a specific comment
 func DeleteComment(t *testing.T, articleSlug string, commentId string, token string) {
-	//type emptyStruct struct {}
-	//_ = DeleteCommentWithResponse[emptyStruct](t, articleSlug, commentId, token, http.StatusOK)
-	MakeAuthenticatedRequestAndParseResponse(t, nil, "DELETE", "/api/articles/"+articleSlug+"/comments/"+commentId, http.StatusOK, nil, token)
+	ExecuteRequest[Nothing](t, "DELETE", "/api/articles/"+articleSlug+"/comments/"+commentId, nil, http.StatusOK, &token)
 }
 
 func DeleteCommentWithResponse[T interface{}](t *testing.T, articleSlug string, commentId string, token string, expectedStatusCode int) T {
-	var respBody T
-	MakeAuthenticatedRequestAndParseResponse(t, nil, "DELETE", "/api/articles/"+articleSlug+"/comments/"+commentId, expectedStatusCode, &respBody, token)
-	return respBody
+	return ExecuteRequest[T](t, "DELETE", "/api/articles/"+articleSlug+"/comments/"+commentId, nil, expectedStatusCode, &token)
 }
 
 // VerifyCommentExists verifies that a specific comment exists in an article's comments
@@ -95,8 +82,6 @@ func LoginUser(t *testing.T, user dto.LoginRequestUserDto) dto.UserResponseUserD
 }
 
 func LoginUserWithResponse[T interface{}](t *testing.T, user dto.LoginRequestUserDto, expectedStatusCode int) T {
-	loginReqBody := dto.LoginRequestBodyDTO{User: user}
-	var loginRespBody T
-	MakeRequestAndParseResponse(t, loginReqBody, "POST", "/api/users/login", expectedStatusCode, &loginRespBody)
-	return loginRespBody
+	reqBody := dto.LoginRequestBodyDTO{User: user}
+	return ExecuteRequest[T](t, "POST", "/api/users/login", reqBody, expectedStatusCode, nil)
 }

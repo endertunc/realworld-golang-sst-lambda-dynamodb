@@ -7,17 +7,21 @@ import (
 )
 
 // ToDo @ender I have different file name pattern... this file camelCase, auth_test_suite.go, other with kebab-case....
-var DefaultNewUserRequestUserDto = dto.NewUserRequestUserDto{
-	Email:    "test@example.com",
-	Username: "test-user",
-	Password: "123456",
+
+// CreateAndLoginUser creates a new user and logs them in, returning the user data and authentication token
+func CreateAndLoginUser(t *testing.T, user dto.NewUserRequestUserDto) (dto.NewUserRequestUserDto, string) {
+	RegisterUser(t, user)
+	loginRespBody := LoginUser(t, dto.LoginRequestUserDto{
+		Email:    user.Email,
+		Password: user.Password,
+	})
+
+	return user, loginRespBody.Token
 }
 
 func CreateUserEntity(t *testing.T, user dto.NewUserRequestUserDto) dto.UserResponseUserDto {
-	body := dto.NewUserRequestBodyDTO{User: user}
-	var respBody dto.UserResponseBodyDTO
-	MakeRequestAndParseResponse(t, body, "POST", "/api/users", http.StatusOK, &respBody)
-	return respBody.User
+	reqBody := dto.NewUserRequestBodyDTO{User: user}
+	return ExecuteRequest[dto.UserResponseBodyDTO](t, "POST", "/api/users", reqBody, http.StatusOK, nil).User
 }
 
 func GetCurrentUser(t *testing.T, token string) dto.UserResponseUserDto {
@@ -25,9 +29,7 @@ func GetCurrentUser(t *testing.T, token string) dto.UserResponseUserDto {
 }
 
 func GetCurrentUserWithResponse[T interface{}](t *testing.T, token string, expectedStatusCode int) T {
-	var respBody T
-	MakeAuthenticatedRequestAndParseResponse(t, nil, "GET", "/api/user", expectedStatusCode, &respBody, token)
-	return respBody
+	return ExecuteRequest[T](t, "GET", "/api/user", nil, expectedStatusCode, &token)
 }
 
 func FollowUser(t *testing.T, username, token string) dto.ProfileResponseDto {
@@ -35,9 +37,7 @@ func FollowUser(t *testing.T, username, token string) dto.ProfileResponseDto {
 }
 
 func FollowUserWithResponse[T interface{}](t *testing.T, username, token string, expectedStatusCode int) T {
-	var respBody T
-	MakeAuthenticatedRequestAndParseResponse(t, nil, "POST", "/api/profiles/"+username+"/follow", expectedStatusCode, &respBody, token)
-	return respBody
+	return ExecuteRequest[T](t, "POST", "/api/profiles/"+username+"/follow", nil, expectedStatusCode, &token)
 }
 
 func UnfollowUser(t *testing.T, username string, token string) dto.ProfileResponseBodyDTO {
@@ -45,9 +45,7 @@ func UnfollowUser(t *testing.T, username string, token string) dto.ProfileRespon
 }
 
 func UnfollowUserWithResponse[T interface{}](t *testing.T, username string, token string, expectedStatusCode int) T {
-	var respBody T
-	MakeAuthenticatedRequestAndParseResponse(t, nil, "DELETE", "/api/profiles/"+username+"/follow", expectedStatusCode, &respBody, token)
-	return respBody
+	return ExecuteRequest[T](t, "DELETE", "/api/profiles/"+username+"/follow", nil, expectedStatusCode, &token)
 }
 
 func GetUserProfile(t *testing.T, username string, token *string) dto.ProfileResponseBodyDTO {
@@ -55,13 +53,7 @@ func GetUserProfile(t *testing.T, username string, token *string) dto.ProfileRes
 }
 
 func GetUserProfileWithResponse[T interface{}](t *testing.T, username string, token *string, expectedStatusCode int) T {
-	var respBody T
-	if token == nil {
-		MakeRequestAndParseResponse(t, nil, "GET", "/api/profiles/"+username, expectedStatusCode, &respBody)
-	} else {
-		MakeAuthenticatedRequestAndParseResponse(t, nil, "GET", "/api/profiles/"+username, expectedStatusCode, &respBody, *token)
-	}
-	return respBody
+	return ExecuteRequest[T](t, "GET", "/api/profiles/"+username, nil, expectedStatusCode, token)
 }
 
 func RegisterUser(t *testing.T, user dto.NewUserRequestUserDto) dto.UserResponseUserDto {
@@ -70,7 +62,5 @@ func RegisterUser(t *testing.T, user dto.NewUserRequestUserDto) dto.UserResponse
 
 func RegisterUserWithResponse[T interface{}](t *testing.T, user dto.NewUserRequestUserDto, expectedStatusCode int) T {
 	reqBody := dto.NewUserRequestBodyDTO{User: user}
-	var respBody T
-	MakeRequestAndParseResponse(t, reqBody, "POST", "/api/users", expectedStatusCode, &respBody)
-	return respBody
+	return ExecuteRequest[T](t, "POST", "/api/users", reqBody, expectedStatusCode, nil)
 }

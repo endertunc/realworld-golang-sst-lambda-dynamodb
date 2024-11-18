@@ -12,7 +12,7 @@ import (
 func TestSuccessfulFollow(t *testing.T) {
 	test.WithSetupAndTeardown(t, func() {
 		// Create and login the follower user
-		_, token := test.CreateAndLoginUser(t, test.DefaultNewUserRequestUserDto)
+		_, token := test.CreateAndLoginUser(t, dtogen.GenerateNewUserRequestUserDto())
 
 		// Create the user to be followed
 		userToFollow := dtogen.GenerateNewUserRequestUserDto()
@@ -34,7 +34,7 @@ func TestSuccessfulFollow(t *testing.T) {
 func TestFollowNonExistentUser(t *testing.T) {
 	test.WithSetupAndTeardown(t, func() {
 		// Create and login a user
-		_, token := test.CreateAndLoginUser(t, test.DefaultNewUserRequestUserDto)
+		_, token := test.CreateAndLoginUser(t, dtogen.GenerateNewUserRequestUserDto())
 
 		// Try to follow non-existent user
 		nonExistentUsername := "non-existent-user"
@@ -46,7 +46,7 @@ func TestFollowNonExistentUser(t *testing.T) {
 func TestFollowYourself(t *testing.T) {
 	test.WithSetupAndTeardown(t, func() {
 		// Create and login a user
-		user, token := test.CreateAndLoginUser(t, test.DefaultNewUserRequestUserDto)
+		user, token := test.CreateAndLoginUser(t, dtogen.GenerateNewUserRequestUserDto())
 
 		// Try to follow yourself
 		respBody := test.FollowUserWithResponse[errutil.SimpleError](t, user.Username, token, http.StatusBadRequest)
@@ -57,7 +57,7 @@ func TestFollowYourself(t *testing.T) {
 func TestFollowAlreadyFollowedUser(t *testing.T) {
 	test.WithSetupAndTeardown(t, func() {
 		// create and login the follower user
-		_, token := test.CreateAndLoginUser(t, test.DefaultNewUserRequestUserDto)
+		_, token := test.CreateAndLoginUser(t, dtogen.GenerateNewUserRequestUserDto())
 
 		// create the user to be followed
 		userToFollow := dtogen.GenerateNewUserRequestUserDto()

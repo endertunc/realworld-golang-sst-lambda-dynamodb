@@ -21,7 +21,7 @@ func TestAuthenticationScenarios(t *testing.T) {
 func TestSuccessfulCommentDeletion(t *testing.T) {
 	test.WithSetupAndTeardown(t, func() {
 		// Create a user and an article
-		_, token := test.CreateAndLoginUser(t, test.DefaultNewUserRequestUserDto)
+		_, token := test.CreateAndLoginUser(t, dtogen.GenerateNewUserRequestUserDto())
 		article := test.CreateArticle(t, dtogen.GenerateCreateArticleRequestDTO(), token)
 
 		// Create a comment
@@ -41,7 +41,7 @@ func TestSuccessfulCommentDeletion(t *testing.T) {
 func TestDeleteNonExistingComment(t *testing.T) {
 	test.WithSetupAndTeardown(t, func() {
 		// Create a user and an article
-		_, token := test.CreateAndLoginUser(t, test.DefaultNewUserRequestUserDto)
+		_, token := test.CreateAndLoginUser(t, dtogen.GenerateNewUserRequestUserDto())
 		article := test.CreateArticle(t, dtogen.GenerateCreateArticleRequestDTO(), token)
 
 		// Try to delete a non-existing comment
@@ -54,7 +54,7 @@ func TestDeleteNonExistingComment(t *testing.T) {
 func TestDeleteCommentWithUnrelatedArticle(t *testing.T) {
 	test.WithSetupAndTeardown(t, func() {
 		// Create a user and two articles
-		_, token := test.CreateAndLoginUser(t, test.DefaultNewUserRequestUserDto)
+		_, token := test.CreateAndLoginUser(t, dtogen.GenerateNewUserRequestUserDto())
 		article1 := test.CreateArticle(t, dtogen.GenerateCreateArticleRequestDTO(), token)
 		article2Request := dto.CreateArticleRequestDTO{
 			Title:       "This is a new kind of article",
@@ -79,7 +79,7 @@ func TestDeleteCommentWithUnrelatedArticle(t *testing.T) {
 func TestDeleteCommentWithNonExistingArticle(t *testing.T) {
 	test.WithSetupAndTeardown(t, func() {
 		// Create a user and an article
-		_, token := test.CreateAndLoginUser(t, test.DefaultNewUserRequestUserDto)
+		_, token := test.CreateAndLoginUser(t, dtogen.GenerateNewUserRequestUserDto())
 		article := test.CreateArticle(t, dtogen.GenerateCreateArticleRequestDTO(), token)
 
 		// Create a comment
@@ -97,7 +97,7 @@ func TestDeleteCommentWithNonExistingArticle(t *testing.T) {
 func TestDeleteCommentWithInvalidCommentId(t *testing.T) {
 	test.WithSetupAndTeardown(t, func() {
 		// Create a user and an article
-		_, token := test.CreateAndLoginUser(t, test.DefaultNewUserRequestUserDto)
+		_, token := test.CreateAndLoginUser(t, dtogen.GenerateNewUserRequestUserDto())
 		article := test.CreateArticle(t, dtogen.GenerateCreateArticleRequestDTO(), token)
 
 		// Try to delete a comment with invalid UUID format
@@ -109,7 +109,7 @@ func TestDeleteCommentWithInvalidCommentId(t *testing.T) {
 func TestDeleteCommentAsNonOwner(t *testing.T) {
 	test.WithSetupAndTeardown(t, func() {
 		// Create two users
-		_, ownerToken := test.CreateAndLoginUser(t, test.DefaultNewUserRequestUserDto)
+		_, ownerToken := test.CreateAndLoginUser(t, dtogen.GenerateNewUserRequestUserDto())
 		nonOwner := dtogen.GenerateNewUserRequestUserDto()
 		_, nonOwnerToken := test.CreateAndLoginUser(t, nonOwner)
 
