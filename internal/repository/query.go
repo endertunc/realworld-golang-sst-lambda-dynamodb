@@ -6,9 +6,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
-	ddbtypes "github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"realworld-aws-lambda-dynamodb-golang/internal/errutil"
 )
 
@@ -39,70 +40,88 @@ func QueryOne[DomainType any, DynamodbType any](ctx context.Context, client *dyn
 	return result, nil
 }
 
-// ToDo @ender here is the tricky thing with dynamodb query and pagination:
-// query operation could return a result without reaching to the limit e.g., if 1 MB of data read before reaching the limit,
-// therefore, we need to paginate INTERNALLY to request remaining items until we reach the limit or LastEvaluatedKey is empty
-func QueryMany[DomainType any, DynamodbType any](ctx context.Context, client *dynamodb.Client, input *dynamodb.QueryInput, mapper func(input DynamodbType) DomainType) ([]DomainType, *string, error) {
-	response, err := client.Query(ctx, input)
+// QueryMany is a helper function to query multiple items from dynamodb.
+// it will internally handle pagination and keep querying until the desired limit is reached
+func QueryMany[DomainType any, DynamodbType any](ctx context.Context, client *dynamodb.Client, input *dynamodb.QueryInput, desiredLimit int, exclusiveStartKey map[string]types.AttributeValue, mapper func(input DynamodbType) DomainType) ([]DomainType, map[string]types.AttributeValue, error) {
 
-	if err != nil {
-		return nil, nil, fmt.Errorf("%w: %w", errutil.ErrDynamoQuery, err)
-	}
+	var domainItems []DomainType
+	lastEvaluatedKey := exclusiveStartKey
 
-	dynamodbItems := make([]DynamodbType, 0, len(response.Items))
-	err = attributevalue.UnmarshalListOfMaps(response.Items, &dynamodbItems)
-	if err != nil {
-		return nil, nil, fmt.Errorf("%w: %w", errutil.ErrDynamoMapping, err)
-	}
+	for len(domainItems) < desiredLimit {
+		remaining := desiredLimit - len(domainItems)
+		input.Limit = aws.Int32(int32(remaining))
+		input.ExclusiveStartKey = lastEvaluatedKey
 
-	var nextPageToken *string
-	if len(response.LastEvaluatedKey) > 0 {
-		encodedToken, err := encodeLastEvaluatedKey(response.LastEvaluatedKey)
+		response, err := client.Query(ctx, input)
 		if err != nil {
-			return nil, nil, fmt.Errorf("%w: %w", errutil.ErrDynamoTokenEncoding, err)
+			return nil, nil, fmt.Errorf("%w: %w", errutil.ErrDynamoQuery, err)
 		}
-		nextPageToken = encodedToken
+
+		dynamodbItems := make([]DynamodbType, 0, len(response.Items))
+		err = attributevalue.UnmarshalListOfMaps(response.Items, &dynamodbItems)
+		if err != nil {
+			return nil, nil, fmt.Errorf("%w: %w", errutil.ErrDynamoMapping, err)
+		}
+		for _, dynamodbItem := range dynamodbItems {
+			domainItems = append(domainItems, mapper(dynamodbItem))
+		}
+		// If no more items, break
+		if response.LastEvaluatedKey == nil {
+			lastEvaluatedKey = nil
+			break
+		}
+		lastEvaluatedKey = response.LastEvaluatedKey
 	}
 
-	domainItems := make([]DomainType, 0, len(dynamodbItems))
-	for _, dynamodbItem := range dynamodbItems {
-		domainItems = append(domainItems, mapper(dynamodbItem))
-	}
-	return domainItems, nextPageToken, nil
+	return domainItems, lastEvaluatedKey, nil
 }
 
-// ToDo @ender handle UnprocessedKeys
-func BatchGetItems[DomainType any, DynamodbType any](ctx context.Context, client *dynamodb.Client,
-	table string, keys []map[string]ddbtypes.AttributeValue, mapper func(input DynamodbType) DomainType) ([]DomainType, error) {
+// BatchGetItems is a helper function to batch get multiple items from dynamodb.
+// it will internally handle unprocessed keys and keep querying until all items are fetched
+func BatchGetItems[DomainType any, DynamodbType any](
+	ctx context.Context,
+	client *dynamodb.Client,
+	table string,
+	keys []map[string]types.AttributeValue,
+	mapper func(input DynamodbType) DomainType) ([]DomainType, error) {
 
-	response, err := client.BatchGetItem(ctx, &dynamodb.BatchGetItemInput{
-		RequestItems: map[string]ddbtypes.KeysAndAttributes{
-			favoriteTable: {
-				Keys: keys,
+	domainItems := make([]DomainType, 0, len(keys))
+	unprocessedKeys := keys
+	for len(unprocessedKeys) > 0 {
+		response, err := client.BatchGetItem(ctx, &dynamodb.BatchGetItemInput{
+			RequestItems: map[string]types.KeysAndAttributes{
+				table: {
+					Keys: unprocessedKeys,
+				},
 			},
-		},
-	})
+		})
 
-	if err != nil {
-		return nil, fmt.Errorf("%w: %w", errutil.ErrDynamoQuery, err)
+		if err != nil {
+			return nil, fmt.Errorf("%w: %w", errutil.ErrDynamoQuery, err)
+		}
+
+		dynamodbItems := make([]DynamodbType, 0, len(response.Responses[table]))
+		err = attributevalue.UnmarshalListOfMaps(response.Responses[table], &dynamodbItems)
+
+		if err != nil {
+			return nil, fmt.Errorf("%w: %w", errutil.ErrDynamoMapping, err)
+		}
+
+		for _, dynamodbItem := range dynamodbItems {
+			domainItems = append(domainItems, mapper(dynamodbItem))
+		}
+
+		if len(response.UnprocessedKeys) == 0 {
+			break
+		}
+		unprocessedKeys = response.UnprocessedKeys[table].Keys
 	}
 
-	dynamodbItems := make([]DynamodbType, 0, len(response.Responses[table]))
-	err = attributevalue.UnmarshalListOfMaps(response.Responses[table], &dynamodbItems)
-
-	if err != nil {
-		return nil, fmt.Errorf("%w: %w", errutil.ErrDynamoMapping, err)
-	}
-
-	domainItems := make([]DomainType, 0, len(dynamodbItems))
-	for _, dynamodbItem := range dynamodbItems {
-		domainItems = append(domainItems, mapper(dynamodbItem))
-	}
 	return domainItems, nil
 }
 
 // - - - - - - - - - - - - - - - - LastEvaluatedKey Encoder/Decoder - - - - - - - - - - - - - - - -
-func encodeLastEvaluatedKey(input map[string]ddbtypes.AttributeValue) (*string, error) {
+func encodeLastEvaluatedKey(input map[string]types.AttributeValue) (*string, error) {
 	var inputMap map[string]interface{}
 	err := attributevalue.UnmarshalMap(input, &inputMap)
 	if err != nil {
@@ -116,7 +135,7 @@ func encodeLastEvaluatedKey(input map[string]ddbtypes.AttributeValue) (*string, 
 	return &output, nil
 }
 
-func decodeLastEvaluatedKey(input string) (map[string]ddbtypes.AttributeValue, error) {
+func decodeLastEvaluatedKey(input string) (map[string]types.AttributeValue, error) {
 	bytesJSON, err := base64.StdEncoding.DecodeString(input)
 	if err != nil {
 		return nil, err

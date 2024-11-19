@@ -6,7 +6,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
-	ddbtypes "github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/google/uuid"
 	"realworld-aws-lambda-dynamodb-golang/internal/database"
 	"realworld-aws-lambda-dynamodb-golang/internal/errutil"
@@ -45,8 +45,8 @@ func (uf userFeedRepository) FanoutArticle(ctx context.Context, articleId, autho
 		TableName:              aws.String(followerTable),
 		IndexName:              aws.String(followerFolloweeGSI),
 		KeyConditionExpression: aws.String("followee = :followee"),
-		ExpressionAttributeValues: map[string]ddbtypes.AttributeValue{
-			":followee": &ddbtypes.AttributeValueMemberS{Value: authorId.String()},
+		ExpressionAttributeValues: map[string]types.AttributeValue{
+			":followee": &types.AttributeValueMemberS{Value: authorId.String()},
 		},
 	})
 
@@ -56,9 +56,7 @@ func (uf userFeedRepository) FanoutArticle(ctx context.Context, articleId, autho
 		if err != nil {
 			return fmt.Errorf("%w: %w", errutil.ErrDynamoQuery, err)
 		}
-		// ToDo @ender delete me
-		//slog.DebugContext(ctx, "fan out article", slog.Int("follower_count", len(result.Items)), slog.Any("result", result))
-		var writeRequests []ddbtypes.WriteRequest
+		var writeRequests []types.WriteRequest
 		for _, item := range result.Items {
 			dynamodbFollowerItem := DynamodbFollowerItem{}
 			err = attributevalue.UnmarshalMap(item, &dynamodbFollowerItem)
@@ -75,15 +73,15 @@ func (uf userFeedRepository) FanoutArticle(ctx context.Context, articleId, autho
 			if err != nil {
 				return fmt.Errorf("%w: %w", errutil.ErrDynamoMarshalling, err)
 			}
-			writeRequests = append(writeRequests, ddbtypes.WriteRequest{
-				PutRequest: &ddbtypes.PutRequest{
+			writeRequests = append(writeRequests, types.WriteRequest{
+				PutRequest: &types.PutRequest{
 					Item: feedItemAttributes,
 				},
 			})
 		}
 		if len(writeRequests) > 0 {
 			_, err = uf.db.Client.BatchWriteItem(ctx, &dynamodb.BatchWriteItemInput{
-				RequestItems: map[string][]ddbtypes.WriteRequest{
+				RequestItems: map[string][]types.WriteRequest{
 					feedTable: writeRequests,
 				},
 			})
@@ -101,25 +99,26 @@ func (uf userFeedRepository) FindArticleIdsInUserFeed(ctx context.Context, userI
 		KeyConditionExpression: aws.String("userId = :userId"),
 		Limit:                  aws.Int32(int32(limit)),
 		ScanIndexForward:       aws.Bool(false),
-		ExpressionAttributeValues: map[string]ddbtypes.AttributeValue{
-			":userId": &ddbtypes.AttributeValueMemberS{Value: userId.String()},
+		ExpressionAttributeValues: map[string]types.AttributeValue{
+			":userId": &types.AttributeValueMemberS{Value: userId.String()},
 		},
 	}
 
 	// decode and set LastEvaluatedKey if nextPageToken is provided
 	// ToDo @ender shoul we pass this to QueryMany and handle it there in a single place?
 	//  it would be weird to pass QueryInput and nextPageToken to QueryMany separately tho...
+	var exclusiveStartKey map[string]types.AttributeValue
 	if nextPageToken != nil {
 		decodedLastEvaluatedKey, err := decodeLastEvaluatedKey(*nextPageToken)
 		if err != nil {
 			return nil, nil, fmt.Errorf("%w: %w", errutil.ErrDynamoTokenDecoding, err)
 		}
-		input.ExclusiveStartKey = decodedLastEvaluatedKey
+		exclusiveStartKey = decodedLastEvaluatedKey
 	}
 
 	// identity mapper to return original DynamodbType without any conversion
 	identityMapper := func(item DynamodbFeedItem) DynamodbFeedItem { return item }
-	feedItems, nextPageToken, err := QueryMany(ctx, uf.db.Client, input, identityMapper)
+	feedItems, lastEvaluatedKey, err := QueryMany(ctx, uf.db.Client, input, limit, exclusiveStartKey, identityMapper)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -130,5 +129,14 @@ func (uf userFeedRepository) FindArticleIdsInUserFeed(ctx context.Context, userI
 		articleIds = append(articleIds, uuid.UUID(item.ArticleId))
 	}
 
-	return articleIds, nextPageToken, nil
+	var newNextPageToken *string
+	if len(lastEvaluatedKey) > 0 {
+		encodedToken, err := encodeLastEvaluatedKey(lastEvaluatedKey)
+		if err != nil {
+			return nil, nil, fmt.Errorf("%w: %w", errutil.ErrDynamoTokenEncoding, err)
+		}
+		newNextPageToken = encodedToken
+	}
+
+	return articleIds, newNextPageToken, nil
 }

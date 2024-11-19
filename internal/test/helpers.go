@@ -34,7 +34,7 @@ var apiUrl = sync.OnceValue(func() string {
 	return value
 })
 
-var dynamodbClient = sync.OnceValue(func() *dynamodb.Client {
+var DynamodbClient = sync.OnceValue(func() *dynamodb.Client {
 	slog.Info("initializing dynamodb client...")
 	ctx := context.Background()
 
@@ -56,7 +56,7 @@ func truncateTable(t *testing.T, tableName string, pkName string, skName *string
 		TableName: aws.String(tableName),
 	}
 
-	result, err := dynamodbClient().Scan(ctx, scanInput)
+	result, err := DynamodbClient().Scan(ctx, scanInput)
 	if err != nil {
 		t.Fatalf("failed to scan table: %v", err)
 	}
@@ -92,7 +92,7 @@ func truncateTable(t *testing.T, tableName string, pkName string, skName *string
 
 		// Perform the batch delete operation with 25 items at a time
 		if len(writeRequests) == 25 || totalItemsToDelete == i+1 {
-			_, err = dynamodbClient().BatchWriteItem(ctx, &dynamodb.BatchWriteItemInput{
+			_, err = DynamodbClient().BatchWriteItem(ctx, &dynamodb.BatchWriteItemInput{
 				RequestItems: map[string][]ddbtypes.WriteRequest{
 					tableName: writeRequests,
 				},

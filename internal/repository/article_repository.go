@@ -13,7 +13,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
-	ddbtypes "github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/google/uuid"
 )
 
@@ -76,8 +76,8 @@ func (d dynamodbArticleRepository) FindArticleBySlug(ctx context.Context, slug s
 		TableName:              &articleTable,
 		IndexName:              articleSlugGSI,
 		KeyConditionExpression: aws.String("slug = :slug"),
-		ExpressionAttributeValues: map[string]ddbtypes.AttributeValue{
-			":slug": &ddbtypes.AttributeValueMemberS{Value: slug},
+		ExpressionAttributeValues: map[string]types.AttributeValue{
+			":slug": &types.AttributeValueMemberS{Value: slug},
 		},
 	}
 
@@ -96,8 +96,8 @@ func (d dynamodbArticleRepository) FindArticleBySlugTBD(ctx context.Context, slu
 		TableName:              &articleTable,
 		IndexName:              articleSlugGSI,
 		KeyConditionExpression: aws.String("slug = :slug"),
-		ExpressionAttributeValues: map[string]ddbtypes.AttributeValue{
-			":slug": &ddbtypes.AttributeValueMemberS{Value: slug},
+		ExpressionAttributeValues: map[string]types.AttributeValue{
+			":slug": &types.AttributeValueMemberS{Value: slug},
 		},
 	}
 	article, err := QueryOne(ctx, d.db.Client, &input, toDomainArticle)
@@ -113,8 +113,8 @@ func (d dynamodbArticleRepository) FindArticleBySlugTBD(ctx context.Context, slu
 func (d dynamodbArticleRepository) FindArticleById(ctx context.Context, articleId uuid.UUID) (domain.Article, error) {
 	input := &dynamodb.GetItemInput{
 		TableName: &articleTable,
-		Key: map[string]ddbtypes.AttributeValue{
-			"pk": &ddbtypes.AttributeValueMemberS{Value: articleId.String()},
+		Key: map[string]types.AttributeValue{
+			"pk": &types.AttributeValueMemberS{Value: articleId.String()},
 		},
 	}
 
@@ -149,7 +149,6 @@ func (d dynamodbArticleRepository) CreateArticle(ctx context.Context, article do
 		Item:      articleAttributes,
 	}
 
-	// ToDo @ender check if we can use the returned article from the put item?
 	_, err = d.db.Client.PutItem(ctx, input)
 	if err != nil {
 		return domain.Article{}, fmt.Errorf("%w: %w", errutil.ErrDynamoQuery, err)
@@ -160,8 +159,8 @@ func (d dynamodbArticleRepository) CreateArticle(ctx context.Context, article do
 
 func (d dynamodbArticleRepository) DeleteArticleById(c context.Context, articleId uuid.UUID) error {
 	input := &dynamodb.DeleteItemInput{
-		Key: map[string]ddbtypes.AttributeValue{
-			"pk": &ddbtypes.AttributeValueMemberS{Value: articleId.String()},
+		Key: map[string]types.AttributeValue{
+			"pk": &types.AttributeValueMemberS{Value: articleId.String()},
 		},
 		TableName: aws.String("article"),
 	}
@@ -178,26 +177,26 @@ func (d dynamodbArticleRepository) DeleteArticleById(c context.Context, articleI
 // if the favorite item does not exist, it does not decrement the favoritesCount and returns an ErrAlreadyUnfavorited error
 func (d dynamodbArticleRepository) UnfavoriteArticle(ctx context.Context, loggedInUserId uuid.UUID, articleId uuid.UUID) error {
 	transactWriteItems := dynamodb.TransactWriteItemsInput{
-		TransactItems: []ddbtypes.TransactWriteItem{
+		TransactItems: []types.TransactWriteItem{
 			{
-				Delete: &ddbtypes.Delete{
+				Delete: &types.Delete{
 					TableName: &favoriteTable,
-					Key: map[string]ddbtypes.AttributeValue{
-						"userId":    &ddbtypes.AttributeValueMemberS{Value: loggedInUserId.String()},
-						"articleId": &ddbtypes.AttributeValueMemberS{Value: articleId.String()},
+					Key: map[string]types.AttributeValue{
+						"userId":    &types.AttributeValueMemberS{Value: loggedInUserId.String()},
+						"articleId": &types.AttributeValueMemberS{Value: articleId.String()},
 					},
 					ConditionExpression: aws.String("attribute_exists(userId) AND attribute_exists(articleId)"),
 				},
 			},
 			{
-				Update: &ddbtypes.Update{
+				Update: &types.Update{
 					TableName: &articleTable,
-					Key: map[string]ddbtypes.AttributeValue{
-						"pk": &ddbtypes.AttributeValueMemberS{Value: articleId.String()},
+					Key: map[string]types.AttributeValue{
+						"pk": &types.AttributeValueMemberS{Value: articleId.String()},
 					},
 					UpdateExpression: aws.String("SET favoritesCount = favoritesCount - :dec"),
-					ExpressionAttributeValues: map[string]ddbtypes.AttributeValue{
-						":dec": &ddbtypes.AttributeValueMemberN{Value: "1"},
+					ExpressionAttributeValues: map[string]types.AttributeValue{
+						":dec": &types.AttributeValueMemberN{Value: "1"},
 					},
 				},
 			},
@@ -208,7 +207,7 @@ func (d dynamodbArticleRepository) UnfavoriteArticle(ctx context.Context, logged
 		o.RetryMaxAttempts = 1 // we don't want to retry this operation due to the favoritesCount decrement
 	})
 	if err != nil {
-		var transactionCanceledErr *ddbtypes.TransactionCanceledException
+		var transactionCanceledErr *types.TransactionCanceledException
 		if errors.As(err, &transactionCanceledErr) {
 			for index, reason := range transactionCanceledErr.CancellationReasons {
 				if reason.Code != nil && *reason.Code == conditionalCheckFailed && index == 0 {
@@ -237,23 +236,23 @@ func (d dynamodbArticleRepository) FavoriteArticle(ctx context.Context, loggedIn
 	}
 
 	transactWriteItems := dynamodb.TransactWriteItemsInput{
-		TransactItems: []ddbtypes.TransactWriteItem{
+		TransactItems: []types.TransactWriteItem{
 			{
-				Put: &ddbtypes.Put{
+				Put: &types.Put{
 					TableName:           &favoriteTable,
 					Item:                favoriteArticleAttributes,
 					ConditionExpression: aws.String("attribute_not_exists(userId) AND attribute_not_exists(articleId)"),
 				},
 			},
 			{
-				Update: &ddbtypes.Update{
+				Update: &types.Update{
 					TableName: &articleTable,
-					Key: map[string]ddbtypes.AttributeValue{
-						"pk": &ddbtypes.AttributeValueMemberS{Value: articleId.String()},
+					Key: map[string]types.AttributeValue{
+						"pk": &types.AttributeValueMemberS{Value: articleId.String()},
 					},
 					UpdateExpression: aws.String("SET favoritesCount = favoritesCount + :inc"),
-					ExpressionAttributeValues: map[string]ddbtypes.AttributeValue{
-						":inc": &ddbtypes.AttributeValueMemberN{Value: "1"},
+					ExpressionAttributeValues: map[string]types.AttributeValue{
+						":inc": &types.AttributeValueMemberN{Value: "1"},
 					},
 				},
 			},
@@ -265,7 +264,7 @@ func (d dynamodbArticleRepository) FavoriteArticle(ctx context.Context, loggedIn
 	})
 
 	if err != nil {
-		var transactionCanceledErr *ddbtypes.TransactionCanceledException
+		var transactionCanceledErr *types.TransactionCanceledException
 		if errors.As(err, &transactionCanceledErr) {
 			for index, reason := range transactionCanceledErr.CancellationReasons {
 				// ToDo @ender err.Error() doesnt give much information about the nature of the underlying issue.
@@ -288,11 +287,11 @@ func (d dynamodbArticleRepository) IsFavorited(ctx context.Context, articleId, u
 	input := &dynamodb.QueryInput{
 		TableName:              &favoriteTable,
 		KeyConditionExpression: aws.String("userId = :userId AND articleId = :articleId"),
-		ExpressionAttributeValues: map[string]ddbtypes.AttributeValue{
-			":userId":    &ddbtypes.AttributeValueMemberS{Value: userId.String()},
-			":articleId": &ddbtypes.AttributeValueMemberS{Value: articleId.String()},
+		ExpressionAttributeValues: map[string]types.AttributeValue{
+			":userId":    &types.AttributeValueMemberS{Value: userId.String()},
+			":articleId": &types.AttributeValueMemberS{Value: articleId.String()},
 		},
-		Select: ddbtypes.SelectCount,
+		Select: types.SelectCount,
 	}
 
 	result, err := d.db.Client.Query(ctx, input)
@@ -310,15 +309,15 @@ func (d dynamodbArticleRepository) FindArticlesByIds(ctx context.Context, articl
 		return []domain.Article{}, nil
 	}
 
-	keys := make([]map[string]ddbtypes.AttributeValue, 0, len(articleIds))
+	keys := make([]map[string]types.AttributeValue, 0, len(articleIds))
 	for _, articleId := range articleIds {
-		keys = append(keys, map[string]ddbtypes.AttributeValue{
-			"pk": &ddbtypes.AttributeValueMemberS{Value: articleId.String()},
+		keys = append(keys, map[string]types.AttributeValue{
+			"pk": &types.AttributeValueMemberS{Value: articleId.String()},
 		})
 	}
 
 	input := &dynamodb.BatchGetItemInput{
-		RequestItems: map[string]ddbtypes.KeysAndAttributes{
+		RequestItems: map[string]types.KeysAndAttributes{
 			articleTable: {
 				Keys: keys,
 			},
@@ -353,11 +352,11 @@ func (d dynamodbArticleRepository) IsFavoritedBulk(ctx context.Context, userId u
 		return set, nil
 	}
 
-	keys := make([]map[string]ddbtypes.AttributeValue, 0, len(articleIds))
+	keys := make([]map[string]types.AttributeValue, 0, len(articleIds))
 	for _, articleId := range articleIds {
-		keys = append(keys, map[string]ddbtypes.AttributeValue{
-			"userId":    &ddbtypes.AttributeValueMemberS{Value: userId.String()},
-			"articleId": &ddbtypes.AttributeValueMemberS{Value: articleId.String()},
+		keys = append(keys, map[string]types.AttributeValue{
+			"userId":    &types.AttributeValueMemberS{Value: userId.String()},
+			"articleId": &types.AttributeValueMemberS{Value: articleId.String()},
 		})
 	}
 
@@ -379,28 +378,38 @@ func (d dynamodbArticleRepository) FindArticlesByAuthor(ctx context.Context, aut
 		TableName:              aws.String(articleTable),
 		IndexName:              articleAuthorIdGSI,
 		KeyConditionExpression: aws.String("authorId = :authorId"),
-		Limit:                  aws.Int32(int32(limit)),
-		ScanIndexForward:       aws.Bool(false),
-		ExpressionAttributeValues: map[string]ddbtypes.AttributeValue{
-			":authorId": &ddbtypes.AttributeValueMemberS{Value: authorId.String()},
+		//Limit:                  aws.Int32(int32(limit)),
+		ScanIndexForward: aws.Bool(false),
+		ExpressionAttributeValues: map[string]types.AttributeValue{
+			":authorId": &types.AttributeValueMemberS{Value: authorId.String()},
 		},
 	}
 
 	// decode and set LastEvaluatedKey if nextPageToken is provided
+	var exclusiveStartKey map[string]types.AttributeValue
 	if nextPageToken != nil {
 		decodedLastEvaluatedKey, err := decodeLastEvaluatedKey(*nextPageToken)
 		if err != nil {
 			return nil, nil, fmt.Errorf("%w: %w", errutil.ErrDynamoTokenDecoding, err)
 		}
-		input.ExclusiveStartKey = decodedLastEvaluatedKey
+		exclusiveStartKey = decodedLastEvaluatedKey
 	}
 
-	articles, nextPageToken, err := QueryMany(ctx, d.db.Client, input, toDomainArticle)
+	articles, lastEvaluatedKey, err := QueryMany(ctx, d.db.Client, input, limit, exclusiveStartKey, toDomainArticle)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	return articles, nextPageToken, nil
+	var newNextPageToken *string
+	if len(lastEvaluatedKey) > 0 {
+		encodedToken, err := encodeLastEvaluatedKey(lastEvaluatedKey)
+		if err != nil {
+			return nil, nil, fmt.Errorf("%w: %w", errutil.ErrDynamoTokenEncoding, err)
+		}
+		newNextPageToken = encodedToken
+	}
+
+	return articles, newNextPageToken, nil
 }
 
 func (d dynamodbArticleRepository) FindArticlesFavoritedByUser(ctx context.Context, userId uuid.UUID, limit int, nextPageToken *string) ([]uuid.UUID, *string, error) {
@@ -408,30 +417,41 @@ func (d dynamodbArticleRepository) FindArticlesFavoritedByUser(ctx context.Conte
 		TableName:              aws.String(favoriteTable),
 		IndexName:              favoriteUserIdCreatedAtGSI,
 		KeyConditionExpression: aws.String("userId = :userId"),
-		Limit:                  aws.Int32(int32(limit)),
-		ScanIndexForward:       aws.Bool(false),
-		ExpressionAttributeValues: map[string]ddbtypes.AttributeValue{
-			":userId": &ddbtypes.AttributeValueMemberS{Value: userId.String()},
+		//Limit:                  aws.Int32(int32(limit)),
+		ScanIndexForward: aws.Bool(false),
+		ExpressionAttributeValues: map[string]types.AttributeValue{
+			":userId": &types.AttributeValueMemberS{Value: userId.String()},
 		},
 	}
 
 	// decode and set LastEvaluatedKey if nextPageToken is provided
+	var exclusiveStartKey map[string]types.AttributeValue
 	if nextPageToken != nil {
 		decodedLastEvaluatedKey, err := decodeLastEvaluatedKey(*nextPageToken)
 		if err != nil {
 			return nil, nil, fmt.Errorf("%w: %w", errutil.ErrDynamoTokenDecoding, err)
 		}
-		input.ExclusiveStartKey = decodedLastEvaluatedKey
+		exclusiveStartKey = decodedLastEvaluatedKey
 	}
 
-	articleIds, nextPageToken, err := QueryMany(ctx, d.db.Client, input, func(item DynamodbFavoriteArticleItem) uuid.UUID {
+	articleIds, lastEvaluatedKey, err := QueryMany(ctx, d.db.Client, input, limit, exclusiveStartKey, func(item DynamodbFavoriteArticleItem) uuid.UUID {
 		return uuid.UUID(item.ArticleId)
 	})
+
 	if err != nil {
 		return nil, nil, err
 	}
 
-	return articleIds, nextPageToken, nil
+	var newNextPageToken *string
+	if len(lastEvaluatedKey) > 0 {
+		encodedToken, err := encodeLastEvaluatedKey(lastEvaluatedKey)
+		if err != nil {
+			return nil, nil, fmt.Errorf("%w: %w", errutil.ErrDynamoTokenEncoding, err)
+		}
+		newNextPageToken = encodedToken
+	}
+
+	return articleIds, newNextPageToken, nil
 }
 
 func toDynamodbArticleItem(article domain.Article) DynamodbArticleItem {

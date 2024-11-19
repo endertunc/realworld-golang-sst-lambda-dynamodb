@@ -42,8 +42,9 @@ func GenerateComment() domain.Comment {
 	date := gofakeit.PastDate()
 	return domain.Comment{
 		Id:        generateUUID(),
-		Body:      gofakeit.LoremIpsumSentence(gofakeit.Number(10, 50)),
+		ArticleId: generateUUID(),
 		AuthorId:  generateUUID(),
+		Body:      gofakeit.LoremIpsumSentence(gofakeit.Number(10, 50)),
 		CreatedAt: date,
 		UpdatedAt: date,
 	}

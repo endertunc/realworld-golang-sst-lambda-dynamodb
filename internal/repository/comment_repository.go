@@ -6,7 +6,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
-	ddbtypes "github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/google/uuid"
 	"realworld-aws-lambda-dynamodb-golang/internal/database"
 	"realworld-aws-lambda-dynamodb-golang/internal/domain"
@@ -50,9 +50,9 @@ type DynamodbCommentItem struct {
 func (c dynamodbCommentRepository) DeleteCommentByArticleIdAndCommentId(ctx context.Context, loggedInUserId uuid.UUID, articleId uuid.UUID, commentId uuid.UUID) error {
 	input := &dynamodb.DeleteItemInput{
 		TableName: &commentTable,
-		Key: map[string]ddbtypes.AttributeValue{
-			"commentId": &ddbtypes.AttributeValueMemberS{Value: commentId.String()},
-			"articleId": &ddbtypes.AttributeValueMemberS{Value: articleId.String()},
+		Key: map[string]types.AttributeValue{
+			"commentId": &types.AttributeValueMemberS{Value: commentId.String()},
+			"articleId": &types.AttributeValueMemberS{Value: articleId.String()},
 		},
 	}
 
@@ -64,22 +64,19 @@ func (c dynamodbCommentRepository) DeleteCommentByArticleIdAndCommentId(ctx cont
 	return nil
 }
 
-/*
- * ToDo Ender by design, dynamodb returns item in any order,
- *  it's not necessary in our case but we could sort the comments by createdAt field.
- */
-
+// the API specs that this project is based on using a bad design IMHO
+// therefore, I will add pagination and sort result by creation date
 func (c dynamodbCommentRepository) FindCommentsByArticleId(ctx context.Context, articleId uuid.UUID) ([]domain.Comment, error) {
 	input := &dynamodb.QueryInput{
 		TableName:              &commentTable,
 		IndexName:              &commentArticleGSI,
 		KeyConditionExpression: aws.String("articleId = :articleId"),
-		ExpressionAttributeValues: map[string]ddbtypes.AttributeValue{
-			":articleId": &ddbtypes.AttributeValueMemberS{Value: articleId.String()},
+		ExpressionAttributeValues: map[string]types.AttributeValue{
+			":articleId": &types.AttributeValueMemberS{Value: articleId.String()},
 		},
 	}
 
-	comments, _, err := QueryMany(ctx, c.db.Client, input, toDomainComment)
+	comments, _, err := QueryMany(ctx, c.db.Client, input, 10, nil, toDomainComment)
 	return comments, err
 }
 
@@ -106,9 +103,9 @@ func (c dynamodbCommentRepository) CreateComment(ctx context.Context, comment do
 func (c dynamodbCommentRepository) FindCommentByCommentIdAndArticleId(ctx context.Context, commentId, articleId uuid.UUID) (domain.Comment, error) {
 	input := &dynamodb.GetItemInput{
 		TableName: &commentTable,
-		Key: map[string]ddbtypes.AttributeValue{
-			"commentId": &ddbtypes.AttributeValueMemberS{Value: commentId.String()},
-			"articleId": &ddbtypes.AttributeValueMemberS{Value: articleId.String()},
+		Key: map[string]types.AttributeValue{
+			"commentId": &types.AttributeValueMemberS{Value: commentId.String()},
+			"articleId": &types.AttributeValueMemberS{Value: articleId.String()},
 		},
 	}
 

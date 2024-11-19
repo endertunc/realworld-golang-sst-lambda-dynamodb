@@ -1,7 +1,6 @@
 package main
 
 import (
-	"realworld-aws-lambda-dynamodb-golang/internal/domain/dto"
 	dtogen "realworld-aws-lambda-dynamodb-golang/internal/domain/dto/generator"
 	"realworld-aws-lambda-dynamodb-golang/internal/test"
 	"testing"
@@ -28,16 +27,8 @@ func TestGetUserFeed(t *testing.T) {
 		// Create first article (older)
 		firstArticle := test.CreateArticle(t, dtogen.GenerateCreateArticleRequestDTO(), firstAuthorToken)
 
-		// Wait a bit to ensure different creation times
-		time.Sleep(100 * time.Millisecond)
-
 		// Create second article (newer)
-		secondArticle := test.CreateArticle(t, dto.CreateArticleRequestDTO{
-			Title:       "Second Article",
-			Description: "Second Description",
-			Body:        "Second Body",
-			TagList:     []string{"second"},
-		}, secondAuthorToken)
+		secondArticle := test.CreateArticle(t, dtogen.GenerateCreateArticleRequestDTO(), secondAuthorToken)
 
 		// Favorite the first article
 		test.FavoriteArticle(t, firstArticle.Slug, viewerToken)
@@ -86,7 +77,7 @@ func TestGetUserFeedPagination(t *testing.T) {
 		secondAuthorArticle1 := test.CreateArticle(t, dtogen.GenerateCreateArticleRequestDTO(), secondAuthorToken)
 		secondAuthorArticle2 := test.CreateArticle(t, dtogen.GenerateCreateArticleRequestDTO(), secondAuthorToken)
 
-		// Check first page with retries (limit=3)
+		// Check the first and second page with retries (limit=3)
 		assert.EventuallyWithT(t, func(testingT *assert.CollectT) {
 			firstPageResp := test.GetUserFeedWithPagination(t, viewerToken, 3, nil)
 
@@ -109,7 +100,7 @@ func TestGetUserFeedPagination(t *testing.T) {
 			assert.Nil(t, secondPageResp.NextPageToken)
 			assert.Equal(t, firstAuthorArticle1.Slug, secondPageResp.Articles[0].Slug)
 
-		}, 5*time.Second, 2*time.Second, "first page should contain 3 newest articles")
+		}, 5*time.Second, 2*time.Second)
 
 	})
 }
