@@ -39,7 +39,7 @@ type DynamodbFollowerItem struct {
 
 // ToDo @ender - should we use GetItem or QueryInput in this case?
 func (s dynamodbFollowerRepository) IsFollowing(ctx context.Context, follower, followee uuid.UUID) (bool, error) {
-	isFollowingQueryInput := &dynamodb.QueryInput{
+	input := &dynamodb.QueryInput{
 		TableName:              aws.String(followerTable),
 		KeyConditionExpression: aws.String("followee = :followee AND follower = :follower"),
 		ExpressionAttributeValues: map[string]ddbtypes.AttributeValue{
@@ -49,8 +49,7 @@ func (s dynamodbFollowerRepository) IsFollowing(ctx context.Context, follower, f
 		Select: ddbtypes.SelectCount,
 	}
 
-	result, err := s.db.Client.Query(ctx, isFollowingQueryInput)
-
+	result, err := s.db.Client.Query(ctx, input)
 	if err != nil {
 		return false, fmt.Errorf("%w: %w", errutil.ErrDynamoQuery, err)
 	}
@@ -111,13 +110,15 @@ func (s dynamodbFollowerRepository) BatchIsFollowing(ctx context.Context, follow
 		})
 	}
 
-	response, err := s.db.Client.BatchGetItem(ctx, &dynamodb.BatchGetItemInput{
+	input := dynamodb.BatchGetItemInput{
 		RequestItems: map[string]ddbtypes.KeysAndAttributes{
 			followerTable: {
 				Keys: keys,
 			},
 		},
-	})
+	}
+
+	response, err := s.db.Client.BatchGetItem(ctx, &input)
 	if err != nil {
 		return resultSet, fmt.Errorf("%w: %w", errutil.ErrDynamoQuery, err)
 	}

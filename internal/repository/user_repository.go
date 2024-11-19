@@ -54,9 +54,8 @@ type DynamodbUserItem struct {
 
 var _ UserRepositoryInterface = (*dynamodbUserRepository)(nil)
 
-// ToDo @ender there are a lot of duplicate code between FindByXXX methods duplication is not always a bad thing but just to be aware
-func (s dynamodbUserRepository) FindUserByEmail(c context.Context, email string) (domain.User, error) {
-	response, err := s.db.Client.Query(c, &dynamodb.QueryInput{
+func (s dynamodbUserRepository) FindUserByEmail(ctx context.Context, email string) (domain.User, error) {
+	input := dynamodb.QueryInput{
 		TableName:              aws.String(userTable),
 		IndexName:              aws.String(userEmailGSI),
 		KeyConditionExpression: aws.String("email = :email"),
@@ -64,25 +63,16 @@ func (s dynamodbUserRepository) FindUserByEmail(c context.Context, email string)
 			":email": &ddbtypes.AttributeValueMemberS{Value: email},
 		},
 		Select: ddbtypes.SelectAllAttributes,
-	})
+	}
 
+	user, err := QueryOne(ctx, s.db.Client, &input, toDomainUser)
 	if err != nil {
-		return domain.User{}, fmt.Errorf("%w: %w", errutil.ErrDynamoQuery, err)
+		if errors.Is(err, ErrDynamodbItemNotFound) {
+			return domain.User{}, errutil.ErrUserNotFound
+		}
+		return domain.User{}, err
 	}
-
-	if len(response.Items) == 0 {
-		return domain.User{}, fmt.Errorf("%w: %s", errutil.ErrUserNotFound, email)
-	}
-
-	dynamodbUser := DynamodbUserItem{}
-	err = attributevalue.UnmarshalMap(response.Items[0], &dynamodbUser)
-
-	if err != nil {
-		return domain.User{}, fmt.Errorf("%w: %w", errutil.ErrDynamoMapping, err)
-	}
-
-	domainUser := toDomainUser(dynamodbUser)
-	return domainUser, nil
+	return user, nil
 }
 
 func (s dynamodbUserRepository) InsertNewUser(ctx context.Context, newUser domain.User) (domain.User, error) {
@@ -172,7 +162,7 @@ func (s dynamodbUserRepository) FindUserById(c context.Context, userId uuid.UUID
 }
 
 func (s dynamodbUserRepository) FindUserByUsername(ctx context.Context, username string) (domain.User, error) {
-	input := &dynamodb.QueryInput{
+	input := dynamodb.QueryInput{
 		TableName:              aws.String(userTable),
 		IndexName:              aws.String(userUsernameGSI),
 		KeyConditionExpression: aws.String("username = :username"),
@@ -181,28 +171,18 @@ func (s dynamodbUserRepository) FindUserByUsername(ctx context.Context, username
 		},
 	}
 
-	response, err := s.db.Client.Query(ctx, input)
-
+	user, err := QueryOne(ctx, s.db.Client, &input, toDomainUser)
 	if err != nil {
-		return domain.User{}, fmt.Errorf("%w: %w", errutil.ErrDynamoQuery, err)
+		if errors.Is(err, ErrDynamodbItemNotFound) {
+			return domain.User{}, errutil.ErrUserNotFound
+		}
+		return domain.User{}, err
 	}
-
-	if len(response.Items) == 0 {
-		return domain.User{}, errutil.ErrUserNotFound
-	}
-
-	dynamodbUser := DynamodbUserItem{}
-	err = attributevalue.UnmarshalMap(response.Items[0], &dynamodbUser)
-
-	if err != nil {
-		return domain.User{}, fmt.Errorf("%w: %w", errutil.ErrDynamoMapping, err)
-	}
-	user := toDomainUser(dynamodbUser)
 	return user, nil
 }
 
 func (s dynamodbUserRepository) FindUserByUsernameTBD(ctx context.Context, username string) (domain.User, error) {
-	input := &dynamodb.QueryInput{
+	input := dynamodb.QueryInput{
 		TableName:              aws.String(userTable),
 		IndexName:              aws.String(userUsernameGSI),
 		KeyConditionExpression: aws.String("username = :username"),
@@ -211,7 +191,7 @@ func (s dynamodbUserRepository) FindUserByUsernameTBD(ctx context.Context, usern
 		},
 		Limit: aws.Int32(1),
 	}
-	user, err := QueryOne(ctx, s.db.Client, input, toDomainUser)
+	user, err := QueryOne(ctx, s.db.Client, &input, toDomainUser)
 	if err != nil {
 		if errors.Is(err, ErrDynamodbItemNotFound) {
 			return domain.User{}, errutil.ErrUserNotFound
@@ -228,45 +208,20 @@ func (s dynamodbUserRepository) FindUserByUsernameTBD(ctx context.Context, usern
 *  dynamodb has batch request count (max 100 item) and size (16mb) limits to be aware.
  */
 func (s dynamodbUserRepository) FindUserListByUserIDs(ctx context.Context, userIds []uuid.UUID) ([]domain.User, error) {
-	// this check is necessary otherwise we will get "ValidationException" from dynamodb
-	// because you must provide a non-empty list of keys to BatchGetItem
+	// short circuit if userIds is empty, no need to query
+	// also, dynamodb will throw a validation error if we try to query with empty keys
 	if len(userIds) == 0 {
 		return []domain.User{}, nil
 	}
 
-	userKeys := make([]map[string]ddbtypes.AttributeValue, 0, len(userIds))
+	keys := make([]map[string]ddbtypes.AttributeValue, 0, len(userIds))
 	for _, userId := range userIds {
-		userKeys = append(userKeys, map[string]ddbtypes.AttributeValue{
+		keys = append(keys, map[string]ddbtypes.AttributeValue{
 			"pk": &ddbtypes.AttributeValueMemberS{Value: userId.String()},
 		})
 	}
 
-	batchGetItemInput := dynamodb.BatchGetItemInput{
-		RequestItems: map[string]ddbtypes.KeysAndAttributes{
-			userTable: {
-				Keys: userKeys,
-			},
-		},
-	}
-
-	response, err := s.db.Client.BatchGetItem(ctx, &batchGetItemInput)
-
-	if err != nil {
-		return nil, fmt.Errorf("%w: %w", errutil.ErrDynamoQuery, err)
-	}
-
-	users := make([]domain.User, 0, len(response.Responses[userTable]))
-	for _, item := range response.Responses[userTable] {
-		dynamodbUser := DynamodbUserItem{}
-		err = attributevalue.UnmarshalMap(item, &dynamodbUser)
-		if err != nil {
-			return nil, fmt.Errorf("%w: %w", errutil.ErrDynamoMapping, err)
-		}
-		user := toDomainUser(dynamodbUser)
-		users = append(users, user)
-	}
-
-	return users, nil
+	return BatchGetItems(ctx, s.db.Client, userTable, keys, toDomainUser)
 }
 
 func toDynamoDbUser(user domain.User) DynamodbUserItem {

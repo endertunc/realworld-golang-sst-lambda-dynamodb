@@ -8,10 +8,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	ddbtypes "github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/google/uuid"
-	"github.com/samber/lo"
-	"github.com/samber/oops"
-	veqrynslog "github.com/veqryn/slog-context/http"
-	"log/slog"
 	"realworld-aws-lambda-dynamodb-golang/internal/database"
 	"realworld-aws-lambda-dynamodb-golang/internal/domain"
 	"realworld-aws-lambda-dynamodb-golang/internal/errutil"
@@ -83,25 +79,8 @@ func (c dynamodbCommentRepository) FindCommentsByArticleId(ctx context.Context, 
 		},
 	}
 
-	result, err := c.db.Client.Query(ctx, input)
-	if err != nil {
-		return nil, fmt.Errorf("%w: %w", errutil.ErrDynamoQuery, err)
-	}
-
-	dynamodbCommentItems := make([]DynamodbCommentItem, 0, len(result.Items))
-	err = attributevalue.UnmarshalListOfMaps(result.Items, &dynamodbCommentItems)
-	if err != nil {
-		// ToDo @ender experiment with this oops library
-		fancyError := oops.Wrap(fmt.Errorf("%w: %w", errutil.ErrDynamoMarshalling, err))
-		veqrynslog.With(ctx, "regularError", fmt.Errorf("%w: %w", errutil.ErrDynamoMarshalling, err))
-		veqrynslog.With(ctx, "fancyError", fancyError)
-		veqrynslog.With(ctx, slog.Group("errorContext", slog.String("articleId", articleId.String())))
-		return nil, fmt.Errorf("%w: %w", errutil.ErrDynamoMarshalling, err)
-	}
-
-	return lo.Map(dynamodbCommentItems, func(comment DynamodbCommentItem, _ int) domain.Comment {
-		return toDomainComment(comment)
-	}), nil
+	comments, _, err := QueryMany(ctx, c.db.Client, input, toDomainComment)
+	return comments, err
 }
 
 func (c dynamodbCommentRepository) CreateComment(ctx context.Context, comment domain.Comment) error {
@@ -172,3 +151,12 @@ func toDomainComment(comment DynamodbCommentItem) domain.Comment {
 		UpdatedAt: time.UnixMilli(comment.UpdatedAt),
 	}
 }
+
+//"github.com/samber/oops"
+//veqrynslog "github.com/veqryn/slog-context/http"
+//"log/slog"
+// ToDo @ender experiment with this oops library
+//fancyError := oops.Wrap(fmt.Errorf("%w: %w", errutil.ErrDynamoMarshalling, err))
+//veqrynslog.With(ctx, "regularError", fmt.Errorf("%w: %w", errutil.ErrDynamoMarshalling, err))
+//veqrynslog.With(ctx, "fancyError", fancyError)
+//veqrynslog.With(ctx, slog.Group("errorContext", slog.String("articleId", articleId.String())))

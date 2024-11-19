@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	mapset "github.com/deckarep/golang-set/v2"
-	"github.com/samber/lo"
 	"realworld-aws-lambda-dynamodb-golang/internal/database"
 	"realworld-aws-lambda-dynamodb-golang/internal/domain"
 	"realworld-aws-lambda-dynamodb-golang/internal/errutil"
@@ -67,12 +66,12 @@ var articleAuthorIdGSI = aws.String("article_author_gsi")
 var favoriteUserIdCreatedAtGSI = aws.String("favorite_user_id_created_at_gsi")
 
 type DynamodbFavoriteArticleItem struct {
-	UserId    string `dynamodbav:"userId"`
-	ArticleId string `dynamodbav:"articleId"`
-	CreatedAt int64  `dynamodbav:"createdAt"`
+	UserId    DynamodbUUID `dynamodbav:"userId"`
+	ArticleId DynamodbUUID `dynamodbav:"articleId"`
+	CreatedAt int64        `dynamodbav:"createdAt"`
 }
 
-func (d dynamodbArticleRepository) FindArticleBySlug(c context.Context, slug string) (domain.Article, error) {
+func (d dynamodbArticleRepository) FindArticleBySlug(ctx context.Context, slug string) (domain.Article, error) {
 	input := &dynamodb.QueryInput{
 		TableName:              &articleTable,
 		IndexName:              articleSlugGSI,
@@ -82,35 +81,6 @@ func (d dynamodbArticleRepository) FindArticleBySlug(c context.Context, slug str
 		},
 	}
 
-	result, err := d.db.Client.Query(c, input)
-	if err != nil {
-		return domain.Article{}, fmt.Errorf("%w: %w", errutil.ErrDynamoQuery, err)
-	}
-
-	if len(result.Items) == 0 {
-		return domain.Article{}, errutil.ErrArticleNotFound
-	}
-
-	var dynamodbArticle DynamodbArticleItem
-	err = attributevalue.UnmarshalMap(result.Items[0], &dynamodbArticle)
-	if err != nil {
-		return domain.Article{}, fmt.Errorf("%w: %w", errutil.ErrDynamoMarshalling, err)
-	}
-
-	domainArticle := toDomainArticle(dynamodbArticle)
-
-	return domainArticle, nil
-}
-
-func (d dynamodbArticleRepository) FindArticleBySlugTBD(ctx context.Context, slug string) (domain.Article, error) {
-	input := &dynamodb.QueryInput{
-		TableName:              &articleTable,
-		IndexName:              articleSlugGSI,
-		KeyConditionExpression: aws.String("slug = :slug"),
-		ExpressionAttributeValues: map[string]ddbtypes.AttributeValue{
-			":slug": &ddbtypes.AttributeValueMemberS{Value: slug},
-		},
-	}
 	article, err := QueryOne(ctx, d.db.Client, input, toDomainArticle)
 	if err != nil {
 		if errors.Is(err, ErrDynamodbItemNotFound) {
@@ -121,7 +91,26 @@ func (d dynamodbArticleRepository) FindArticleBySlugTBD(ctx context.Context, slu
 	return article, nil
 }
 
-func (d dynamodbArticleRepository) FindArticleById(c context.Context, articleId uuid.UUID) (domain.Article, error) {
+func (d dynamodbArticleRepository) FindArticleBySlugTBD(ctx context.Context, slug string) (domain.Article, error) {
+	input := dynamodb.QueryInput{
+		TableName:              &articleTable,
+		IndexName:              articleSlugGSI,
+		KeyConditionExpression: aws.String("slug = :slug"),
+		ExpressionAttributeValues: map[string]ddbtypes.AttributeValue{
+			":slug": &ddbtypes.AttributeValueMemberS{Value: slug},
+		},
+	}
+	article, err := QueryOne(ctx, d.db.Client, &input, toDomainArticle)
+	if err != nil {
+		if errors.Is(err, ErrDynamodbItemNotFound) {
+			return domain.Article{}, errutil.ErrArticleNotFound
+		}
+		return domain.Article{}, err
+	}
+	return article, nil
+}
+
+func (d dynamodbArticleRepository) FindArticleById(ctx context.Context, articleId uuid.UUID) (domain.Article, error) {
 	input := &dynamodb.GetItemInput{
 		TableName: &articleTable,
 		Key: map[string]ddbtypes.AttributeValue{
@@ -129,7 +118,7 @@ func (d dynamodbArticleRepository) FindArticleById(c context.Context, articleId 
 		},
 	}
 
-	result, err := d.db.Client.GetItem(c, input)
+	result, err := d.db.Client.GetItem(ctx, input)
 	if err != nil {
 		return domain.Article{}, fmt.Errorf("%w: %w", errutil.ErrDynamoQuery, err)
 	}
@@ -237,8 +226,8 @@ func (d dynamodbArticleRepository) UnfavoriteArticle(ctx context.Context, logged
 // if the favorite item already exists, it does not increment the favoritesCount and returns an ErrAlreadyFavorited error
 func (d dynamodbArticleRepository) FavoriteArticle(ctx context.Context, loggedInUserId uuid.UUID, articleId uuid.UUID) error {
 	favorite := DynamodbFavoriteArticleItem{
-		UserId:    loggedInUserId.String(),
-		ArticleId: articleId.String(),
+		UserId:    DynamodbUUID(loggedInUserId),
+		ArticleId: DynamodbUUID(articleId),
 		CreatedAt: time.Now().UnixMilli(),
 	}
 
@@ -358,7 +347,6 @@ func (d dynamodbArticleRepository) FindArticlesByIds(ctx context.Context, articl
 
 func (d dynamodbArticleRepository) IsFavoritedBulk(ctx context.Context, userId uuid.UUID, articleIds []uuid.UUID) (mapset.Set[uuid.UUID], error) {
 	set := mapset.NewThreadUnsafeSet[uuid.UUID]()
-
 	// short circuit if articleIds is empty, no need to query
 	// also, dynamodb will throw a validation error if we try to query with empty keys
 	if len(articleIds) == 0 {
@@ -373,29 +361,16 @@ func (d dynamodbArticleRepository) IsFavoritedBulk(ctx context.Context, userId u
 		})
 	}
 
-	input := &dynamodb.BatchGetItemInput{
-		RequestItems: map[string]ddbtypes.KeysAndAttributes{
-			favoriteTable: {
-				Keys: keys,
-			},
-		},
-	}
-
-	result, err := d.db.Client.BatchGetItem(ctx, input)
+	articleIds, err := BatchGetItems(ctx, d.db.Client, favoriteTable, keys, func(item DynamodbFavoriteArticleItem) uuid.UUID {
+		return uuid.UUID(item.ArticleId)
+	})
 	if err != nil {
-		return set, fmt.Errorf("%w: %w", errutil.ErrDynamoQuery, err)
+		return nil, err
 	}
 
-	dynamodbFavoriteArticleItems := make([]DynamodbFavoriteArticleItem, 0, len(result.Responses[favoriteTable]))
-	err = attributevalue.UnmarshalListOfMaps(result.Responses[favoriteTable], &dynamodbFavoriteArticleItems)
-	if err != nil {
-		return set, fmt.Errorf("%w: %w", errutil.ErrDynamoMarshalling, err)
+	for _, articleId := range articleIds {
+		set.Add(articleId)
 	}
-	for _, item := range dynamodbFavoriteArticleItems {
-		// ToDo @ender must parse again...
-		set.Add(uuid.MustParse(item.ArticleId))
-	}
-
 	return set, nil
 }
 
@@ -420,34 +395,12 @@ func (d dynamodbArticleRepository) FindArticlesByAuthor(ctx context.Context, aut
 		input.ExclusiveStartKey = decodedLastEvaluatedKey
 	}
 
-	result, err := d.db.Client.Query(ctx, input)
+	articles, nextPageToken, err := QueryMany(ctx, d.db.Client, input, toDomainArticle)
 	if err != nil {
-		return nil, nil, fmt.Errorf("%w: %w", errutil.ErrDynamoQuery, err)
+		return nil, nil, err
 	}
 
-	// parse dynamodb result
-	dynamodbArticleItems := make([]DynamodbArticleItem, 0, len(result.Items))
-	err = attributevalue.UnmarshalListOfMaps(result.Items, &dynamodbArticleItems)
-	if err != nil {
-		return nil, nil, fmt.Errorf("%w: %w", errutil.ErrDynamoMapping, err)
-	}
-
-	// convert to domain articles
-	articles := lo.Map(dynamodbArticleItems, func(item DynamodbArticleItem, _ int) domain.Article {
-		return toDomainArticle(item)
-	})
-
-	// prepare next page token if there are more results
-	var nextToken *string
-	if len(result.LastEvaluatedKey) > 0 {
-		encodedToken, err := encodeLastEvaluatedKey(result.LastEvaluatedKey)
-		if err != nil {
-			return nil, nil, fmt.Errorf("%w: %w", errutil.ErrDynamoTokenEncoding, err)
-		}
-		nextToken = encodedToken
-	}
-
-	return articles, nextToken, nil
+	return articles, nextPageToken, nil
 }
 
 func (d dynamodbArticleRepository) FindArticlesFavoritedByUser(ctx context.Context, userId uuid.UUID, limit int, nextPageToken *string) ([]uuid.UUID, *string, error) {
@@ -471,34 +424,14 @@ func (d dynamodbArticleRepository) FindArticlesFavoritedByUser(ctx context.Conte
 		input.ExclusiveStartKey = decodedLastEvaluatedKey
 	}
 
-	result, err := d.db.Client.Query(ctx, input)
-	if err != nil {
-		return nil, nil, fmt.Errorf("%w: %w", errutil.ErrDynamoQuery, err)
-	}
-
-	// parse dynamodb result
-	dynamodbFavoriteArticleItems := make([]DynamodbFavoriteArticleItem, 0, len(result.Items))
-	err = attributevalue.UnmarshalListOfMaps(result.Items, &dynamodbFavoriteArticleItems)
-	if err != nil {
-		return nil, nil, fmt.Errorf("%w: %w", errutil.ErrDynamoMapping, err)
-	}
-
-	// extract article ids
-	articleIds := lo.Map(dynamodbFavoriteArticleItems, func(item DynamodbFavoriteArticleItem, _ int) uuid.UUID {
-		return uuid.MustParse(item.ArticleId)
+	articleIds, nextPageToken, err := QueryMany(ctx, d.db.Client, input, func(item DynamodbFavoriteArticleItem) uuid.UUID {
+		return uuid.UUID(item.ArticleId)
 	})
-
-	// prepare next page token if there are more results
-	var nextToken *string
-	if len(result.LastEvaluatedKey) > 0 {
-		encodedToken, err := encodeLastEvaluatedKey(result.LastEvaluatedKey)
-		if err != nil {
-			return nil, nil, fmt.Errorf("%w: %w", errutil.ErrDynamoTokenEncoding, err)
-		}
-		nextToken = encodedToken
+	if err != nil {
+		return nil, nil, err
 	}
 
-	return articleIds, nextToken, nil
+	return articleIds, nextPageToken, nil
 }
 
 func toDynamodbArticleItem(article domain.Article) DynamodbArticleItem {
@@ -518,7 +451,7 @@ func toDynamodbArticleItem(article domain.Article) DynamodbArticleItem {
 
 func toDomainArticle(article DynamodbArticleItem) domain.Article {
 	return domain.Article{
-		Id:             uuid.UUID(article.Id), // ToDo @ender we should never use uuid.MustParse - it panics
+		Id:             uuid.UUID(article.Id),
 		Title:          article.Title,
 		Slug:           article.Slug,
 		Description:    article.Description,

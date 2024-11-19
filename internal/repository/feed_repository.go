@@ -2,15 +2,12 @@ package repository
 
 import (
 	"context"
-	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	ddbtypes "github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/google/uuid"
-	"log/slog"
 	"realworld-aws-lambda-dynamodb-golang/internal/database"
 	"realworld-aws-lambda-dynamodb-golang/internal/errutil"
 	"time"
@@ -110,6 +107,8 @@ func (uf userFeedRepository) FindArticleIdsInUserFeed(ctx context.Context, userI
 	}
 
 	// decode and set LastEvaluatedKey if nextPageToken is provided
+	// ToDo @ender shoul we pass this to QueryMany and handle it there in a single place?
+	//  it would be weird to pass QueryInput and nextPageToken to QueryMany separately tho...
 	if nextPageToken != nil {
 		decodedLastEvaluatedKey, err := decodeLastEvaluatedKey(*nextPageToken)
 		if err != nil {
@@ -118,67 +117,18 @@ func (uf userFeedRepository) FindArticleIdsInUserFeed(ctx context.Context, userI
 		input.ExclusiveStartKey = decodedLastEvaluatedKey
 	}
 
-	result, err := uf.db.Client.Query(ctx, input)
+	// identity mapper to return original DynamodbType without any conversion
+	identityMapper := func(item DynamodbFeedItem) DynamodbFeedItem { return item }
+	feedItems, nextPageToken, err := QueryMany(ctx, uf.db.Client, input, identityMapper)
 	if err != nil {
-		return nil, nil, fmt.Errorf("%w: %w", errutil.ErrDynamoQuery, err)
-	}
-
-	slog.DebugContext(ctx, "find article ids in user feed",
-		slog.Any("LastEvaluatedKey", result.LastEvaluatedKey),
-		slog.Any("Count", result.Count),
-		slog.Any("ResultMetadata", result.ResultMetadata))
-
-	// parse feed items
-	dynamodbFeedItems := make([]DynamodbFeedItem, 0, len(result.Items))
-	err = attributevalue.UnmarshalListOfMaps(result.Items, &dynamodbFeedItems)
-	if err != nil {
-		return nil, nil, fmt.Errorf("%w: %w", errutil.ErrDynamoMapping, err)
+		return nil, nil, err
 	}
 
 	// convert to article ids
-	articleIds := make([]uuid.UUID, 0, len(dynamodbFeedItems))
-	for _, item := range dynamodbFeedItems {
+	articleIds := make([]uuid.UUID, 0, len(feedItems))
+	for _, item := range feedItems {
 		articleIds = append(articleIds, uuid.UUID(item.ArticleId))
 	}
 
-	// prepare next page token if there are more results
-	var nextToken *string
-	if len(result.LastEvaluatedKey) > 0 {
-		encodedToken, err := encodeLastEvaluatedKey(result.LastEvaluatedKey)
-		if err != nil {
-			return nil, nil, fmt.Errorf("%w: %w", errutil.ErrDynamoTokenEncoding, err)
-		}
-		nextToken = encodedToken
-	}
-
-	return articleIds, nextToken, nil
-}
-
-// ToDo move this to commons in the repositories package.
-func encodeLastEvaluatedKey(input map[string]ddbtypes.AttributeValue) (*string, error) {
-	var inputMap map[string]interface{}
-	err := attributevalue.UnmarshalMap(input, &inputMap)
-	if err != nil {
-		return nil, err
-	}
-	bytesJSON, err := json.Marshal(inputMap)
-	if err != nil {
-		return nil, err
-	}
-	output := base64.StdEncoding.EncodeToString(bytesJSON)
-	return &output, nil
-}
-
-func decodeLastEvaluatedKey(input string) (map[string]ddbtypes.AttributeValue, error) {
-	bytesJSON, err := base64.StdEncoding.DecodeString(input)
-	if err != nil {
-		return nil, err
-	}
-	var outputJSON map[string]interface{}
-	err = json.Unmarshal(bytesJSON, &outputJSON)
-	if err != nil {
-		return nil, err
-	}
-
-	return attributevalue.MarshalMap(outputJSON)
+	return articleIds, nextPageToken, nil
 }
