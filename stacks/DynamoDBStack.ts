@@ -88,7 +88,6 @@ export function DynamoDBStack({ stack }: StackContext) {
       name: "commentId",
       type: dynamodb.AttributeType.STRING
     },
-    // ToDo @ender - I dont think I need this sk
     sortKey: {
       name: "articleId",
       type: dynamodb.AttributeType.STRING
@@ -153,6 +152,11 @@ export function DynamoDBStack({ stack }: StackContext) {
   });
 
   return {
-    articleTable: articleTable
+    articleTable,
+    userTable,
+    feedTable,
+    commentTable,
+    favoritedTable,
+    followerTable
   };
 }

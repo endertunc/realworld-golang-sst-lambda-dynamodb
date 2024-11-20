@@ -217,7 +217,6 @@ dynamodb-pipeline:
       tables:
         # REQUIRED: Supply the DynamoDB table ARN and whether export or stream processing is needed, or both
         - table_arn: arn:aws:dynamodb:${stack.region}:${stack.account}:table/article
-          # Remove the stream block if only export is needed
           stream:
             start_position: LATEST # TRIM_HORIZON does not work now. It will make pipeline unstable and cannot be deployed.
       aws:

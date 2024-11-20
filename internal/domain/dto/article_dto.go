@@ -89,3 +89,7 @@ func ToMultipleArticlesResponseBodyDTO(feedItems []domain.FeedItem, nextPageToke
 		NextPageToken: nextPageToken,
 	}
 }
+
+type TagsResponseDTO struct {
+	Tags []string `json:"tags"`
+}

@@ -14,7 +14,7 @@ import (
 const physicalResourceID = "create-opensearch-indices"
 
 func lambdaHandler(ctx context.Context, event cfn.Event) (string, map[string]interface{}, error) {
-	openSearchStore := database.NewOpenSearchStore(ctx)
+	openSearchStore := database.NewOpenSearchStore()
 	indexName := "go-test-index"
 
 	// Define index mapping.

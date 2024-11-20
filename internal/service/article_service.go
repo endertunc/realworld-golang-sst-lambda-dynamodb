@@ -11,10 +11,10 @@ import (
 )
 
 type articleService struct {
-	articleRepository repository.ArticleRepositoryInterface
-	userService       UserServiceInterface
-	profileService    ProfileServiceInterface
-	commentRepository repository.CommentRepositoryInterface
+	articleRepository           repository.ArticleRepositoryInterface
+	articleOpensearchRepository repository.ArticleOpensearchRepositoryInterface
+	userService                 UserServiceInterface
+	profileService              ProfileServiceInterface
 }
 
 type ArticleServiceInterface interface {
@@ -34,15 +34,21 @@ type ArticleServiceInterface interface {
 	GetMostRecentArticlesFavoritedByUser(ctx context.Context, loggedInUser *uuid.UUID, favoritedByUsername string, limit int, nextPageToken *string) ([]domain.FeedItem, *string, error)
 	GetMostRecentArticlesFavoritedByTag(ctx context.Context, loggedInUser *uuid.UUID, tag string, limit int, nextPageToken *string) ([]domain.FeedItem, *string, error)
 	GetMostRecentArticlesGlobally(ctx context.Context, loggedInUser *uuid.UUID, limit int, nextPageToken *string) ([]domain.FeedItem, *string, error)
+	GetTags(ctx context.Context) ([]string, error)
 }
 
 var _ ArticleServiceInterface = articleService{}
 
-func NewArticleService(articleRepository repository.ArticleRepositoryInterface, userService UserServiceInterface, profileService ProfileServiceInterface) ArticleServiceInterface {
+func NewArticleService(
+	articleRepository repository.ArticleRepositoryInterface,
+	articleOpensearchRepository repository.ArticleOpensearchRepositoryInterface,
+	userService UserServiceInterface,
+	profileService ProfileServiceInterface) ArticleServiceInterface {
 	return articleService{
-		userService:       userService,
-		profileService:    profileService,
-		articleRepository: articleRepository,
+		articleRepository:           articleRepository,
+		articleOpensearchRepository: articleOpensearchRepository,
+		userService:                 userService,
+		profileService:              profileService,
 	}
 }
 
@@ -133,8 +139,6 @@ func (as articleService) GetMostRecentArticlesByAuthor(ctx context.Context, logg
 	// find the author user by username
 	authorUser, err := as.userService.GetUserByUsername(ctx, author)
 	if err != nil {
-		// ToDo @ender if author is not found, should we return an error or an empty list?
-		//  at the moment ErrUserNotFound is mapped to StatusNotFound
 		return nil, nil, err
 	}
 
@@ -263,26 +267,13 @@ func (as articleService) GetMostRecentArticlesFavoritedByUser(ctx context.Contex
 
 // ToDo @ender this is first iteration, GetMostRecentArticles* share a lot of common code
 func (as articleService) GetMostRecentArticlesFavoritedByTag(ctx context.Context, loggedInUser *uuid.UUID, tag string, limit int, nextPageToken *string) ([]domain.FeedItem, *string, error) {
-	// this time we should fetch this information from elasticsearch
-	var (
-		articles  []domain.Article = nil
-		nextToken *string          = nil
-		err       error            = nil
-	)
+	articles, nextToken, err := as.articleOpensearchRepository.FindArticlesByTag(ctx, tag, limit, 0)
 
 	if err != nil {
 		return nil, nil, err
 	}
 
-	authorIdToArticleMap := make(map[uuid.UUID]domain.Article)
-	for _, article := range articles {
-		authorIdToArticleMap[article.Id] = article
-	}
-
-	authorIdsList := lo.Map(articles, func(article domain.Article, _ int) uuid.UUID {
-		return article.AuthorId
-	})
-
+	authorIdsList := lo.Map(articles, func(article domain.Article, _ int) uuid.UUID { return article.AuthorId })
 	uniqueAuthorIdsList := lo.Uniq(authorIdsList)
 
 	// fetch authors (users) in bulk and create a map for lookup by authorId
@@ -336,24 +327,13 @@ func (as articleService) GetMostRecentArticlesFavoritedByTag(ctx context.Context
 // ToDo @ender this is first iteration, GetMostRecentArticles* share a lot of common code
 func (as articleService) GetMostRecentArticlesGlobally(ctx context.Context, loggedInUser *uuid.UUID, limit int, nextPageToken *string) ([]domain.FeedItem, *string, error) {
 	// this time we should fetch this information from elasticsearch
-	var (
-		articles  []domain.Article = nil
-		nextToken *string          = nil
-		err       error            = nil
-	)
+	articles, nextToken, err := as.articleOpensearchRepository.FindAllArticles(ctx, limit, 0)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	authorIdToArticleMap := make(map[uuid.UUID]domain.Article)
-	for _, article := range articles {
-		authorIdToArticleMap[article.Id] = article
-	}
-
-	authorIdsList := lo.Map(articles, func(article domain.Article, _ int) uuid.UUID {
-		return article.AuthorId
-	})
-
+	// ToDo let's convert to this regular for loop?
+	authorIdsList := lo.Map(articles, func(article domain.Article, _ int) uuid.UUID { return article.AuthorId })
 	uniqueAuthorIdsList := lo.Uniq(authorIdsList)
 
 	// fetch authors (users) in bulk and create a map for lookup by authorId
@@ -403,4 +383,8 @@ func (as articleService) GetMostRecentArticlesGlobally(ctx context.Context, logg
 	}
 
 	return feedItems, nextToken, nil
+}
+
+func (as articleService) GetTags(ctx context.Context) ([]string, error) {
+	return as.articleOpensearchRepository.FindAllTags(ctx)
 }

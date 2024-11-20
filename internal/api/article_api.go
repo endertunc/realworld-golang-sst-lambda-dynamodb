@@ -157,3 +157,11 @@ func (aa ArticleApi) ListArticles(ctx context.Context, loggedInUserId *uuid.UUID
 	}
 	return dto.ToMultipleArticlesResponseBodyDTO(feedItems, newNextPageToken), nil
 }
+
+func (aa ArticleApi) GetTags(ctx context.Context) (dto.TagsResponseDTO, error) {
+	tags, err := aa.ArticleService.GetTags(ctx)
+	if err != nil {
+		return dto.TagsResponseDTO{}, err
+	}
+	return dto.TagsResponseDTO{Tags: tags}, nil
+}

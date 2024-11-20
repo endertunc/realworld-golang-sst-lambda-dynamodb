@@ -42,6 +42,11 @@ func StartOptionallyAuthenticatedHandler(handlerToWrap OptionallyAuthenticatedHa
 
 type AuthenticatedHandlerHTTP func(w http.ResponseWriter, r *http.Request, userId uuid.UUID, token domain.Token)
 
+var requestLogger func(http.Handler) http.Handler = samberSlog.New(slog.Default())
+var RequestLoggerMiddleware func(http.Handler) http.Handler = func(handler http.Handler) http.Handler {
+	return veqrynslog.AttrCollection(requestLogger(handler))
+}
+
 func StartAuthenticatedHandlerHTTP(handlerToWrap AuthenticatedHandlerHTTP) http.Handler {
 	var handlerFunc http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
@@ -51,7 +56,7 @@ func StartAuthenticatedHandlerHTTP(handlerToWrap AuthenticatedHandlerHTTP) http.
 		}
 		handlerToWrap(w, r, userId, token)
 	}
-	return veqrynslog.AttrCollection(samberSlog.New(slog.Default())(handlerFunc))
+	return RequestLoggerMiddleware(handlerFunc)
 }
 
 type OptionallyAuthenticatedHandlerHTTP func(w http.ResponseWriter, r *http.Request, userId *uuid.UUID, token *domain.Token)
@@ -66,5 +71,5 @@ func StartOptionallyAuthenticatedHandlerHTTP(handlerToWrap OptionallyAuthenticat
 		handlerToWrap(w, r, userId, token)
 	}
 	// wrap handler function with slog middleware and context middleware
-	return veqrynslog.AttrCollection(samberSlog.New(slog.Default())(handlerFunc))
+	return RequestLoggerMiddleware(handlerFunc)
 }

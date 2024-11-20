@@ -17,7 +17,7 @@ type User struct {
 }
 
 func NewUser(email, username, hashedPassword string) User {
-	now := time.Now()
+	now := time.Now().Truncate(time.Millisecond)
 	return User{
 		Id:             uuid.New(),
 		Email:          email,

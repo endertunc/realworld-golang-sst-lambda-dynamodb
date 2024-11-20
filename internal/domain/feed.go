@@ -1,6 +1,6 @@
 package domain
 
-// ToDo @ender better name for this struct
+// ToDo @ender better name for this struct: an idea ArticleAggregateItem
 type FeedItem struct {
 	Article     Article
 	Author      User

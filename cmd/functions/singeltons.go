@@ -12,7 +12,8 @@ import (
 )
 
 var (
-	dynamodbStore = database.NewDynamoDBStore()
+	dynamodbStore   = database.NewDynamoDBStore()
+	opensearchStore = database.NewOpenSearchStore()
 
 	followerRepository = repository.NewDynamodbFollowerRepository(dynamodbStore)
 
@@ -20,9 +21,10 @@ var (
 	userService    = service.NewUserService(userRepository)
 	UserApi        = api.NewUserApi(userService)
 
-	articleRepository = repository.NewDynamodbArticleRepository(dynamodbStore)
-	articleService    = service.NewArticleService(articleRepository, userService, profileService)
-	ArticleApi        = api.NewArticleApi(articleService, userService, profileService)
+	articleRepository           = repository.NewDynamodbArticleRepository(dynamodbStore)
+	articleOpenSearchRepository = repository.NewArticleOpensearchRepository(opensearchStore)
+	articleService              = service.NewArticleService(articleRepository, articleOpenSearchRepository, userService, profileService)
+	ArticleApi                  = api.NewArticleApi(articleService, userService, profileService)
 
 	profileService = service.NewProfileService(followerRepository, userRepository)
 	ProfileApi     = api.NewProfileApi(profileService)

@@ -15,7 +15,7 @@ type Comment struct {
 }
 
 func NewComment(articleId, authorId uuid.UUID, body string) Comment {
-	now := time.Now()
+	now := time.Now().Truncate(time.Millisecond)
 	return Comment{
 		Id:        uuid.New(),
 		ArticleId: articleId,

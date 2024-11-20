@@ -25,7 +25,7 @@ func init() {
 }
 
 func NewArticle(title, description, body string, tagList []string, authorId uuid.UUID) Article {
-	now := time.Now()
+	now := time.Now().Truncate(time.Millisecond)
 	return Article{
 		Id:             uuid.New(),
 		Title:          title,

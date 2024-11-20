@@ -15,7 +15,7 @@ export default {
   async stacks(app) {
     app.stack(VPCStack);
     app.stack(DynamoDBStack);
-    // await app.stack(OpenSearchStack);
+    await app.stack(OpenSearchStack);
     app.stack(APIStack);
   }
 } satisfies SSTConfig;
