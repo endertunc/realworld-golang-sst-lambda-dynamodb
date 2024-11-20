@@ -266,5 +266,7 @@ dynamodb-pipeline:
   //
   // console.log("Patch Role Mapping Result: ", patchRoleResult);
 
-  return {};
+  return {
+    openSearchDomain
+  };
 }

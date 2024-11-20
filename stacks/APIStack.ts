@@ -1,16 +1,16 @@
 import * as ec2 from "aws-cdk-lib/aws-ec2";
-import { Effect, PolicyStatement } from "aws-cdk-lib/aws-iam";
+import { PolicyStatement } from "aws-cdk-lib/aws-iam";
 import { FilterCriteria, FilterRule, StartingPosition } from "aws-cdk-lib/aws-lambda";
 import { DynamoEventSource } from "aws-cdk-lib/aws-lambda-event-sources";
 import { Api, Function, use } from "sst/constructs";
-// import { OpenSearchStack } from "./OpenSearchStack";
 import { DynamoDBStack } from "./DynamoDBStack";
+import { OpenSearchStack } from "./OpenSearchStack";
 import { VPCStack } from "./VPCStack";
 import type { StackContext } from "sst/constructs";
 
 export function APIStack({ stack }: StackContext) {
   const { vpc, privateSubnets, securityGroupId } = use(VPCStack);
-  // const { opensearchBackendRole } = use(OpenSearchStack);
+  const { openSearchDomain } = use(OpenSearchStack);
   const dynamodbStack = use(DynamoDBStack);
 
   const lambdaSecurityGroupId = ec2.SecurityGroup.fromSecurityGroupId(
@@ -18,13 +18,6 @@ export function APIStack({ stack }: StackContext) {
     "real-world-lambda-security-group-id",
     securityGroupId
   );
-
-  // opensearchBackendRole.addManagedPolicy(
-  //   ManagedPolicy.fromAwsManagedPolicyName("service-role/AWSLambdaBasicExecutionRole")
-  // );
-  // opensearchBackendRole.addManagedPolicy(
-  //   ManagedPolicy.fromAwsManagedPolicyName("service-role/AWSLambdaVPCAccessExecutionRole")
-  // );
 
   function createLambdaFunction(functionName: string, handler: string) {
     const lambda = new Function(stack, functionName, {
@@ -37,8 +30,7 @@ export function APIStack({ stack }: StackContext) {
       },
       securityGroups: [lambdaSecurityGroupId],
       environment: {
-        OPENSEARCH_URL:
-          "https://search-realworldopense-gz85mgbqxy6m-yyche33hhd4znh2l2smev26w5i.eu-west-1.es.amazonaws.com"
+        OPENSEARCH_URL: `https://${openSearchDomain.domainEndpoint}`
       }
     });
     return lambda;
@@ -49,47 +41,16 @@ export function APIStack({ stack }: StackContext) {
     resources: ["arn:aws:dynamodb:*:*:table/*"] // ToDo @ender this should be more restrictive but this is to make deployment faster
   });
 
-  // Grant the Lambda function access to the OpenSearch domain
-  // const openSearchPolicy = new PolicyStatement({
-  //   actions: ["es:*"],
-  //   resources: [openSearchDomainArn]
-  // });
-
   // Grant the Lambda function access to all OpenSearch domains in the account
   const openSearchPolicy = new PolicyStatement({
-    actions: ["es:*"], // ToDo @ender this should be more restrictive
-    resources: ["arn:aws:es:*:*:domain/*"] // ToDo @ender this should be more restrictive but this is to make deployment faster
+    // actions: ["es:*"],
+    // resources: ["arn:aws:es:*:*:domain/*"]
+    actions: ["es:ESHttpGet", "es:ESHttpPost"],
+    resources: [`${openSearchDomain.domainArn}/*`] // ToDo @ender "/*" could be "/article"
   });
-
-  // const ossAPIPolicy = new PolicyStatement({
-  //   effect: Effect.ALLOW,
-  //   // actions: ["aoss:APIAccessAll"], // ToDo @ender this should be more restrictive
-  //   actions: ["aoss:*"],
-  //   resources: [
-  //     `arn:aws:aoss:${stack.region}:${stack.account}:collection/article`,
-  //     `arn:aws:aoss:${stack.region}:${stack.account}:index/*/*` // ToDe @ender recently added
-  //   ]
-  // });
-
-  const ossAPIPolicy = new PolicyStatement({
-    effect: Effect.ALLOW,
-    actions: ["aoss:*"],
-    resources: [
-      `arn:aws:aoss:${stack.region}:${stack.account}:collection/*`, // ToDo @ender this should be more restrictive
-      `arn:aws:aoss:${stack.region}:${stack.account}:index/*/*` // ToDo @ender this should be more restrictive
-    ]
-  });
-
-  // const ossDashboardPolicy = new PolicyStatement({
-  //   effect: Effect.ALLOW,
-  //   actions: ["aoss:DashboardsAccessAll"],
-  //   resources: [`arn:aws:aoss:${stack.region}:${stack.account}:dashboards/default`]
-  // });
-  // userLogin.addToRolePolicy(ossAPIPolicy);
 
   const helloWorld = createLambdaFunction("hello-world", "hello_world/hello_world.go");
-
-  [ossAPIPolicy, openSearchPolicy, dynamoPolicy].forEach((policy) => helloWorld.addToRolePolicy(policy));
+  [openSearchPolicy, dynamoPolicy].forEach((policy) => helloWorld.addToRolePolicy(policy));
 
   const loginUser = createLambdaFunction("login-user", "login_user/login_user.go");
   dynamodbStack.userTable.grantReadData(loginUser);
