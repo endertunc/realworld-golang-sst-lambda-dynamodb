@@ -139,7 +139,7 @@ func (o opensearchArticleRepository) FindAllTags(ctx context.Context) ([]string,
 	// ToDo @ender this is static we should move it to a constant
 	query := strings.NewReader(`
 	{
-		"size" : 0
+		"size" : 0,
 	  	"aggs": {
 	    	"tagList": {
 	      		"terms": { 

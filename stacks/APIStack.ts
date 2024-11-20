@@ -127,6 +127,9 @@ export function APIStack({ stack }: StackContext) {
   );
   dynamodbStack.commentTable.grantReadData(getArticleComments);
 
+  const getTags = createLambdaFunction("get-tags", "get_tags/get_tags.go");
+  getTags.addToRolePolicy(openSearchPolicy);
+
   // const privateKey = new secretsmanager.Secret(stack, 'private-key', {
   //     secretName: 'private-key',
   //     removalPolicy: RemovalPolicy.DESTROY,
@@ -135,25 +138,26 @@ export function APIStack({ stack }: StackContext) {
   const realWorldApi = new Api(stack, "real-world-api", {
     // prettier-ignore
     routes: {
-      "GET    /api/hello-world": helloWorld,
-      "POST   /api/users/login": loginUser,
-      "POST   /api/users": registerUser,
-      "GET    /api/user": getCurrentUser,
+      "GET    /api/hello-world":                    helloWorld,
+      "POST   /api/users/login":                    loginUser,
+      "POST   /api/users":                          registerUser,
+      "GET    /api/user":                           getCurrentUser,
       // "PUT    /api/user":                         updateUser,
-      "GET    /api/profiles/{username}": getUserProfile,
-      "POST   /api/profiles/{username}/follow": followUser,
-      "DELETE /api/profiles/{username}/follow": unfollowUser,
-      "POST   /api/articles": postArticle,
+      "GET    /api/profiles/{username}":            getUserProfile,
+      "POST   /api/profiles/{username}/follow":     followUser,
+      "DELETE /api/profiles/{username}/follow":     unfollowUser,
+      "POST   /api/articles":                       postArticle,
       // "PUT    /api/articles/{slug}":               updateArticle,
-      "GET    /api/articles": listArticles,
-      "GET    /api/articles/feed": getUserFeed,
-      "GET    /api/articles/{slug}": getArticle,
+      "GET    /api/articles":                       listArticles,
+      "GET    /api/articles/feed":                  getUserFeed,
+      "GET    /api/articles/{slug}":                getArticle,
       // "DELETE /api/articles/{slug}":               deleteArticle,
-      "POST   /api/articles/{slug}/favorite": favoriteArticle,
-      "DELETE /api/articles/{slug}/favorite": unfavoriteArticle,
-      "POST   /api/articles/{slug}/comments": addComment,
-      "DELETE /api/articles/{slug}/comments/{id}": deleteComment,
-      "GET    /api/articles/{slug}/comments": getArticleComments
+      "POST   /api/articles/{slug}/favorite":       favoriteArticle,
+      "DELETE /api/articles/{slug}/favorite":       unfavoriteArticle,
+      "POST   /api/articles/{slug}/comments":       addComment,
+      "DELETE /api/articles/{slug}/comments/{id}":  deleteComment,
+      "GET    /api/articles/{slug}/comments":       getArticleComments,
+       "GET   /api/tags":                           getTags,
     }
   });
 

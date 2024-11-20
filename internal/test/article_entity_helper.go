@@ -110,3 +110,7 @@ func GetUserFeedWithPagination(t *testing.T, token string, limit int, offset *st
 	}
 	return ExecuteRequest[dto.MultipleArticlesResponseBodyDTO](t, "GET", path, nil, http.StatusOK, &token)
 }
+
+func GetTags(t *testing.T) dto.TagsResponseDTO {
+	return ExecuteRequest[dto.TagsResponseDTO](t, "GET", "/api/tags", nil, http.StatusOK, nil)
+}
