@@ -24,7 +24,8 @@ var (
 	articleRepository           = repository.NewDynamodbArticleRepository(dynamodbStore)
 	articleOpenSearchRepository = repository.NewArticleOpensearchRepository(opensearchStore)
 	articleService              = service.NewArticleService(articleRepository, articleOpenSearchRepository, userService, profileService)
-	ArticleApi                  = api.NewArticleApi(articleService, userService, profileService)
+	articleListService          = service.NewArticleListService(articleRepository, articleOpenSearchRepository, userService, profileService)
+	ArticleApi                  = api.NewArticleApi(articleService, articleListService, userService, profileService)
 
 	profileService = service.NewProfileService(followerRepository, userRepository)
 	ProfileApi     = api.NewProfileApi(profileService)

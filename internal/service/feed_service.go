@@ -18,7 +18,7 @@ type userFeedService struct {
 
 type FeedServiceInterface interface {
 	FanoutArticle(ctx context.Context, articleId, authorId uuid.UUID, createdAt time.Time) error
-	FetchArticlesFromFeed(ctx context.Context, userId uuid.UUID, limit int, nextPageToken *string) ([]domain.FeedItem, *string, error)
+	FetchArticlesFromFeed(ctx context.Context, userId uuid.UUID, limit int, nextPageToken *string) ([]domain.ArticleAggregateView, *string, error)
 }
 
 var _ FeedServiceInterface = userFeedService{}
@@ -45,7 +45,7 @@ func (uf userFeedService) FanoutArticle(ctx context.Context, articleId, authorId
  * - GetArticlesByIds and IsFavoritedBulk: both needs articleIds can be fetched in a single query
  * - GetUserListByUserIDs and IsFollowingBulk: both needs uniqueAuthorIdsList and can be fetched in a single query
  */
-func (uf userFeedService) FetchArticlesFromFeed(ctx context.Context, userId uuid.UUID, limit int, nextPageToken *string) ([]domain.FeedItem, *string, error) {
+func (uf userFeedService) FetchArticlesFromFeed(ctx context.Context, userId uuid.UUID, limit int, nextPageToken *string) ([]domain.ArticleAggregateView, *string, error) {
 	articleIds, nextToken, err := uf.userFeedRepository.FindArticleIdsInUserFeed(ctx, userId, limit, nextPageToken)
 	if err != nil {
 		return nil, nil, err
@@ -89,7 +89,7 @@ func (uf userFeedService) FetchArticlesFromFeed(ctx context.Context, userId uuid
 		return nil, nil, err
 	}
 
-	feedItems := make([]domain.FeedItem, 0)
+	feedItems := make([]domain.ArticleAggregateView, 0)
 	// we need to return article in the order of articleIds
 	for _, articleId := range articleIds {
 		article, articleFound := authorIdToArticleMap[articleId]
@@ -101,7 +101,7 @@ func (uf userFeedService) FetchArticlesFromFeed(ctx context.Context, userId uuid
 		// 3- we should have the author in the authorsMap, otherwise let it skip
 		if articleFound && isFollowing && authorFound {
 			isFavorited := favoritedArticlesSet.ContainsOne(article.Id)
-			feedItem := domain.FeedItem{
+			feedItem := domain.ArticleAggregateView{
 				Article:     article,
 				Author:      author,
 				IsFavorited: isFavorited,

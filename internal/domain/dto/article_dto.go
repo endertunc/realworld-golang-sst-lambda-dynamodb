@@ -77,7 +77,7 @@ func ToArticleResponseBodyDTO(article domain.Article, author domain.User, isFavo
 	return ArticleResponseBodyDTO{Article: ToArticleResponseDTO(article, author, isFavorited, isFollowing)}
 }
 
-func ToMultipleArticlesResponseBodyDTO(feedItems []domain.FeedItem, nextPageToken *string) MultipleArticlesResponseBodyDTO {
+func ToMultipleArticlesResponseBodyDTO(feedItems []domain.ArticleAggregateView, nextPageToken *string) MultipleArticlesResponseBodyDTO {
 	articles := make([]ArticleResponseDTO, 0, len(feedItems))
 	for _, feedItem := range feedItems {
 		articleResponseDTO := ToArticleResponseDTO(feedItem.Article, feedItem.Author, feedItem.IsFavorited, feedItem.IsFollowing)

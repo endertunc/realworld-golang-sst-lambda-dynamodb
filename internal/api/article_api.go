@@ -6,47 +6,54 @@ import (
 	"realworld-aws-lambda-dynamodb-golang/internal/domain"
 	"realworld-aws-lambda-dynamodb-golang/internal/domain/dto"
 	"realworld-aws-lambda-dynamodb-golang/internal/service"
+	"strconv"
 )
 
 type ArticleApi struct {
-	ArticleService service.ArticleServiceInterface
-	UserService    service.UserServiceInterface
-	ProfileService service.ProfileServiceInterface
+	articleService     service.ArticleServiceInterface
+	articleListService service.ArticleListServiceInterface
+	userService        service.UserServiceInterface
+	profileService     service.ProfileServiceInterface
 }
 
-func NewArticleApi(articleService service.ArticleServiceInterface, userService service.UserServiceInterface, profileService service.ProfileServiceInterface) ArticleApi {
+func NewArticleApi(
+	articleService service.ArticleServiceInterface,
+	articleListService service.ArticleListServiceInterface,
+	userService service.UserServiceInterface,
+	profileService service.ProfileServiceInterface) ArticleApi {
 	return ArticleApi{
-		ArticleService: articleService,
-		UserService:    userService,
-		ProfileService: profileService,
+		articleService:     articleService,
+		articleListService: articleListService,
+		userService:        userService,
+		profileService:     profileService,
 	}
 }
 
 func (aa ArticleApi) GetArticle(ctx context.Context, loggedInUserId *uuid.UUID, slug string) (dto.ArticleResponseBodyDTO, error) {
 	// ToDo @ender [maybe not] --- we could get article and author in BatchGetItem
-	article, err := aa.ArticleService.GetArticle(ctx, slug)
+	article, err := aa.articleService.GetArticle(ctx, slug)
 	if err != nil {
 		return dto.ArticleResponseBodyDTO{}, err
 	}
-	author, err := aa.UserService.GetUserByUserId(ctx, article.AuthorId)
+	author, err := aa.userService.GetUserByUserId(ctx, article.AuthorId)
 	if err != nil {
 		return dto.ArticleResponseBodyDTO{}, err
 	}
 	if loggedInUserId == nil {
 		return dto.ToArticleResponseBodyDTO(article, author, false, false), nil
 	} else {
-		loggedInUser, err := aa.UserService.GetUserByUserId(ctx, *loggedInUserId)
+		loggedInUser, err := aa.userService.GetUserByUserId(ctx, *loggedInUserId)
 		if err != nil {
 			return dto.ArticleResponseBodyDTO{}, err
 		}
 
 		// ToDo @ender we make multiple request. We could optimize this by using BatchGetItem - isFollowing and isFavorited
-		isFollowing, err := aa.ProfileService.IsFollowing(ctx, loggedInUser.Id, article.AuthorId)
+		isFollowing, err := aa.profileService.IsFollowing(ctx, loggedInUser.Id, article.AuthorId)
 		if err != nil {
 			return dto.ArticleResponseBodyDTO{}, err
 		}
 
-		isFavorited, err := aa.ArticleService.IsFavorited(ctx, article.Id, loggedInUser.Id)
+		isFavorited, err := aa.articleService.IsFavorited(ctx, article.Id, loggedInUser.Id)
 
 		if err != nil {
 			return dto.ArticleResponseBodyDTO{}, err
@@ -64,7 +71,7 @@ func (aa ArticleApi) CreateArticle(ctx context.Context, loggedInUserId uuid.UUID
 	//  thus I skipped creating a struct that "service accepts" and simply passed the params needed to create and article
 	//  Once this list of parameters that needs to be passed to service gets crowded,
 	//  one could introduce intermediate "CreateArticleRequest" that articleService accepts
-	article, err := aa.ArticleService.CreateArticle(
+	article, err := aa.articleService.CreateArticle(
 		ctx,
 		loggedInUserId,
 		articleDTO.Title,
@@ -75,7 +82,7 @@ func (aa ArticleApi) CreateArticle(ctx context.Context, loggedInUserId uuid.UUID
 		return dto.ArticleResponseBodyDTO{}, err
 	}
 
-	user, err := aa.UserService.GetUserByUserId(ctx, loggedInUserId)
+	user, err := aa.userService.GetUserByUserId(ctx, loggedInUserId)
 	if err != nil {
 		return dto.ArticleResponseBodyDTO{}, err
 	}
@@ -86,18 +93,18 @@ func (aa ArticleApi) CreateArticle(ctx context.Context, loggedInUserId uuid.UUID
 }
 
 func (aa ArticleApi) UnfavoriteArticle(ctx context.Context, loggedInUserId uuid.UUID, slug string) (dto.ArticleResponseBodyDTO, error) {
-	article, err := aa.ArticleService.UnfavoriteArticle(ctx, loggedInUserId, slug)
+	article, err := aa.articleService.UnfavoriteArticle(ctx, loggedInUserId, slug)
 	if err != nil {
 		return dto.ArticleResponseBodyDTO{}, err
 	}
 
-	author, err := aa.UserService.GetUserByUserId(ctx, loggedInUserId)
+	author, err := aa.userService.GetUserByUserId(ctx, loggedInUserId)
 	if err != nil {
 		return dto.ArticleResponseBodyDTO{}, err
 	}
 
 	// ToDo @ender test if the parameters passed to isFollowing are correct
-	isFollowing, err := aa.ProfileService.IsFollowing(ctx, loggedInUserId, article.AuthorId)
+	isFollowing, err := aa.profileService.IsFollowing(ctx, loggedInUserId, article.AuthorId)
 	if err != nil {
 		return dto.ArticleResponseBodyDTO{}, err
 	}
@@ -106,18 +113,18 @@ func (aa ArticleApi) UnfavoriteArticle(ctx context.Context, loggedInUserId uuid.
 }
 
 func (aa ArticleApi) FavoriteArticle(ctx context.Context, loggedInUserId uuid.UUID, slug string) (dto.ArticleResponseBodyDTO, error) {
-	article, err := aa.ArticleService.FavoriteArticle(ctx, loggedInUserId, slug)
+	article, err := aa.articleService.FavoriteArticle(ctx, loggedInUserId, slug)
 	if err != nil {
 		return dto.ArticleResponseBodyDTO{}, err
 	}
 
-	author, err := aa.UserService.GetUserByUserId(ctx, article.AuthorId)
+	author, err := aa.userService.GetUserByUserId(ctx, article.AuthorId)
 	if err != nil {
 		return dto.ArticleResponseBodyDTO{}, err
 	}
 
 	// ToDo @ender test if the parameters passed to isFollowing are correct
-	isFollowing, err := aa.ProfileService.IsFollowing(ctx, loggedInUserId, article.AuthorId)
+	isFollowing, err := aa.profileService.IsFollowing(ctx, loggedInUserId, article.AuthorId)
 	if err != nil {
 		return dto.ArticleResponseBodyDTO{}, err
 	}
@@ -126,7 +133,7 @@ func (aa ArticleApi) FavoriteArticle(ctx context.Context, loggedInUserId uuid.UU
 }
 
 func (aa ArticleApi) DeleteArticle(ctx context.Context, loggedInUserId uuid.UUID, slug string) error {
-	err := aa.ArticleService.DeleteArticle(ctx, loggedInUserId, slug)
+	err := aa.articleService.DeleteArticle(ctx, loggedInUserId, slug)
 	if err != nil {
 		return err
 	}
@@ -140,15 +147,44 @@ type ListArticlesQueryOptions struct {
 }
 
 func (aa ArticleApi) ListArticles(ctx context.Context, loggedInUserId *uuid.UUID, queryOptions ListArticlesQueryOptions, limit int, nextPageToken *string) (dto.MultipleArticlesResponseBodyDTO, error) {
-	feedItems, newNextPageToken, err := func() ([]domain.FeedItem, *string, error) {
+	feedItems, newNextPageToken, err := func() ([]domain.ArticleAggregateView, *string, error) {
 		if queryOptions.Author != nil {
-			return aa.ArticleService.GetMostRecentArticlesByAuthor(ctx, loggedInUserId, *queryOptions.Author, limit, nextPageToken)
+			return aa.articleListService.GetMostRecentArticlesByAuthor(ctx, loggedInUserId, *queryOptions.Author, limit, nextPageToken)
 		} else if queryOptions.FavoritedBy != nil {
-			return aa.ArticleService.GetMostRecentArticlesFavoritedByUser(ctx, loggedInUserId, *queryOptions.FavoritedBy, limit, nextPageToken)
+			return aa.articleListService.GetMostRecentArticlesFavoritedByUser(ctx, loggedInUserId, *queryOptions.FavoritedBy, limit, nextPageToken)
 		} else if queryOptions.Tag != nil {
-			return aa.ArticleService.GetMostRecentArticlesFavoritedByTag(ctx, loggedInUserId, *queryOptions.Tag, limit, nextPageToken)
+			var offset *int
+			if nextPageToken != nil {
+				offsetInt, err := strconv.Atoi(*nextPageToken)
+				if err != nil {
+					return nil, nil, err // ToDo @ender needs a domain error
+				}
+				offset = &offsetInt
+			}
+			result, nextToken, err := aa.articleListService.GetMostRecentArticlesFavoritedByTag(ctx, loggedInUserId, *queryOptions.Tag, limit, offset)
+			var nextTokenStr *string
+			if nextToken != nil {
+				s := strconv.Itoa(*nextToken)
+				nextTokenStr = &s // ToDo @ender do not use aws like this directly...
+			}
+			return result, nextTokenStr, err
 		} else {
-			return aa.ArticleService.GetMostRecentArticlesGlobally(ctx, loggedInUserId, limit, nextPageToken)
+			var offset *int
+			if nextPageToken != nil {
+				offsetInt, err := strconv.Atoi(*nextPageToken)
+				if err != nil {
+					return nil, nil, err // ToDo @ender needs a domain error
+				}
+				offset = &offsetInt
+			}
+			result, nextToken, err := aa.articleListService.GetMostRecentArticlesGlobally(ctx, loggedInUserId, limit, offset)
+
+			var nextTokenStr *string
+			if nextToken != nil {
+				s := strconv.Itoa(*nextToken)
+				nextTokenStr = &s // ToDo @ender do not use aws like this directly...
+			}
+			return result, nextTokenStr, err
 		}
 	}()
 
@@ -159,7 +195,7 @@ func (aa ArticleApi) ListArticles(ctx context.Context, loggedInUserId *uuid.UUID
 }
 
 func (aa ArticleApi) GetTags(ctx context.Context) (dto.TagsResponseDTO, error) {
-	tags, err := aa.ArticleService.GetTags(ctx)
+	tags, err := aa.articleService.GetTags(ctx)
 	if err != nil {
 		return dto.TagsResponseDTO{}, err
 	}

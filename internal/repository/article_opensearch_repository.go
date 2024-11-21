@@ -18,8 +18,8 @@ type opensearchArticleRepository struct {
 }
 
 type ArticleOpensearchRepositoryInterface interface {
-	FindAllArticles(ctx context.Context, limit, offset int) ([]domain.Article, *string, error)
-	FindArticlesByTag(ctx context.Context, tag string, limit, offset int) ([]domain.Article, *string, error)
+	FindAllArticles(ctx context.Context, limit int, offset *int) ([]domain.Article, *int, error)
+	FindArticlesByTag(ctx context.Context, tag string, limit int, offset *int) ([]domain.Article, *int, error)
 	FindAllTags(ctx context.Context) ([]string, error)
 }
 
@@ -54,7 +54,7 @@ var (
 	articleIndex = "article"
 )
 
-func (o opensearchArticleRepository) FindAllArticles(ctx context.Context, limit, offset int) ([]domain.Article, *string, error) {
+func (o opensearchArticleRepository) FindAllArticles(ctx context.Context, limit int, offset *int) ([]domain.Article, *int, error) {
 	// ToDo @ender add pagination
 	query := strings.NewReader(`
 	{
@@ -93,7 +93,7 @@ func (o opensearchArticleRepository) FindAllArticles(ctx context.Context, limit,
 	return articles, nil, nil
 }
 
-func (o opensearchArticleRepository) FindArticlesByTag(ctx context.Context, tag string, limit, offset int) ([]domain.Article, *string, error) {
+func (o opensearchArticleRepository) FindArticlesByTag(ctx context.Context, tag string, limit int, offset *int) ([]domain.Article, *int, error) {
 	query := strings.NewReader(fmt.Sprintf(`
 	{
 		"query": {
