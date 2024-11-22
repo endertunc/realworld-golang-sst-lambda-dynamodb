@@ -2,9 +2,12 @@ package main
 
 import (
 	"github.com/stretchr/testify/assert"
+	"net/http"
 	"realworld-aws-lambda-dynamodb-golang/internal/domain/dto"
 	dtogen "realworld-aws-lambda-dynamodb-golang/internal/domain/dto/generator"
+	"realworld-aws-lambda-dynamodb-golang/internal/errutil"
 	"realworld-aws-lambda-dynamodb-golang/internal/test"
+	"strings"
 	"testing"
 )
 
@@ -13,6 +16,164 @@ func TestAuthenticationScenarios(t *testing.T) {
 		Method: "POST",
 		Path:   "/api/articles",
 	})
+}
+
+func TestRequestValidation(t *testing.T) {
+	// create a user
+	_, token := test.CreateAndLoginUser(t, dtogen.GenerateNewUserRequestUserDto())
+
+	tests := []test.ApiRequestValidationTest[dto.CreateArticleRequestDTO]{
+		{
+			Name: "missing title",
+			Input: dto.CreateArticleRequestDTO{
+				Description: "This is a test article",
+				Body:        "Article body content",
+				TagList:     []string{"test", "article"},
+			},
+			ExpectedError: map[string]string{
+				"Article.Title": "Title is a required field",
+			},
+		},
+		{
+			Name: "blank title",
+			Input: dto.CreateArticleRequestDTO{
+				Title:       "    ",
+				Description: "This is a test article",
+				Body:        "Article body content",
+				TagList:     []string{"test", "article"},
+			},
+			ExpectedError: map[string]string{
+				"Article.Title": "Title cannot be blank",
+			},
+		},
+		{
+			Name: "title too long",
+			Input: dto.CreateArticleRequestDTO{
+				Title:       strings.Repeat("a", 256),
+				Description: "This is a test article",
+				Body:        "Article body content",
+				TagList:     []string{"test", "article"},
+			},
+			ExpectedError: map[string]string{
+				"Article.Title": "Title must be a maximum of 255 characters in length",
+			},
+		},
+		{
+			Name: "missing description",
+			Input: dto.CreateArticleRequestDTO{
+				Title:   "Test Article",
+				Body:    "Article body content",
+				TagList: []string{"test", "article"},
+			},
+			ExpectedError: map[string]string{
+				"Article.Description": "Description is a required field",
+			},
+		},
+		{
+			Name: "blank description",
+			Input: dto.CreateArticleRequestDTO{
+				Title:       "Test Article",
+				Description: "     ",
+				Body:        "Article body content",
+				TagList:     []string{"test", "article"},
+			},
+			ExpectedError: map[string]string{
+				"Article.Description": "Description cannot be blank",
+			},
+		},
+		{
+			Name: "description too long",
+			Input: dto.CreateArticleRequestDTO{
+				Title:       "Test Article",
+				Description: strings.Repeat("a", 1025),
+				Body:        "Article body content",
+				TagList:     []string{"test", "article"},
+			},
+			ExpectedError: map[string]string{
+				"Article.Description": "Description must be a maximum of 1,024 characters in length",
+			},
+		},
+		{
+			Name: "missing body",
+			Input: dto.CreateArticleRequestDTO{
+				Title:       "Test Article",
+				Description: "This is a test article",
+				TagList:     []string{"test", "article"},
+			},
+			ExpectedError: map[string]string{
+				"Article.Body": "Body is a required field",
+			},
+		},
+		{
+			Name: "blank body",
+			Input: dto.CreateArticleRequestDTO{
+				Title:       "Test Article",
+				Description: "This is a test article",
+				Body:        "     ",
+				TagList:     []string{"test", "article"},
+			},
+			ExpectedError: map[string]string{
+				"Article.Body": "Body cannot be blank",
+			},
+		},
+		{
+			Name: "empty tag list",
+			Input: dto.CreateArticleRequestDTO{
+				Title:       "Test Article",
+				Description: "This is a test article",
+				Body:        "Article body content",
+				TagList:     []string{},
+			},
+			ExpectedError: map[string]string{
+				"Article.TagList": "TagList must contain more than 0 items",
+			},
+		},
+		{
+			Name: "duplicate tags",
+			Input: dto.CreateArticleRequestDTO{
+				Title:       "Test Article",
+				Description: "This is a test article",
+				Body:        "Article body content",
+				TagList:     []string{"test", "test"},
+			},
+			ExpectedError: map[string]string{
+				"Article.TagList": "TagList must contain unique values",
+			},
+		},
+		{
+			Name: "blank tag",
+			Input: dto.CreateArticleRequestDTO{
+				Title:       "Test Article",
+				Description: "This is a test article",
+				Body:        "Article body content",
+				TagList:     []string{"test", "   "},
+			},
+			ExpectedError: map[string]string{
+				"Article.TagList[1]": "TagList[1] cannot be blank",
+			},
+		},
+		{
+			Name: "tag too long",
+			Input: dto.CreateArticleRequestDTO{
+				Title:       "Test Article",
+				Description: "This is a test article",
+				Body:        "Article body content",
+				TagList:     []string{"test", strings.Repeat("a", 65)},
+			},
+			ExpectedError: map[string]string{
+				"Article.TagList[1]": "TagList[1] must be a maximum of 64 characters in length",
+			},
+		},
+	}
+
+	createArticleRequest := func(t *testing.T, input dto.CreateArticleRequestDTO) errutil.ValidationErrors {
+		return test.CreateArticleWithResponse[errutil.ValidationErrors](t, input, token, http.StatusBadRequest)
+	}
+	for _, tt := range tests {
+		t.Run(tt.Name, func(t *testing.T) {
+			test.TestValidation(t, tt, createArticleRequest)
+		})
+	}
 }
 
 func TestSuccessfulArticleCreation(t *testing.T) {

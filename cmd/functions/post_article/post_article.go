@@ -22,7 +22,7 @@ func init() {
 func HandlerHTTP(w http.ResponseWriter, r *http.Request, userId uuid.UUID, _ domain.Token) {
 	ctx := r.Context()
 
-	createArticleRequestBodyDTO, ok := api.ParseBodyAsHTTP[dto.CreateArticleRequestBodyDTO](ctx, w, r)
+	createArticleRequestBodyDTO, ok := api.ParseAndValidateBody[dto.CreateArticleRequestBodyDTO](ctx, w, r)
 
 	if !ok {
 		return

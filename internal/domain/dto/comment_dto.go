@@ -16,7 +16,7 @@ type AddCommentRequestDTO struct {
 	Body string `json:"body" validate:"required,notblank,max=4096"`
 }
 
-func (s AddCommentRequestBodyDTO) Validate() (map[string]string, bool) {
+func (s AddCommentRequestBodyDTO) Validate() ValidationErrors {
 	return validateStruct(s)
 }
 

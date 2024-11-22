@@ -10,6 +10,69 @@ import (
 	"testing"
 )
 
+func TestRequestValidation(t *testing.T) {
+	tests := []test.ApiRequestValidationTest[dto.LoginRequestUserDto]{
+		{
+			Name: "missing email",
+			Input: dto.LoginRequestUserDto{
+				Password: "password123",
+			},
+			ExpectedError: map[string]string{
+				"User.Email": "Email is a required field",
+			},
+		},
+		{
+			Name: "invalid email format",
+			Input: dto.LoginRequestUserDto{
+				Email:    "invalid-email",
+				Password: "password123",
+			},
+			ExpectedError: map[string]string{
+				"User.Email": "Email must be a valid email address",
+			},
+		},
+		{
+			Name: "password too short",
+			Input: dto.LoginRequestUserDto{
+				Email:    "test@example.com",
+				Password: "12345",
+			},
+			ExpectedError: map[string]string{
+				"User.Password": "Password must be at least 6 characters in length",
+			},
+		},
+		{
+			Name: "password too long",
+			Input: dto.LoginRequestUserDto{
+				Email:    "test@example.com",
+				Password: "123456789012345678901", // 21 characters
+			},
+			ExpectedError: map[string]string{
+				"User.Password": "Password must be a maximum of 20 characters in length",
+			},
+		},
+		{
+			Name: "blank password",
+			Input: dto.LoginRequestUserDto{
+				Email:    "test@example.com",
+				Password: "      ",
+			},
+			ExpectedError: map[string]string{
+				"User.Password": "Password cannot be blank",
+			},
+		},
+	}
+
+	loginRequest := func(t *testing.T, input dto.LoginRequestUserDto) errutil.ValidationErrors {
+		return test.LoginUserWithResponse[errutil.ValidationErrors](t, input, http.StatusBadRequest)
+	}
+	for _, tt := range tests {
+		t.Run(tt.Name, func(t *testing.T) {
+			test.TestValidation(t, tt, loginRequest)
+		})
+	}
+}
+
 func TestSuccessfulLogin(t *testing.T) {
 	test.WithSetupAndTeardown(t, func() {
 		// Create a user

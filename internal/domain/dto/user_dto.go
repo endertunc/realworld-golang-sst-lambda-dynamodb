@@ -15,7 +15,7 @@ type LoginRequestUserDto struct {
 	Password string `json:"password" validate:"required,notblank,min=6,max=20"`
 }
 
-func (s LoginRequestBodyDTO) Validate() (map[string]string, bool) {
+func (s LoginRequestBodyDTO) Validate() ValidationErrors {
 	return validateStruct(s)
 }
 
@@ -30,7 +30,7 @@ type NewUserRequestUserDto struct {
 	Username string `json:"username" validate:"required,notblank,min=3,max=64"`
 }
 
-func (s NewUserRequestBodyDTO) Validate() (map[string]string, bool) {
+func (s NewUserRequestBodyDTO) Validate() ValidationErrors {
 	return validateStruct(s)
 }
 

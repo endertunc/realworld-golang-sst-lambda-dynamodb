@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"realworld-aws-lambda-dynamodb-golang/internal/domain/dto"
 	"strconv"
 	"strings"
 
@@ -176,6 +177,26 @@ func ParseBodyAsHTTP[T any](ctx context.Context, w http.ResponseWriter, r *http.
 		ToSimpleHTTPError(w, http.StatusBadRequest, err.Error())
 		return nil, false
 	}
+	return &out, true
+}
+
+func ParseAndValidateBody[T dto.Validatable](ctx context.Context, w http.ResponseWriter, r *http.Request) (*T, bool) {
+	var out T
+	err := json.NewDecoder(r.Body).Decode(&out)
+	if err != nil {
+		cause := fmt.Errorf("error decoding request body: %w", err)
+		slog.WarnContext(ctx, "error decoding request body", slog.Any("error", cause))
+		ToSimpleHTTPError(w, http.StatusBadRequest, err.Error())
+		return nil, false
+	}
+
+	validationErrorsMap := out.Validate()
+
+	if len(validationErrorsMap) > 0 {
+		ToFieldValidationHTTPError(w, http.StatusBadRequest, validationErrorsMap)
+		return nil, false
+	}
+
 	return &out, true
 }
 

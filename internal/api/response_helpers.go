@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"realworld-aws-lambda-dynamodb-golang/internal/domain/dto"
 	"realworld-aws-lambda-dynamodb-golang/internal/errutil"
 
 	"github.com/aws/aws-lambda-go/events"
@@ -79,6 +80,19 @@ func ToSimpleHTTPError(w http.ResponseWriter, statusCode int, message string) {
 	body, err := json.Marshal(errutil.SimpleError{Message: message})
 	if err != nil {
 		slog.Error("error encoding response body", slog.Any("error", err))
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
+	w.Write(body)
+}
+
+func ToFieldValidationHTTPError(w http.ResponseWriter, statusCode int, validationErrors dto.ValidationErrors) {
+	body, err := json.Marshal(validationErrors.ToHttpValidationError())
+	if err != nil {
+		slog.Error("error encoding validation errors response body", slog.Any("error", err))
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}

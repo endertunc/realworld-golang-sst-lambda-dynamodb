@@ -24,7 +24,7 @@ func init() {
 func HandlerHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	newUserRequestBodyDTO, ok := api.ParseBodyAsHTTP[dto.NewUserRequestBodyDTO](ctx, w, r)
+	newUserRequestBodyDTO, ok := api.ParseAndValidateBody[dto.NewUserRequestBodyDTO](ctx, w, r)
 
 	if !ok {
 		return

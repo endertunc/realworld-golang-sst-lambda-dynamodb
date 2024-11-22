@@ -33,7 +33,7 @@ func HandlerHTTP(w http.ResponseWriter, r *http.Request, userId uuid.UUID, token
 	}
 
 	// Parse request body
-	addCommentRequestBodyDTO, ok := api.ParseBodyAsHTTP[dto.AddCommentRequestBodyDTO](ctx, w, r)
+	addCommentRequestBodyDTO, ok := api.ParseAndValidateBody[dto.AddCommentRequestBodyDTO](ctx, w, r)
 	if !ok {
 		return
 	}

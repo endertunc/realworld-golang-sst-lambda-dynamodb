@@ -8,14 +8,28 @@ import (
 	"github.com/go-playground/validator/v10/non-standard/validators"
 	en_translations "github.com/go-playground/validator/v10/translations/en"
 	"log"
+	"realworld-aws-lambda-dynamodb-golang/internal/errutil"
 	"strings"
 	"sync"
 )
 
+type ValidationErrors map[string]string
+
+func (v ValidationErrors) ToHttpValidationError() errutil.ValidationErrors {
+	errs := make([]errutil.ValidationError, 0, len(v))
+	for field, message := range v {
+		errs = append(errs, errutil.ValidationError{
+			Field:   field,
+			Message: message,
+		})
+	}
+	return errutil.ValidationErrors{Errors: errs}
+}
+
 // Validatable is an interface that matches any type with a Validate method
 // that returns a map[string]string and bool
 type Validatable interface {
-	Validate() (map[string]string, bool)
+	Validate() ValidationErrors
 }
 
 var translator = sync.OnceValue(func() ut.Translator {
@@ -64,7 +78,7 @@ var validator = sync.OnceValue(func() *v10.Validate {
 	return validator
 })
 
-func validateStruct[T Validatable](value T) (map[string]string, bool) {
+func validateStruct[T Validatable](value T) ValidationErrors {
 	err := validator().Struct(value)
 	if err != nil {
 		trans := make(map[string]string)
@@ -74,11 +88,10 @@ func validateStruct[T Validatable](value T) (map[string]string, bool) {
 				fieldStructPath := dropRootStructName(fieldError.Namespace())
 				trans[fieldStructPath] = fieldError.Translate(translator())
 			}
-			return trans, true
+			return trans
 		}
-
 	}
-	return nil, false
+	return nil
 }
 
 func dropRootStructName(s string) string {

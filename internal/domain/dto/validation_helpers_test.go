@@ -1,6 +1,8 @@
 package dto
 
-import "testing"
+import (
+	"testing"
+)
 
 // ValidationTestCase represents a test case for validation testing
 type ValidationTestCase[T Validatable] struct {
@@ -13,7 +15,8 @@ type ValidationTestCase[T Validatable] struct {
 // testValidation is a helper function that handles the common validation testing logic
 func testValidation[T Validatable](t *testing.T, tc ValidationTestCase[T]) {
 	t.Helper()
-	errors, hasErrors := tc.Input.Validate()
+	errors := tc.Input.Validate()
+	hasErrors := len(errors) > 0
 	if hasErrors != tc.WantErrors {
 		t.Errorf("%s: Validate() hasErrors = %v, want %v", tc.Name, hasErrors, tc.WantErrors)
 	}

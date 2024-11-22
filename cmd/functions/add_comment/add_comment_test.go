@@ -7,6 +7,7 @@ import (
 	dtogen "realworld-aws-lambda-dynamodb-golang/internal/domain/dto/generator"
 	"realworld-aws-lambda-dynamodb-golang/internal/errutil"
 	"realworld-aws-lambda-dynamodb-golang/internal/test"
+	"strings"
 	"testing"
 )
 
@@ -15,6 +16,57 @@ func TestAuthenticationScenarios(t *testing.T) {
 		Method: "POST",
 		Path:   "/api/articles/some-article/comments",
 	})
+}
+
+func TestRequestValidation(t *testing.T) {
+	// create a user
+	_, token := test.CreateAndLoginUser(t, dtogen.GenerateNewUserRequestUserDto())
+
+	tests := []test.ApiRequestValidationTest[dto.AddCommentRequestDTO]{
+		{
+			Name:  "missing comment",
+			Input: dto.AddCommentRequestDTO{},
+			ExpectedError: map[string]string{
+				"Comment": "Comment is a required field",
+			},
+		},
+		{
+			Name: "empty comment body",
+			Input: dto.AddCommentRequestDTO{
+				Body: "",
+			},
+			ExpectedError: map[string]string{
+				"Comment": "Comment is a required field",
+			},
+		},
+		{
+			Name: "blank comment body",
+			Input: dto.AddCommentRequestDTO{
+				Body: "     ",
+			},
+			ExpectedError: map[string]string{
+				"Comment.Body": "Body cannot be blank",
+			},
+		},
+		{
+			Name: "comment body too long",
+			Input: dto.AddCommentRequestDTO{
+				Body: strings.Repeat("a", 4097),
+			},
+			ExpectedError: map[string]string{
+				"Comment.Body": "Body must be a maximum of 4,096 characters in length",
+			},
+		},
+	}
+
+	createCommentRequest := func(t *testing.T, input dto.AddCommentRequestDTO) errutil.ValidationErrors {
+		return test.CreateCommentWithResponse[errutil.ValidationErrors](t, "does-not-matter", input, token, http.StatusBadRequest)
+	}
+	for _, tt := range tests {
+		t.Run(tt.Name, func(t *testing.T) {
+			test.TestValidation(t, tt, createCommentRequest)
+		})
+	}
 }
 
 func TestSuccessfulCommentCreation(t *testing.T) {

@@ -117,6 +117,8 @@ export function APIStack({ stack }: StackContext) {
 
   const addComment = createLambdaFunction("add-comment", "add_comment/add_comment.go");
   dynamodbStack.commentTable.grantWriteData(addComment);
+  dynamodbStack.articleTable.grantReadData(addComment);
+  dynamodbStack.userTable.grantReadData(addComment);
 
   const deleteComment = createLambdaFunction("delete-comment", "delete_comment/delete_comment.go");
   dynamodbStack.commentTable.grantWriteData(deleteComment);

@@ -8,6 +8,15 @@ type SimpleError struct {
 	Message string `json:"message"`
 }
 
+type ValidationErrors struct {
+	Errors []ValidationError `json:"errors"`
+}
+
+type ValidationError struct {
+	Field   string `json:"field"`
+	Message string `json:"message"`
+}
+
 // note on where to define errors (and I am not still sure which one I like better):
 // - define errors in where they are returned: errors are closely related to the functions that return them.
 // - define errors in a single place: easy to find and manage all errors in one place.

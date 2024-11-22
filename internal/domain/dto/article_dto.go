@@ -17,7 +17,7 @@ type CreateArticleRequestDTO struct {
 	TagList     []string `json:"tagList" validate:"gt=0,unique,dive,notblank,max=64"`
 }
 
-func (s CreateArticleRequestBodyDTO) Validate() (map[string]string, bool) {
+func (s CreateArticleRequestBodyDTO) Validate() ValidationErrors {
 	return validateStruct(s)
 }
 

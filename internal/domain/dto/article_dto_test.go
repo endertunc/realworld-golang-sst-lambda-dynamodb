@@ -217,17 +217,29 @@ func TestAddCommentRequestBodyDTO_Validate(t *testing.T) {
 			WantErrors: false,
 		},
 		{
-			Name: "missing body",
+			Name: "missing comment",
 			Input: AddCommentRequestBodyDTO{
 				Comment: AddCommentRequestDTO{},
 			},
 			WantErrors: true,
 			ExpectedError: map[string]string{
-				"Comment.Body": "Body is a required field",
+				"Comment": "Comment is a required field",
 			},
 		},
 		{
-			Name: "blank body",
+			Name: "empty comment body",
+			Input: AddCommentRequestBodyDTO{
+				Comment: AddCommentRequestDTO{
+					Body: "",
+				},
+			},
+			WantErrors: true,
+			ExpectedError: map[string]string{
+				"Comment": "Comment is a required field",
+			},
+		},
+		{
+			Name: "blank comment body",
 			Input: AddCommentRequestBodyDTO{
 				Comment: AddCommentRequestDTO{
 					Body: "     ",
@@ -239,7 +251,7 @@ func TestAddCommentRequestBodyDTO_Validate(t *testing.T) {
 			},
 		},
 		{
-			Name: "body too long",
+			Name: "comment body too long",
 			Input: AddCommentRequestBodyDTO{
 				Comment: AddCommentRequestDTO{
 					Body: strings.Repeat("a", 4097),
