@@ -366,285 +366,60 @@ func (_c *MockArticleServiceInterface_GetArticlesByIds_Call) RunAndReturn(run fu
 	return _c
 }
 
-// GetMostRecentArticlesByAuthor provides a mock function with given fields: ctx, userId, author, limit, nextPageToken
-func (_m *MockArticleServiceInterface) GetMostRecentArticlesByAuthor(ctx context.Context, userId *uuid.UUID, author string, limit int, nextPageToken *string) ([]domain.FeedItem, *string, error) {
-	ret := _m.Called(ctx, userId, author, limit, nextPageToken)
+// GetTags provides a mock function with given fields: ctx
+func (_m *MockArticleServiceInterface) GetTags(ctx context.Context) ([]string, error) {
+	ret := _m.Called(ctx)
 
 	if len(ret) == 0 {
-		panic("no return value specified for GetMostRecentArticlesByAuthor")
+		panic("no return value specified for GetTags")
 	}
 
-	var r0 []domain.FeedItem
-	var r1 *string
-	var r2 error
-	if rf, ok := ret.Get(0).(func(context.Context, *uuid.UUID, string, int, *string) ([]domain.FeedItem, *string, error)); ok {
-		return rf(ctx, userId, author, limit, nextPageToken)
+	var r0 []string
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context) ([]string, error)); ok {
+		return rf(ctx)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, *uuid.UUID, string, int, *string) []domain.FeedItem); ok {
-		r0 = rf(ctx, userId, author, limit, nextPageToken)
+	if rf, ok := ret.Get(0).(func(context.Context) []string); ok {
+		r0 = rf(ctx)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]domain.FeedItem)
+			r0 = ret.Get(0).([]string)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, *uuid.UUID, string, int, *string) *string); ok {
-		r1 = rf(ctx, userId, author, limit, nextPageToken)
+	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = rf(ctx)
 	} else {
-		if ret.Get(1) != nil {
-			r1 = ret.Get(1).(*string)
-		}
+		r1 = ret.Error(1)
 	}
 
-	if rf, ok := ret.Get(2).(func(context.Context, *uuid.UUID, string, int, *string) error); ok {
-		r2 = rf(ctx, userId, author, limit, nextPageToken)
-	} else {
-		r2 = ret.Error(2)
-	}
-
-	return r0, r1, r2
+	return r0, r1
 }
 
-// MockArticleServiceInterface_GetMostRecentArticlesByAuthor_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetMostRecentArticlesByAuthor'
-type MockArticleServiceInterface_GetMostRecentArticlesByAuthor_Call struct {
+// MockArticleServiceInterface_GetTags_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetTags'
+type MockArticleServiceInterface_GetTags_Call struct {
 	*mock.Call
 }
 
-// GetMostRecentArticlesByAuthor is a helper method to define mock.On call
+// GetTags is a helper method to define mock.On call
 //   - ctx context.Context
-//   - userId *uuid.UUID
-//   - author string
-//   - limit int
-//   - nextPageToken *string
-func (_e *MockArticleServiceInterface_Expecter) GetMostRecentArticlesByAuthor(ctx interface{}, userId interface{}, author interface{}, limit interface{}, nextPageToken interface{}) *MockArticleServiceInterface_GetMostRecentArticlesByAuthor_Call {
-	return &MockArticleServiceInterface_GetMostRecentArticlesByAuthor_Call{Call: _e.mock.On("GetMostRecentArticlesByAuthor", ctx, userId, author, limit, nextPageToken)}
+func (_e *MockArticleServiceInterface_Expecter) GetTags(ctx interface{}) *MockArticleServiceInterface_GetTags_Call {
+	return &MockArticleServiceInterface_GetTags_Call{Call: _e.mock.On("GetTags", ctx)}
 }
 
-func (_c *MockArticleServiceInterface_GetMostRecentArticlesByAuthor_Call) Run(run func(ctx context.Context, userId *uuid.UUID, author string, limit int, nextPageToken *string)) *MockArticleServiceInterface_GetMostRecentArticlesByAuthor_Call {
+func (_c *MockArticleServiceInterface_GetTags_Call) Run(run func(ctx context.Context)) *MockArticleServiceInterface_GetTags_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(*uuid.UUID), args[2].(string), args[3].(int), args[4].(*string))
+		run(args[0].(context.Context))
 	})
 	return _c
 }
 
-func (_c *MockArticleServiceInterface_GetMostRecentArticlesByAuthor_Call) Return(_a0 []domain.FeedItem, _a1 *string, _a2 error) *MockArticleServiceInterface_GetMostRecentArticlesByAuthor_Call {
-	_c.Call.Return(_a0, _a1, _a2)
+func (_c *MockArticleServiceInterface_GetTags_Call) Return(_a0 []string, _a1 error) *MockArticleServiceInterface_GetTags_Call {
+	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *MockArticleServiceInterface_GetMostRecentArticlesByAuthor_Call) RunAndReturn(run func(context.Context, *uuid.UUID, string, int, *string) ([]domain.FeedItem, *string, error)) *MockArticleServiceInterface_GetMostRecentArticlesByAuthor_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// GetMostRecentArticlesFavoritedByTag provides a mock function with given fields: ctx, loggedInUser, tag, limit, nextPageToken
-func (_m *MockArticleServiceInterface) GetMostRecentArticlesFavoritedByTag(ctx context.Context, loggedInUser *uuid.UUID, tag string, limit int, nextPageToken *string) ([]domain.FeedItem, *string, error) {
-	ret := _m.Called(ctx, loggedInUser, tag, limit, nextPageToken)
-
-	if len(ret) == 0 {
-		panic("no return value specified for GetMostRecentArticlesFavoritedByTag")
-	}
-
-	var r0 []domain.FeedItem
-	var r1 *string
-	var r2 error
-	if rf, ok := ret.Get(0).(func(context.Context, *uuid.UUID, string, int, *string) ([]domain.FeedItem, *string, error)); ok {
-		return rf(ctx, loggedInUser, tag, limit, nextPageToken)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context, *uuid.UUID, string, int, *string) []domain.FeedItem); ok {
-		r0 = rf(ctx, loggedInUser, tag, limit, nextPageToken)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]domain.FeedItem)
-		}
-	}
-
-	if rf, ok := ret.Get(1).(func(context.Context, *uuid.UUID, string, int, *string) *string); ok {
-		r1 = rf(ctx, loggedInUser, tag, limit, nextPageToken)
-	} else {
-		if ret.Get(1) != nil {
-			r1 = ret.Get(1).(*string)
-		}
-	}
-
-	if rf, ok := ret.Get(2).(func(context.Context, *uuid.UUID, string, int, *string) error); ok {
-		r2 = rf(ctx, loggedInUser, tag, limit, nextPageToken)
-	} else {
-		r2 = ret.Error(2)
-	}
-
-	return r0, r1, r2
-}
-
-// MockArticleServiceInterface_GetMostRecentArticlesFavoritedByTag_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetMostRecentArticlesFavoritedByTag'
-type MockArticleServiceInterface_GetMostRecentArticlesFavoritedByTag_Call struct {
-	*mock.Call
-}
-
-// GetMostRecentArticlesFavoritedByTag is a helper method to define mock.On call
-//   - ctx context.Context
-//   - loggedInUser *uuid.UUID
-//   - tag string
-//   - limit int
-//   - nextPageToken *string
-func (_e *MockArticleServiceInterface_Expecter) GetMostRecentArticlesFavoritedByTag(ctx interface{}, loggedInUser interface{}, tag interface{}, limit interface{}, nextPageToken interface{}) *MockArticleServiceInterface_GetMostRecentArticlesFavoritedByTag_Call {
-	return &MockArticleServiceInterface_GetMostRecentArticlesFavoritedByTag_Call{Call: _e.mock.On("GetMostRecentArticlesFavoritedByTag", ctx, loggedInUser, tag, limit, nextPageToken)}
-}
-
-func (_c *MockArticleServiceInterface_GetMostRecentArticlesFavoritedByTag_Call) Run(run func(ctx context.Context, loggedInUser *uuid.UUID, tag string, limit int, nextPageToken *string)) *MockArticleServiceInterface_GetMostRecentArticlesFavoritedByTag_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(*uuid.UUID), args[2].(string), args[3].(int), args[4].(*string))
-	})
-	return _c
-}
-
-func (_c *MockArticleServiceInterface_GetMostRecentArticlesFavoritedByTag_Call) Return(_a0 []domain.FeedItem, _a1 *string, _a2 error) *MockArticleServiceInterface_GetMostRecentArticlesFavoritedByTag_Call {
-	_c.Call.Return(_a0, _a1, _a2)
-	return _c
-}
-
-func (_c *MockArticleServiceInterface_GetMostRecentArticlesFavoritedByTag_Call) RunAndReturn(run func(context.Context, *uuid.UUID, string, int, *string) ([]domain.FeedItem, *string, error)) *MockArticleServiceInterface_GetMostRecentArticlesFavoritedByTag_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// GetMostRecentArticlesFavoritedByUser provides a mock function with given fields: ctx, loggedInUser, favoritedByUsername, limit, nextPageToken
-func (_m *MockArticleServiceInterface) GetMostRecentArticlesFavoritedByUser(ctx context.Context, loggedInUser *uuid.UUID, favoritedByUsername string, limit int, nextPageToken *string) ([]domain.FeedItem, *string, error) {
-	ret := _m.Called(ctx, loggedInUser, favoritedByUsername, limit, nextPageToken)
-
-	if len(ret) == 0 {
-		panic("no return value specified for GetMostRecentArticlesFavoritedByUser")
-	}
-
-	var r0 []domain.FeedItem
-	var r1 *string
-	var r2 error
-	if rf, ok := ret.Get(0).(func(context.Context, *uuid.UUID, string, int, *string) ([]domain.FeedItem, *string, error)); ok {
-		return rf(ctx, loggedInUser, favoritedByUsername, limit, nextPageToken)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context, *uuid.UUID, string, int, *string) []domain.FeedItem); ok {
-		r0 = rf(ctx, loggedInUser, favoritedByUsername, limit, nextPageToken)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]domain.FeedItem)
-		}
-	}
-
-	if rf, ok := ret.Get(1).(func(context.Context, *uuid.UUID, string, int, *string) *string); ok {
-		r1 = rf(ctx, loggedInUser, favoritedByUsername, limit, nextPageToken)
-	} else {
-		if ret.Get(1) != nil {
-			r1 = ret.Get(1).(*string)
-		}
-	}
-
-	if rf, ok := ret.Get(2).(func(context.Context, *uuid.UUID, string, int, *string) error); ok {
-		r2 = rf(ctx, loggedInUser, favoritedByUsername, limit, nextPageToken)
-	} else {
-		r2 = ret.Error(2)
-	}
-
-	return r0, r1, r2
-}
-
-// MockArticleServiceInterface_GetMostRecentArticlesFavoritedByUser_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetMostRecentArticlesFavoritedByUser'
-type MockArticleServiceInterface_GetMostRecentArticlesFavoritedByUser_Call struct {
-	*mock.Call
-}
-
-// GetMostRecentArticlesFavoritedByUser is a helper method to define mock.On call
-//   - ctx context.Context
-//   - loggedInUser *uuid.UUID
-//   - favoritedByUsername string
-//   - limit int
-//   - nextPageToken *string
-func (_e *MockArticleServiceInterface_Expecter) GetMostRecentArticlesFavoritedByUser(ctx interface{}, loggedInUser interface{}, favoritedByUsername interface{}, limit interface{}, nextPageToken interface{}) *MockArticleServiceInterface_GetMostRecentArticlesFavoritedByUser_Call {
-	return &MockArticleServiceInterface_GetMostRecentArticlesFavoritedByUser_Call{Call: _e.mock.On("GetMostRecentArticlesFavoritedByUser", ctx, loggedInUser, favoritedByUsername, limit, nextPageToken)}
-}
-
-func (_c *MockArticleServiceInterface_GetMostRecentArticlesFavoritedByUser_Call) Run(run func(ctx context.Context, loggedInUser *uuid.UUID, favoritedByUsername string, limit int, nextPageToken *string)) *MockArticleServiceInterface_GetMostRecentArticlesFavoritedByUser_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(*uuid.UUID), args[2].(string), args[3].(int), args[4].(*string))
-	})
-	return _c
-}
-
-func (_c *MockArticleServiceInterface_GetMostRecentArticlesFavoritedByUser_Call) Return(_a0 []domain.FeedItem, _a1 *string, _a2 error) *MockArticleServiceInterface_GetMostRecentArticlesFavoritedByUser_Call {
-	_c.Call.Return(_a0, _a1, _a2)
-	return _c
-}
-
-func (_c *MockArticleServiceInterface_GetMostRecentArticlesFavoritedByUser_Call) RunAndReturn(run func(context.Context, *uuid.UUID, string, int, *string) ([]domain.FeedItem, *string, error)) *MockArticleServiceInterface_GetMostRecentArticlesFavoritedByUser_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// GetMostRecentArticlesGlobally provides a mock function with given fields: ctx, loggedInUser, limit, nextPageToken
-func (_m *MockArticleServiceInterface) GetMostRecentArticlesGlobally(ctx context.Context, loggedInUser *uuid.UUID, limit int, nextPageToken *string) ([]domain.FeedItem, *string, error) {
-	ret := _m.Called(ctx, loggedInUser, limit, nextPageToken)
-
-	if len(ret) == 0 {
-		panic("no return value specified for GetMostRecentArticlesGlobally")
-	}
-
-	var r0 []domain.FeedItem
-	var r1 *string
-	var r2 error
-	if rf, ok := ret.Get(0).(func(context.Context, *uuid.UUID, int, *string) ([]domain.FeedItem, *string, error)); ok {
-		return rf(ctx, loggedInUser, limit, nextPageToken)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context, *uuid.UUID, int, *string) []domain.FeedItem); ok {
-		r0 = rf(ctx, loggedInUser, limit, nextPageToken)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]domain.FeedItem)
-		}
-	}
-
-	if rf, ok := ret.Get(1).(func(context.Context, *uuid.UUID, int, *string) *string); ok {
-		r1 = rf(ctx, loggedInUser, limit, nextPageToken)
-	} else {
-		if ret.Get(1) != nil {
-			r1 = ret.Get(1).(*string)
-		}
-	}
-
-	if rf, ok := ret.Get(2).(func(context.Context, *uuid.UUID, int, *string) error); ok {
-		r2 = rf(ctx, loggedInUser, limit, nextPageToken)
-	} else {
-		r2 = ret.Error(2)
-	}
-
-	return r0, r1, r2
-}
-
-// MockArticleServiceInterface_GetMostRecentArticlesGlobally_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetMostRecentArticlesGlobally'
-type MockArticleServiceInterface_GetMostRecentArticlesGlobally_Call struct {
-	*mock.Call
-}
-
-// GetMostRecentArticlesGlobally is a helper method to define mock.On call
-//   - ctx context.Context
-//   - loggedInUser *uuid.UUID
-//   - limit int
-//   - nextPageToken *string
-func (_e *MockArticleServiceInterface_Expecter) GetMostRecentArticlesGlobally(ctx interface{}, loggedInUser interface{}, limit interface{}, nextPageToken interface{}) *MockArticleServiceInterface_GetMostRecentArticlesGlobally_Call {
-	return &MockArticleServiceInterface_GetMostRecentArticlesGlobally_Call{Call: _e.mock.On("GetMostRecentArticlesGlobally", ctx, loggedInUser, limit, nextPageToken)}
-}
-
-func (_c *MockArticleServiceInterface_GetMostRecentArticlesGlobally_Call) Run(run func(ctx context.Context, loggedInUser *uuid.UUID, limit int, nextPageToken *string)) *MockArticleServiceInterface_GetMostRecentArticlesGlobally_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(*uuid.UUID), args[2].(int), args[3].(*string))
-	})
-	return _c
-}
-
-func (_c *MockArticleServiceInterface_GetMostRecentArticlesGlobally_Call) Return(_a0 []domain.FeedItem, _a1 *string, _a2 error) *MockArticleServiceInterface_GetMostRecentArticlesGlobally_Call {
-	_c.Call.Return(_a0, _a1, _a2)
-	return _c
-}
-
-func (_c *MockArticleServiceInterface_GetMostRecentArticlesGlobally_Call) RunAndReturn(run func(context.Context, *uuid.UUID, int, *string) ([]domain.FeedItem, *string, error)) *MockArticleServiceInterface_GetMostRecentArticlesGlobally_Call {
+func (_c *MockArticleServiceInterface_GetTags_Call) RunAndReturn(run func(context.Context) ([]string, error)) *MockArticleServiceInterface_GetTags_Call {
 	_c.Call.Return(run)
 	return _c
 }

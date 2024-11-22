@@ -10,6 +10,7 @@ packages:
       UserRepositoryInterface:
       UserFeedRepositoryInterface:
       CommentRepositoryInterface:
+      ArticleOpensearchRepositoryInterface:
   realworld-aws-lambda-dynamodb-golang/internal/service:
     interfaces:
       ArticleServiceInterface:
@@ -17,3 +18,4 @@ packages:
       FeedServiceInterface:
       ProfileServiceInterface:
       CommentServiceInterface:
+      ArticleListServiceInterface:

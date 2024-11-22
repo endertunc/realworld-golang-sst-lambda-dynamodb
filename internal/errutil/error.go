@@ -25,6 +25,8 @@ var (
 	ErrDynamoQuery             = errors.New("dynamodb query failed")
 	ErrDynamoMapping           = errors.New("dynamodb mapping failed")
 	ErrDynamoMarshalling       = errors.New("dynamodb marshalling failed")
+	ErrOpensearchMarshalling   = errors.New("opensearch marshalling failed")
+	ErrOpensearchQuery         = errors.New("opensearch query failed")
 	ErrDynamoTokenDecoding     = errors.New("dynamodb token decoding failed")
 	ErrDynamoTokenEncoding     = errors.New("dynamodb token encoding failed")
 	ErrCantFollowYourself      = errors.New("cannot follow yourself")

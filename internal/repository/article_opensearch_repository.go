@@ -8,12 +8,12 @@ import (
 	"github.com/opensearch-project/opensearch-go/v4/opensearchapi"
 	"realworld-aws-lambda-dynamodb-golang/internal/database"
 	"realworld-aws-lambda-dynamodb-golang/internal/domain"
-	"realworld-aws-lambda-dynamodb-golang/internal/test"
+	"realworld-aws-lambda-dynamodb-golang/internal/errutil"
 	"strings"
 	"time"
 )
 
-type opensearchArticleRepository struct {
+type articleOpensearchRepository struct {
 	db *database.OpenSearchStore
 }
 
@@ -23,10 +23,10 @@ type ArticleOpensearchRepositoryInterface interface {
 	FindAllTags(ctx context.Context) ([]string, error)
 }
 
-var _ ArticleOpensearchRepositoryInterface = opensearchArticleRepository{}
+var _ ArticleOpensearchRepositoryInterface = articleOpensearchRepository{}
 
 func NewArticleOpensearchRepository(db *database.OpenSearchStore) ArticleOpensearchRepositoryInterface {
-	return opensearchArticleRepository{db: db}
+	return articleOpensearchRepository{db: db}
 }
 
 type OpensearchArticleItem struct {
@@ -54,7 +54,7 @@ var (
 	articleIndex = "article"
 )
 
-func (o opensearchArticleRepository) FindAllArticles(ctx context.Context, limit int, offset *int) ([]domain.Article, *int, error) {
+func (o articleOpensearchRepository) FindAllArticles(ctx context.Context, limit int, offset *int) ([]domain.Article, *int, error) {
 	// ToDo @ender add pagination
 	query := strings.NewReader(`
 	{
@@ -77,23 +77,22 @@ func (o opensearchArticleRepository) FindAllArticles(ctx context.Context, limit 
 
 	response, err := o.db.Client.Search(ctx, &request)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("%w: %w", errutil.ErrOpensearchQuery, err)
 	}
 
-	test.PrintAsJSON(response)
 	articles := make([]domain.Article, 0)
 	for _, hit := range response.Hits.Hits {
 		article := OpensearchArticleItem{}
 		err := json.Unmarshal(hit.Source, &article)
 		if err != nil {
-			return nil, nil, err // ToDo wrap with our own domain error
+			return nil, nil, fmt.Errorf("%w: %w", errutil.ErrOpensearchMarshalling, err)
 		}
 		articles = append(articles, article.toDomainArticle())
 	}
 	return articles, nil, nil
 }
 
-func (o opensearchArticleRepository) FindArticlesByTag(ctx context.Context, tag string, limit int, offset *int) ([]domain.Article, *int, error) {
+func (o articleOpensearchRepository) FindArticlesByTag(ctx context.Context, tag string, limit int, offset *int) ([]domain.Article, *int, error) {
 	query := strings.NewReader(fmt.Sprintf(`
 	{
 		"query": {
@@ -117,27 +116,24 @@ func (o opensearchArticleRepository) FindArticlesByTag(ctx context.Context, tag 
 
 	response, err := o.db.Client.Search(ctx, &request)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("%w: %w", errutil.ErrOpensearchQuery, err)
 	}
 
-	test.PrintAsJSON(response)
 	articles := make([]domain.Article, 0)
 	for _, hit := range response.Hits.Hits {
 		article := OpensearchArticleItem{}
 		err := json.Unmarshal(hit.Source, &article)
 		if err != nil {
-			return nil, nil, err // ToDo wrap with our own domain error
+			return nil, nil, fmt.Errorf("%w: %w", errutil.ErrOpensearchMarshalling, err)
 		}
 		articles = append(articles, article.toDomainArticle())
 	}
 	return articles, nil, nil
 }
 
-func (o opensearchArticleRepository) FindAllTags(ctx context.Context) ([]string, error) {
-	// size: 0 at root means we don't want documents to be returned, just the aggregation
-	// size: 100 at terms level means we want to get the top 100 tags which is enough for our use case
-	// ToDo @ender this is static we should move it to a constant
-	query := strings.NewReader(`
+// "size: 0" at root means we don't want documents to be returned, just the aggregation
+// "size: 100" at terms level means we want to get the top 100 tags which is enough for our use case
+var query = strings.NewReader(`
 	{
 		"size" : 0,
 	  	"aggs": {
@@ -150,6 +146,7 @@ func (o opensearchArticleRepository) FindAllTags(ctx context.Context) ([]string,
 	  	}
 	}`)
 
+func (o articleOpensearchRepository) FindAllTags(ctx context.Context) ([]string, error) {
 	request := opensearchapi.SearchReq{
 		Indices: []string{articleIndex},
 		Body:    query,
@@ -157,15 +154,13 @@ func (o opensearchArticleRepository) FindAllTags(ctx context.Context) ([]string,
 
 	response, err := o.db.Client.Search(ctx, &request)
 	if err != nil {
-		return nil, err // ToDo wrap with our own domain error
+		return nil, fmt.Errorf("%w: %w", errutil.ErrOpensearchQuery, err)
 	}
-
-	test.PrintAsJSON(response)
 
 	tagAggregationsResult := TagAggregationsResult{}
 	err = json.Unmarshal(response.Aggregations, &tagAggregationsResult)
 	if err != nil {
-		return nil, err // ToDo wrap with our own domain error
+		return nil, fmt.Errorf("%w: %w", errutil.ErrOpensearchMarshalling, err)
 	}
 
 	tags := make([]string, 0)

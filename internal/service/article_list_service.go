@@ -71,7 +71,7 @@ func (r ArticlesWithMetadataResult) toArticleAggregateView() []domain.ArticleAgg
 
 // ToDo @ender to keep things short - we better pass limit and nextPageToken struct Pagination or something like that.
 // ToDo @ender iteration #2 - finalize the code
-func (al articleListService) GetMostRecentArticlesGloballyShortV2(ctx context.Context, loggedInUser *uuid.UUID, limit int, nextPageToken *int) ([]domain.ArticleAggregateView, *int, error) {
+func (al articleListService) GetMostRecentArticlesGlobally(ctx context.Context, loggedInUser *uuid.UUID, limit int, nextPageToken *int) ([]domain.ArticleAggregateView, *int, error) {
 	result, nextToken, err := collectArticlesWithMetadata(ctx, al, loggedInUser, limit, nextPageToken, al.articleOpensearchRepository.FindAllArticles)
 
 	if err != nil {
@@ -81,7 +81,7 @@ func (al articleListService) GetMostRecentArticlesGloballyShortV2(ctx context.Co
 	return result.toArticleAggregateView(), nextToken, nil
 }
 
-func (al articleListService) GetMostRecentArticlesByAuthorShortV2(ctx context.Context, loggedInUser *uuid.UUID, author string, limit int, nextPageToken *string) ([]domain.ArticleAggregateView, *string, error) {
+func (al articleListService) GetMostRecentArticlesByAuthor(ctx context.Context, loggedInUser *uuid.UUID, author string, limit int, nextPageToken *string) ([]domain.ArticleAggregateView, *string, error) {
 	authorUser, err := al.userService.GetUserByUsername(ctx, author)
 	if err != nil {
 		return nil, nil, err
@@ -100,7 +100,7 @@ func (al articleListService) GetMostRecentArticlesByAuthorShortV2(ctx context.Co
 	return result.toArticleAggregateView(), nextToken, nil
 }
 
-func (al articleListService) GetMostRecentArticlesByTagShortV2(ctx context.Context, loggedInUser *uuid.UUID, tag string, limit int, nextPageToken *int) ([]domain.ArticleAggregateView, *int, error) {
+func (al articleListService) GetMostRecentArticlesFavoritedByTag(ctx context.Context, loggedInUser *uuid.UUID, tag string, limit int, nextPageToken *int) ([]domain.ArticleAggregateView, *int, error) {
 	var articlesByTagProvider articleRetrievalStrategy[int] = func(ctx context.Context, limit int, offset *int) ([]domain.Article, *int, error) {
 		return al.articleOpensearchRepository.FindArticlesByTag(ctx, tag, limit, offset)
 	}
@@ -111,7 +111,7 @@ func (al articleListService) GetMostRecentArticlesByTagShortV2(ctx context.Conte
 	return result.toArticleAggregateView(), nextToken, nil
 }
 
-func (al articleListService) GetMostRecentArticlesFavoritedByUserShortV2(ctx context.Context, loggedInUser *uuid.UUID, favoritedByUsername string, limit int, nextPageToken *string) ([]domain.ArticleAggregateView, *string, error) {
+func (al articleListService) GetMostRecentArticlesFavoritedByUser(ctx context.Context, loggedInUser *uuid.UUID, favoritedByUsername string, limit int, nextPageToken *string) ([]domain.ArticleAggregateView, *string, error) {
 	favoritedByUser, err := al.userService.GetUserByUsername(ctx, favoritedByUsername)
 	if err != nil {
 		return nil, nil, err
@@ -140,7 +140,7 @@ func (al articleListService) GetMostRecentArticlesFavoritedByUserShortV2(ctx con
 	for _, article := range result.Articles {
 		authorIdToArticleMap[article.Id] = article
 	}
-	feedItems := make([]domain.ArticleAggregateView, 0)
+	articleAggregateViews := make([]domain.ArticleAggregateView, 0)
 	// we need to return article in the order of articleIds
 	for _, articleId := range articleIds {
 		article, articleFound := authorIdToArticleMap[articleId]
@@ -157,11 +157,11 @@ func (al articleListService) GetMostRecentArticlesFavoritedByUserShortV2(ctx con
 				IsFavorited: isFavorited,
 				IsFollowing: isFollowing,
 			}
-			feedItems = append(feedItems, feedItem)
+			articleAggregateViews = append(articleAggregateViews, feedItem)
 		}
 	}
 
-	return nil, nextToken, nil
+	return articleAggregateViews, nextToken, nil
 }
 
 func collectArticlesWithMetadata[T any](ctx context.Context, al articleListService, loggedInUser *uuid.UUID, limit int, nextPageToken *T, articleProviderFunc articleRetrievalStrategy[T]) (ArticlesWithMetadataResult, *T, error) {
@@ -212,7 +212,7 @@ func collectArticlesWithMetadata[T any](ctx context.Context, al articleListServi
 }
 
 // ToDo @ender to be removed iteration #0
-func (al articleListService) GetMostRecentArticlesByAuthor(ctx context.Context, loggedInUser *uuid.UUID, author string, limit int, nextPageToken *string) ([]domain.ArticleAggregateView, *string, error) {
+func (al articleListService) GetMostRecentArticlesByAuthorShortV2(ctx context.Context, loggedInUser *uuid.UUID, author string, limit int, nextPageToken *string) ([]domain.ArticleAggregateView, *string, error) {
 	// find the author user by username
 	authorUser, err := al.userService.GetUserByUsername(ctx, author)
 	if err != nil {
@@ -260,7 +260,7 @@ func (al articleListService) GetMostRecentArticlesByAuthor(ctx context.Context, 
 	return feedItems, nextToken, nil
 
 }
-func (al articleListService) GetMostRecentArticlesFavoritedByUser(ctx context.Context, loggedInUser *uuid.UUID, favoritedByUsername string, limit int, nextPageToken *string) ([]domain.ArticleAggregateView, *string, error) {
+func (al articleListService) GetMostRecentArticlesFavoritedByUserShortV2(ctx context.Context, loggedInUser *uuid.UUID, favoritedByUsername string, limit int, nextPageToken *string) ([]domain.ArticleAggregateView, *string, error) {
 	// find the author user by username
 	favoritedByUser, err := al.userService.GetUserByUsername(ctx, favoritedByUsername)
 	if err != nil {
@@ -338,7 +338,7 @@ func (al articleListService) GetMostRecentArticlesFavoritedByUser(ctx context.Co
 
 	return feedItems, nextToken, nil
 }
-func (al articleListService) GetMostRecentArticlesFavoritedByTag(ctx context.Context, loggedInUser *uuid.UUID, tag string, limit int, offset *int) ([]domain.ArticleAggregateView, *int, error) {
+func (al articleListService) GetMostRecentArticlesFavoritedByTagShortV2(ctx context.Context, loggedInUser *uuid.UUID, tag string, limit int, offset *int) ([]domain.ArticleAggregateView, *int, error) {
 	articles, nextToken, err := al.articleOpensearchRepository.FindArticlesByTag(ctx, tag, limit, offset)
 
 	if err != nil {
@@ -395,7 +395,7 @@ func (al articleListService) GetMostRecentArticlesFavoritedByTag(ctx context.Con
 
 	return feedItems, nextToken, nil
 }
-func (al articleListService) GetMostRecentArticlesGlobally(ctx context.Context, loggedInUser *uuid.UUID, limit int, offset *int) ([]domain.ArticleAggregateView, *int, error) {
+func (al articleListService) GetMostRecentArticlesGloballyShortV2(ctx context.Context, loggedInUser *uuid.UUID, limit int, offset *int) ([]domain.ArticleAggregateView, *int, error) {
 	// this time we should fetch this information from elasticsearch
 	articles, nextToken, err := al.articleOpensearchRepository.FindAllArticles(ctx, limit, offset)
 	if err != nil {

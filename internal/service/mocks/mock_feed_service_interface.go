@@ -76,24 +76,24 @@ func (_c *MockFeedServiceInterface_FanoutArticle_Call) RunAndReturn(run func(con
 }
 
 // FetchArticlesFromFeed provides a mock function with given fields: ctx, userId, limit, nextPageToken
-func (_m *MockFeedServiceInterface) FetchArticlesFromFeed(ctx context.Context, userId uuid.UUID, limit int, nextPageToken *string) ([]domain.FeedItem, *string, error) {
+func (_m *MockFeedServiceInterface) FetchArticlesFromFeed(ctx context.Context, userId uuid.UUID, limit int, nextPageToken *string) ([]domain.ArticleAggregateView, *string, error) {
 	ret := _m.Called(ctx, userId, limit, nextPageToken)
 
 	if len(ret) == 0 {
 		panic("no return value specified for FetchArticlesFromFeed")
 	}
 
-	var r0 []domain.FeedItem
+	var r0 []domain.ArticleAggregateView
 	var r1 *string
 	var r2 error
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, int, *string) ([]domain.FeedItem, *string, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, int, *string) ([]domain.ArticleAggregateView, *string, error)); ok {
 		return rf(ctx, userId, limit, nextPageToken)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, int, *string) []domain.FeedItem); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, int, *string) []domain.ArticleAggregateView); ok {
 		r0 = rf(ctx, userId, limit, nextPageToken)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]domain.FeedItem)
+			r0 = ret.Get(0).([]domain.ArticleAggregateView)
 		}
 	}
 
@@ -135,12 +135,12 @@ func (_c *MockFeedServiceInterface_FetchArticlesFromFeed_Call) Run(run func(ctx 
 	return _c
 }
 
-func (_c *MockFeedServiceInterface_FetchArticlesFromFeed_Call) Return(_a0 []domain.FeedItem, _a1 *string, _a2 error) *MockFeedServiceInterface_FetchArticlesFromFeed_Call {
+func (_c *MockFeedServiceInterface_FetchArticlesFromFeed_Call) Return(_a0 []domain.ArticleAggregateView, _a1 *string, _a2 error) *MockFeedServiceInterface_FetchArticlesFromFeed_Call {
 	_c.Call.Return(_a0, _a1, _a2)
 	return _c
 }
 
-func (_c *MockFeedServiceInterface_FetchArticlesFromFeed_Call) RunAndReturn(run func(context.Context, uuid.UUID, int, *string) ([]domain.FeedItem, *string, error)) *MockFeedServiceInterface_FetchArticlesFromFeed_Call {
+func (_c *MockFeedServiceInterface_FetchArticlesFromFeed_Call) RunAndReturn(run func(context.Context, uuid.UUID, int, *string) ([]domain.ArticleAggregateView, *string, error)) *MockFeedServiceInterface_FetchArticlesFromFeed_Call {
 	_c.Call.Return(run)
 	return _c
 }
