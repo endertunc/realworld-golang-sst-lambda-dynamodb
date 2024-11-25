@@ -13,7 +13,7 @@ import (
 
 var (
 	dynamodbStore   = database.NewDynamoDBStore()
-	opensearchStore = database.NewOpenSearchStore()
+	opensearchStore = database.NewOpensearchStore()
 
 	followerRepository = repository.NewDynamodbFollowerRepository(dynamodbStore)
 

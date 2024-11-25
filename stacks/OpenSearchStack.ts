@@ -266,6 +266,10 @@ dynamodb-pipeline:
   //
   // console.log("Patch Role Mapping Result: ", patchRoleResult);
 
+  stack.addOutputs({
+    OPENSEARCH_URL: `https://${openSearchDomain.domainEndpoint}`
+  });
+
   return {
     openSearchDomain
   };

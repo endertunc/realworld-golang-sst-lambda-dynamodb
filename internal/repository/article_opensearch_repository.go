@@ -9,6 +9,7 @@ import (
 	"realworld-aws-lambda-dynamodb-golang/internal/database"
 	"realworld-aws-lambda-dynamodb-golang/internal/domain"
 	"realworld-aws-lambda-dynamodb-golang/internal/errutil"
+	"realworld-aws-lambda-dynamodb-golang/internal/test"
 	"strings"
 	"time"
 )
@@ -29,7 +30,7 @@ func NewArticleOpensearchRepository(db *database.OpenSearchStore) ArticleOpensea
 	return articleOpensearchRepository{db: db}
 }
 
-type OpensearchArticleItem struct {
+type OpensearchArticleDocument struct {
 	Id             uuid.UUID `json:"pk"`
 	Title          string    `json:"title"`
 	Slug           string    `json:"slug"`
@@ -55,9 +56,15 @@ var (
 )
 
 func (o articleOpensearchRepository) FindAllArticles(ctx context.Context, limit int, offset *int) ([]domain.Article, *int, error) {
-	// ToDo @ender add pagination
-	query := strings.NewReader(`
+	from := 0
+	if offset != nil {
+		from = *offset
+	}
+
+	query := strings.NewReader(fmt.Sprintf(`
 	{
+		"from": %d,
+		"size": %d,
 		"query": {
 			"match_all": {}
 		},
@@ -67,8 +74,9 @@ func (o articleOpensearchRepository) FindAllArticles(ctx context.Context, limit 
         			"order": "desc"
 				}
 			}
-		]
-	}`)
+		],
+		"track_total_hits": true
+	}`, from, limit))
 
 	request := opensearchapi.SearchReq{
 		Indices: []string{articleIndex},
@@ -80,21 +88,31 @@ func (o articleOpensearchRepository) FindAllArticles(ctx context.Context, limit 
 		return nil, nil, fmt.Errorf("%w: %w", errutil.ErrOpensearchQuery, err)
 	}
 
+	test.PrintAsJSON(response)
+
 	articles := make([]domain.Article, 0)
 	for _, hit := range response.Hits.Hits {
-		article := OpensearchArticleItem{}
+		article := OpensearchArticleDocument{}
 		err := json.Unmarshal(hit.Source, &article)
 		if err != nil {
 			return nil, nil, fmt.Errorf("%w: %w", errutil.ErrOpensearchMarshalling, err)
 		}
 		articles = append(articles, article.toDomainArticle())
 	}
+
 	return articles, nil, nil
 }
 
 func (o articleOpensearchRepository) FindArticlesByTag(ctx context.Context, tag string, limit int, offset *int) ([]domain.Article, *int, error) {
+	from := 0
+	if offset != nil {
+		from = *offset
+	}
+
 	query := strings.NewReader(fmt.Sprintf(`
 	{
+		"from": %d,
+		"size": %d,
 		"query": {
 			"match": {
 				"tagList": "%s"
@@ -106,8 +124,9 @@ func (o articleOpensearchRepository) FindArticlesByTag(ctx context.Context, tag 
         			"order": "desc"
 				}
 			}
-		]
-	}`, tag))
+		],
+		"track_total_hits": true
+	}`, from, limit, tag))
 
 	request := opensearchapi.SearchReq{
 		Indices: []string{articleIndex},
@@ -121,13 +140,14 @@ func (o articleOpensearchRepository) FindArticlesByTag(ctx context.Context, tag 
 
 	articles := make([]domain.Article, 0)
 	for _, hit := range response.Hits.Hits {
-		article := OpensearchArticleItem{}
+		article := OpensearchArticleDocument{}
 		err := json.Unmarshal(hit.Source, &article)
 		if err != nil {
 			return nil, nil, fmt.Errorf("%w: %w", errutil.ErrOpensearchMarshalling, err)
 		}
 		articles = append(articles, article.toDomainArticle())
 	}
+
 	return articles, nil, nil
 }
 
@@ -171,17 +191,17 @@ func (o articleOpensearchRepository) FindAllTags(ctx context.Context) ([]string,
 	return tags, nil
 }
 
-func (article OpensearchArticleItem) toDomainArticle() domain.Article {
+func (articleDocument OpensearchArticleDocument) toDomainArticle() domain.Article {
 	return domain.Article{
-		Id:             article.Id,
-		Title:          article.Title,
-		Slug:           article.Slug,
-		Description:    article.Description,
-		Body:           article.Body,
-		TagList:        article.TagList,
-		FavoritesCount: article.FavoritesCount,
-		AuthorId:       article.AuthorId,
-		CreatedAt:      time.UnixMilli(article.CreatedAt),
-		UpdatedAt:      time.UnixMilli(article.UpdatedAt),
+		Id:             articleDocument.Id,
+		Title:          articleDocument.Title,
+		Slug:           articleDocument.Slug,
+		Description:    articleDocument.Description,
+		Body:           articleDocument.Body,
+		TagList:        articleDocument.TagList,
+		FavoritesCount: articleDocument.FavoritesCount,
+		AuthorId:       articleDocument.AuthorId,
+		CreatedAt:      time.UnixMilli(articleDocument.CreatedAt),
+		UpdatedAt:      time.UnixMilli(articleDocument.UpdatedAt),
 	}
 }

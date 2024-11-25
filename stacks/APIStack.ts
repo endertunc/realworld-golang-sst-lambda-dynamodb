@@ -179,7 +179,7 @@ export function APIStack({ stack }: StackContext) {
   );
 
   stack.addOutputs({
-    apiUrl: realWorldApi.url
+    API_URL: realWorldApi.url
   });
 
   return {

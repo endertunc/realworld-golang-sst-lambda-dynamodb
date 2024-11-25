@@ -13,7 +13,7 @@ type OpenSearchStore struct {
 	Client *opensearchapi.Client
 }
 
-func NewOpenSearchStore() *OpenSearchStore {
+func NewOpensearchStore() *OpenSearchStore {
 	cfg, err := config.LoadDefaultConfig(context.Background())
 
 	if err != nil {
