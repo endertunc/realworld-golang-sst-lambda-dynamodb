@@ -2,10 +2,14 @@ package api
 
 import (
 	"context"
+	"errors"
 	mapset "github.com/deckarep/golang-set/v2"
 	"github.com/google/uuid"
+	"log/slog"
+	"net/http"
 	"realworld-aws-lambda-dynamodb-golang/internal/domain"
 	"realworld-aws-lambda-dynamodb-golang/internal/domain/dto"
+	"realworld-aws-lambda-dynamodb-golang/internal/errutil"
 	"realworld-aws-lambda-dynamodb-golang/internal/service"
 )
 
@@ -36,13 +40,31 @@ func NewCommentApi(commentService service.CommentServiceInterface, userService s
  *
  * Regardless, one must monitor the performance of the application and optimize accordingly.
  */
-func (aa CommentApi) GetArticleComments(ctx context.Context, loggedInUserId *uuid.UUID, slug string) (dto.MultiCommentsResponseBodyDTO, error) {
+func (aa CommentApi) GetArticleComments(ctx context.Context, w http.ResponseWriter, r *http.Request, loggedInUserId *uuid.UUID) {
+	slug, ok := GetPathParamHTTP(ctx, w, r, "slug")
+	if !ok {
+		return
+	}
+
+	handleError := func(err error) {
+		if errors.Is(err, errutil.ErrArticleNotFound) {
+			slog.DebugContext(ctx, "article not found", slog.String("slug", slug), slog.Any("error", err))
+			ToSimpleHTTPError(w, http.StatusNotFound, "article not found")
+			return
+		}
+		ToInternalServerHTTPError(w, err)
+		return
+	}
+
 	comments, err := aa.commentService.GetArticleComments(ctx, slug)
 	if err != nil {
-		return dto.MultiCommentsResponseBodyDTO{}, err
+		handleError(err)
+		return
 	}
 	if len(comments) == 0 {
-		return dto.MultiCommentsResponseBodyDTO{Comment: []dto.CommentResponseDTO{}}, nil
+		resp := dto.MultiCommentsResponseBodyDTO{Comment: []dto.CommentResponseDTO{}}
+		ToSuccessHTTPResponse(w, resp)
+		return
 	} else {
 		authorIdsMap := make(map[uuid.UUID]struct{})
 		for _, comment := range comments {
@@ -55,9 +77,9 @@ func (aa CommentApi) GetArticleComments(ctx context.Context, loggedInUserId *uui
 		}
 
 		authors, err := aa.userService.GetUserListByUserIDs(ctx, uniqueAuthorIdsList)
-
 		if err != nil {
-			return dto.MultiCommentsResponseBodyDTO{}, err
+			handleError(err)
+			return
 		}
 
 		authorIdsToAuthorMap := make(map[uuid.UUID]domain.User, len(authors))
@@ -66,37 +88,103 @@ func (aa CommentApi) GetArticleComments(ctx context.Context, loggedInUserId *uui
 		}
 
 		if loggedInUserId == nil {
-			return dto.ToMultiCommentsResponseBodyDTO(comments, authorIdsToAuthorMap, mapset.NewSetWithSize[uuid.UUID](0)), nil
+			resp := dto.ToMultiCommentsResponseBodyDTO(comments, authorIdsToAuthorMap, mapset.NewSetWithSize[uuid.UUID](0))
+			ToSuccessHTTPResponse(w, resp)
+			return
 		} else {
 			followedAuthorsSet, err := aa.profileService.IsFollowingBulk(ctx, *loggedInUserId, uniqueAuthorIdsList)
 			if err != nil {
-				return dto.MultiCommentsResponseBodyDTO{}, err
+				handleError(err)
+				return
 			}
-			return dto.ToMultiCommentsResponseBodyDTO(comments, authorIdsToAuthorMap, followedAuthorsSet), nil
+			resp := dto.ToMultiCommentsResponseBodyDTO(comments, authorIdsToAuthorMap, followedAuthorsSet)
+			ToSuccessHTTPResponse(w, resp)
+			return
 		}
-
 	}
 }
 
-func (aa CommentApi) AddComment(ctx context.Context, loggedInUserId uuid.UUID, articleSlug string, addCommentRequestDTO dto.AddCommentRequestBodyDTO) (dto.SingleCommentResponseBodyDTO, error) {
-	comment, err := aa.commentService.AddComment(ctx, loggedInUserId, articleSlug, addCommentRequestDTO.Comment.Body)
+func (aa CommentApi) AddComment(ctx context.Context, w http.ResponseWriter, r *http.Request, loggedInUserId uuid.UUID) {
+	// Get slug from the request path
+	slug, ok := GetPathParamHTTP(ctx, w, r, "slug")
+	if !ok {
+		return
+	}
+
+	// Parse request body
+	addCommentRequestBodyDTO, ok := ParseAndValidateBody[dto.AddCommentRequestBodyDTO](ctx, w, r)
+	if !ok {
+		return
+	}
+
+	handleError := func(err error) {
+		if errors.Is(err, errutil.ErrArticleNotFound) {
+			slog.DebugContext(ctx, "article not found", slog.String("slug", slug), slog.Any("error", err))
+			ToSimpleHTTPError(w, http.StatusNotFound, "article not found")
+			return
+		}
+		ToInternalServerHTTPError(w, err)
+		return
+	}
+
+	comment, err := aa.commentService.AddComment(ctx, loggedInUserId, slug, addCommentRequestBodyDTO.Comment.Body)
 	if err != nil {
-		return dto.SingleCommentResponseBodyDTO{}, err
+		handleError(err)
+		return
 	}
 
 	user, err := aa.userService.GetUserByUserId(ctx, loggedInUserId)
 	if err != nil {
-		return dto.SingleCommentResponseBodyDTO{}, err
+		handleError(err)
+		return
 	}
+
 	// the current user is the author, and the user can't follow itself,
 	// thus we simply pass isFollowing as false
-	return dto.ToSingleCommentResponseBodyDTO(comment, user, false), nil
+	resp := dto.ToSingleCommentResponseBodyDTO(comment, user, false)
+
+	// Success response
+	ToSuccessHTTPResponse(w, resp)
+	return
 }
 
-func (aa CommentApi) DeleteComment(ctx context.Context, loggedInUserId uuid.UUID, slug string, commentId uuid.UUID) error {
-	err := aa.commentService.DeleteComment(ctx, loggedInUserId, slug, commentId)
-	if err != nil {
-		return err
+func (aa CommentApi) DeleteComment(ctx context.Context, w http.ResponseWriter, r *http.Request, loggedInUserId uuid.UUID) {
+	slug, ok := GetPathParamHTTP(ctx, w, r, "slug")
+	if !ok {
+		return
 	}
-	return nil
+
+	commentIdAsString, ok := GetPathParamHTTP(ctx, w, r, "id")
+	if !ok {
+		return
+	}
+
+	commentId, err := uuid.Parse(commentIdAsString)
+	if err != nil {
+		slog.DebugContext(ctx, "invalid commentId path param", slog.String("commentId", commentIdAsString), slog.Any("error", err))
+		ToSimpleHTTPError(w, http.StatusBadRequest, "commentId path parameter must be a valid UUID")
+		return
+	}
+
+	err = aa.commentService.DeleteComment(ctx, loggedInUserId, slug, commentId)
+	if err != nil {
+		if errors.Is(err, errutil.ErrCommentNotFound) {
+			slog.DebugContext(ctx, "comment not found", slog.String("slug", slug), slog.String("commentId", commentId.String()), slog.Any("error", err))
+			ToSimpleHTTPError(w, http.StatusNotFound, "comment not found")
+			return
+		} else if errors.Is(err, errutil.ErrArticleNotFound) {
+			slog.DebugContext(ctx, "article not found", slog.String("slug", slug), slog.String("commentId", commentId.String()), slog.Any("error", err))
+			ToSimpleHTTPError(w, http.StatusNotFound, "article not found")
+			return
+		} else if errors.Is(err, errutil.ErrCantDeleteOthersComment) {
+			slog.DebugContext(ctx, "can't delete other's comment", slog.String("slug", slug), slog.String("commentId", commentId.String()), slog.Any("error", err))
+			ToSimpleHTTPError(w, http.StatusForbidden, "forbidden")
+			return
+		} else {
+			ToInternalServerHTTPError(w, err)
+			return
+		}
+	}
+	ToSuccessHTTPResponse(w, nil)
+	return
 }

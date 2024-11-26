@@ -2,8 +2,12 @@ package api
 
 import (
 	"context"
+	"errors"
 	"github.com/google/uuid"
+	"log/slog"
+	"net/http"
 	"realworld-aws-lambda-dynamodb-golang/internal/domain/dto"
+	"realworld-aws-lambda-dynamodb-golang/internal/errutil"
 	"realworld-aws-lambda-dynamodb-golang/internal/service"
 )
 
@@ -15,26 +19,74 @@ func NewProfileApi(profileService service.ProfileServiceInterface) ProfileApi {
 	return ProfileApi{ProfileService: profileService}
 }
 
-func (pa ProfileApi) UnfollowUserByUsername(ctx context.Context, loggedInUser uuid.UUID, followerUsername string) (dto.ProfileResponseBodyDTO, error) {
-	user, err := pa.ProfileService.UnFollow(ctx, loggedInUser, followerUsername)
-	if err != nil {
-		return dto.ProfileResponseBodyDTO{}, err
+func (pa ProfileApi) UnfollowUserByUsername(ctx context.Context, w http.ResponseWriter, r *http.Request, loggedInUser uuid.UUID) {
+	followeeUsername, ok := GetPathParamHTTP(ctx, w, r, "username")
+	if !ok {
+		return
 	}
-	return dto.ToProfileResponseBodyDTO(user, false), nil
+	user, err := pa.ProfileService.UnFollow(ctx, loggedInUser, followeeUsername)
+	if err != nil {
+		if errors.Is(err, errutil.ErrUserNotFound) {
+			slog.DebugContext(ctx, "user not found", slog.String("username", followeeUsername))
+			ToSimpleHTTPError(w, http.StatusNotFound, "user not found")
+			return
+		}
+		if errors.Is(err, errutil.ErrCantFollowYourself) {
+			slog.DebugContext(ctx, "user tried to unfollow itself", slog.String("username", followeeUsername), slog.String("userId", loggedInUser.String()))
+			ToSimpleHTTPError(w, http.StatusConflict, "cannot unfollow yourself")
+			return
+		}
+		ToInternalServerHTTPError(w, err)
+		return
+	}
+	resp := dto.ToProfileResponseBodyDTO(user, false)
+	ToSuccessHTTPResponse(w, resp)
+	return
 }
 
-func (pa ProfileApi) FollowUserByUsername(ctx context.Context, loggedInUser uuid.UUID, followerUsername string) (dto.ProfileResponseBodyDTO, error) {
-	user, err := pa.ProfileService.Follow(ctx, loggedInUser, followerUsername)
-	if err != nil {
-		return dto.ProfileResponseBodyDTO{}, err
+func (pa ProfileApi) FollowUserByUsername(ctx context.Context, w http.ResponseWriter, r *http.Request, loggedInUser uuid.UUID) {
+	followeeUsername, ok := GetPathParamHTTP(ctx, w, r, "username")
+	if !ok {
+		return
 	}
-	return dto.ToProfileResponseBodyDTO(user, true), nil
+
+	user, err := pa.ProfileService.Follow(ctx, loggedInUser, followeeUsername)
+	if err != nil {
+		if errors.Is(err, errutil.ErrUserNotFound) {
+			slog.DebugContext(ctx, "user to follow not found", slog.Any("username", followeeUsername), slog.Any("error", err))
+			ToSimpleHTTPError(w, http.StatusNotFound, "user not found")
+			return
+		}
+		if errors.Is(err, errutil.ErrCantFollowYourself) {
+			slog.DebugContext(ctx, "user tried to follow itself", slog.Any("username", followeeUsername), slog.String("userId", loggedInUser.String()), slog.Any("error", err))
+			ToSimpleHTTPError(w, http.StatusBadRequest, "cannot follow yourself")
+			return
+		}
+		ToInternalServerHTTPError(w, err)
+		return
+	}
+	resp := dto.ToProfileResponseBodyDTO(user, true)
+	ToSuccessHTTPResponse(w, resp)
+	return
 }
 
-func (pa ProfileApi) GetUserProfile(context context.Context, loggedInUserId *uuid.UUID, profileUsername string) (dto.ProfileResponseBodyDTO, error) {
-	user, isFollowing, err := pa.ProfileService.GetUserProfile(context, loggedInUserId, profileUsername)
-	if err != nil {
-		return dto.ProfileResponseBodyDTO{}, err
+func (pa ProfileApi) GetUserProfile(ctx context.Context, w http.ResponseWriter, r *http.Request, loggedInUserId *uuid.UUID) {
+	profileUsername, ok := GetPathParamHTTP(ctx, w, r, "username")
+	if !ok {
+		return
 	}
-	return dto.ToProfileResponseBodyDTO(user, isFollowing), nil
+
+	user, isFollowing, err := pa.ProfileService.GetUserProfile(ctx, loggedInUserId, profileUsername)
+	if err != nil {
+		if errors.Is(err, errutil.ErrUserNotFound) {
+			slog.DebugContext(ctx, "user profile not found", slog.String("username", profileUsername), slog.Any("error", err))
+			ToSimpleHTTPError(w, http.StatusNotFound, "user not found")
+			return
+		}
+		ToInternalServerHTTPError(w, err)
+		return
+	}
+	resp := dto.ToProfileResponseBodyDTO(user, isFollowing)
+	ToSuccessHTTPResponse(w, resp)
+	return
 }

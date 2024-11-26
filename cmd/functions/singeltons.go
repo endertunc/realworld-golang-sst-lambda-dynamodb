@@ -15,6 +15,8 @@ var (
 	dynamodbStore   = database.NewDynamoDBStore()
 	opensearchStore = database.NewOpensearchStore()
 
+	paginationConfig = api.GetPaginationConfig()
+
 	followerRepository = repository.NewDynamodbFollowerRepository(dynamodbStore)
 
 	userRepository = repository.NewDynamodbUserRepository(dynamodbStore)
@@ -25,7 +27,7 @@ var (
 	articleOpenSearchRepository = repository.NewArticleOpensearchRepository(opensearchStore)
 	articleService              = service.NewArticleService(articleRepository, articleOpenSearchRepository, userService, profileService)
 	articleListService          = service.NewArticleListService(articleRepository, articleOpenSearchRepository, userService, profileService)
-	ArticleApi                  = api.NewArticleApi(articleService, articleListService, userService, profileService)
+	ArticleApi                  = api.NewArticleApi(articleService, articleListService, userService, profileService, paginationConfig)
 
 	profileService = service.NewProfileService(followerRepository, userRepository)
 	ProfileApi     = api.NewProfileApi(profileService)
@@ -36,7 +38,7 @@ var (
 
 	userFeedRepository = repository.NewUserFeedRepository(dynamodbStore)
 	UserFeedService    = service.NewUserFeedService(userFeedRepository, articleService, profileService, userService)
-	UserFeedApi        = api.NewFeedApi(UserFeedService)
+	UserFeedApi        = api.NewUserFeedApi(UserFeedService, paginationConfig)
 )
 
 func init() {

@@ -3,24 +3,40 @@ package api
 import (
 	"context"
 	"github.com/google/uuid"
+	"net/http"
 	"realworld-aws-lambda-dynamodb-golang/internal/domain/dto"
 	"realworld-aws-lambda-dynamodb-golang/internal/service"
 )
 
-type feedApi struct {
-	feedService service.FeedServiceInterface
+type UserFeedApi struct {
+	feedService      service.FeedServiceInterface
+	paginationConfig PaginationConfig
 }
 
-func NewFeedApi(feedService service.FeedServiceInterface) feedApi {
-	return feedApi{
-		feedService: feedService,
+func NewUserFeedApi(feedService service.FeedServiceInterface, paginationConfig PaginationConfig) UserFeedApi {
+	return UserFeedApi{
+		feedService:      feedService,
+		paginationConfig: paginationConfig,
 	}
 }
 
-func (uf feedApi) FetchUserFeed(ctx context.Context, userId uuid.UUID, limit int, nextPageToken *string) (dto.MultipleArticlesResponseBodyDTO, error) {
+func (uf UserFeedApi) FetchUserFeed(ctx context.Context, w http.ResponseWriter, r *http.Request, userId uuid.UUID) {
+	limit, ok := GetIntQueryParamOrDefaultHTTP(ctx, w, r, "limit", uf.paginationConfig.DefaultLimit, &uf.paginationConfig.MinLimit, &uf.paginationConfig.MaxLimit)
+	if !ok {
+		return
+	}
+
+	nextPageToken, ok := GetOptionalStringQueryParamHTTP(w, r, "offset")
+	if !ok {
+		return
+	}
+
 	feedItems, nextToken, err := uf.feedService.FetchArticlesFromFeed(ctx, userId, limit, nextPageToken)
 	if err != nil {
-		return dto.MultipleArticlesResponseBodyDTO{}, err
+		ToInternalServerHTTPError(w, err)
+		return
 	}
-	return dto.ToMultipleArticlesResponseBodyDTO(feedItems, nextToken), nil
+	resp := dto.ToMultipleArticlesResponseBodyDTO(feedItems, nextToken)
+	ToSuccessHTTPResponse(w, resp)
+	return
 }

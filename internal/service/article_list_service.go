@@ -107,7 +107,7 @@ func (al articleListService) GetMostRecentArticlesFavoritedByTag(ctx context.Con
 	var articlesByTagProvider articleRetrievalStrategy = func() ([]domain.Article, *string, error) {
 		return al.articleOpensearchRepository.FindArticlesByTag(ctx, tag, limit, nextPageToken)
 	}
-	result, nextToken, err := collectArticlesWithMetadata[string](ctx, al, loggedInUser, articlesByTagProvider)
+	result, nextToken, err := collectArticlesWithMetadata(ctx, al, loggedInUser, articlesByTagProvider)
 	if err != nil {
 		return nil, nil, err
 	}

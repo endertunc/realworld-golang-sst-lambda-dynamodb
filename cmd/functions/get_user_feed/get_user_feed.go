@@ -14,30 +14,8 @@ func init() {
 	http.Handle("GET /api/articles/feed", api.StartAuthenticatedHandlerHTTP(handler))
 }
 
-var paginationConfig = api.GetPaginationConfig()
-
 func handler(w http.ResponseWriter, r *http.Request, userId uuid.UUID, token domain.Token) {
-	ctx := r.Context()
-
-	limit, ok := api.GetIntQueryParamOrDefaultHTTP(ctx, w, r, "limit", paginationConfig.DefaultLimit, &paginationConfig.MinLimit, &paginationConfig.MaxLimit)
-
-	if !ok {
-		return
-	}
-
-	nextPageToken, ok := api.GetOptionalStringQueryParamHTTP(w, r, "offset")
-
-	if !ok {
-		return
-	}
-
-	result, err := functions.UserFeedApi.FetchUserFeed(ctx, userId, limit, nextPageToken)
-	if err != nil {
-		api.ToInternalServerHTTPError(w, err)
-		return
-	}
-
-	api.ToSuccessHTTPResponse(w, result)
+	functions.UserFeedApi.FetchUserFeed(r.Context(), w, r, userId)
 	return
 }
 

@@ -8,7 +8,6 @@ import (
 	"realworld-aws-lambda-dynamodb-golang/cmd/functions"
 	"realworld-aws-lambda-dynamodb-golang/internal/api"
 	"realworld-aws-lambda-dynamodb-golang/internal/domain"
-	"realworld-aws-lambda-dynamodb-golang/internal/domain/dto"
 )
 
 func init() {
@@ -16,22 +15,7 @@ func init() {
 }
 
 func handler(w http.ResponseWriter, r *http.Request, userId uuid.UUID, _ domain.Token) {
-	ctx := r.Context()
-
-	createArticleRequestBodyDTO, ok := api.ParseAndValidateBody[dto.CreateArticleRequestBodyDTO](ctx, w, r)
-
-	if !ok {
-		return
-	}
-
-	result, err := functions.ArticleApi.CreateArticle(ctx, userId, *createArticleRequestBodyDTO)
-
-	if err != nil {
-		api.ToInternalServerHTTPError(w, err)
-		return
-	}
-
-	api.ToSuccessHTTPResponse(w, result)
+	functions.ArticleApi.CreateArticle(r.Context(), w, r, userId)
 	return
 }
 

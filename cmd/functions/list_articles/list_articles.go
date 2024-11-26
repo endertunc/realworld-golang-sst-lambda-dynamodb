@@ -1,8 +1,6 @@
 package main
 
 import (
-	"context"
-	"errors"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/awslabs/aws-lambda-go-api-proxy/httpadapter"
 	"github.com/google/uuid"
@@ -10,64 +8,15 @@ import (
 	"realworld-aws-lambda-dynamodb-golang/cmd/functions"
 	"realworld-aws-lambda-dynamodb-golang/internal/api"
 	"realworld-aws-lambda-dynamodb-golang/internal/domain"
-	"realworld-aws-lambda-dynamodb-golang/internal/errutil"
 )
 
 func init() {
 	http.Handle("GET /api/articles", api.StartOptionallyAuthenticatedHandlerHTTP(handler))
 }
 
-var paginationConfig = api.GetPaginationConfig()
-
 func handler(w http.ResponseWriter, r *http.Request, userId *uuid.UUID, _ *domain.Token) {
-	ctx := r.Context()
-	listArticlesQueryOptions, limit, offset, ok := extractArticleListRequestParameters(ctx, w, r)
-	if !ok {
-		return
-	}
-	result, err := functions.ArticleApi.ListArticles(ctx, userId, listArticlesQueryOptions, limit, offset)
-	if err != nil {
-		if errors.Is(err, errutil.ErrUserNotFound) {
-			api.ToSimpleHTTPError(w, http.StatusNotFound, "author not found")
-			return
-		}
-		api.ToInternalServerHTTPError(w, err)
-		return
-	}
-	// Success response
-	api.ToSuccessHTTPResponse(w, result)
+	functions.ArticleApi.ListArticles(r.Context(), w, r, userId)
 	return
-}
-
-func extractArticleListRequestParameters(ctx context.Context, w http.ResponseWriter, r *http.Request) (api.ListArticlesQueryOptions, int, *string, bool) {
-	limit, ok := api.GetIntQueryParamOrDefaultHTTP(ctx, w, r, "limit", paginationConfig.DefaultLimit, &paginationConfig.MinLimit, &paginationConfig.MaxLimit)
-	if !ok {
-		return api.ListArticlesQueryOptions{}, 0, nil, ok
-	}
-	offset, ok := api.GetOptionalStringQueryParamHTTP(w, r, "offset")
-	if !ok {
-		return api.ListArticlesQueryOptions{}, 0, nil, ok
-	}
-
-	author, ok := api.GetOptionalStringQueryParamHTTP(w, r, "author")
-	if !ok {
-		return api.ListArticlesQueryOptions{}, 0, nil, ok
-	}
-	favoritedBy, ok := api.GetOptionalStringQueryParamHTTP(w, r, "favorited")
-	if !ok {
-		return api.ListArticlesQueryOptions{}, 0, nil, ok
-	}
-	tag, ok := api.GetOptionalStringQueryParamHTTP(w, r, "tag")
-	if !ok {
-		return api.ListArticlesQueryOptions{}, 0, nil, ok
-	}
-	listArticlesQueryOptions := api.ListArticlesQueryOptions{
-		Author:      author,
-		FavoritedBy: favoritedBy,
-		Tag:         tag,
-	}
-
-	return listArticlesQueryOptions, limit, offset, ok
 }
 
 func main() {

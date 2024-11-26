@@ -13,13 +13,7 @@ func init() {
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-	result, err := functions.ArticleApi.GetTags(ctx)
-	if err != nil {
-		api.ToInternalServerHTTPError(w, err)
-		return
-	}
-	api.ToSuccessHTTPResponse(w, result)
+	functions.ArticleApi.GetTags(r.Context(), w)
 	return
 }
 
