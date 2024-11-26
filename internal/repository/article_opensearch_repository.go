@@ -9,7 +9,6 @@ import (
 	"realworld-aws-lambda-dynamodb-golang/internal/database"
 	"realworld-aws-lambda-dynamodb-golang/internal/domain"
 	"realworld-aws-lambda-dynamodb-golang/internal/errutil"
-	"realworld-aws-lambda-dynamodb-golang/internal/test"
 	"strings"
 	"time"
 )
@@ -19,7 +18,7 @@ type articleOpensearchRepository struct {
 }
 
 type ArticleOpensearchRepositoryInterface interface {
-	FindAllArticles(ctx context.Context, limit int, offset *int) ([]domain.Article, *int, error)
+	FindAllArticles(ctx context.Context, limit int, offset *string) ([]domain.Article, *string, error)
 	FindArticlesByTag(ctx context.Context, tag string, limit int, offset *string) ([]domain.Article, *string, error)
 	FindAllTags(ctx context.Context) ([]string, error)
 }
@@ -55,40 +54,64 @@ var (
 	articleIndex = "article"
 )
 
-func (o articleOpensearchRepository) FindAllArticles(ctx context.Context, limit int, offset *int) ([]domain.Article, *int, error) {
-	from := 0
-	if offset != nil {
-		from = *offset
+func (o articleOpensearchRepository) FindAllArticles(ctx context.Context, limit int, offset *string) ([]domain.Article, *string, error) {
+	matchAll := map[string]any{
+		"match_all": map[string]any{},
+	}
+	queryBody, err := prepareQueryWithPagination(matchAll, limit, offset)
+	if err != nil {
+		return nil, nil, err
 	}
 
-	query := strings.NewReader(fmt.Sprintf(`
-	{
-		"from": %d,
-		"size": %d,
-		"query": {
-			"match_all": {}
-		},
-		"sort":[
-			{
-				"createdAt": {
-        			"order": "desc"
-				}
-			}
-		]
-	}`, from, limit))
-
-	request := opensearchapi.SearchReq{
+	searchReq := opensearchapi.SearchReq{
 		Indices: []string{articleIndex},
-		Body:    query,
+		Body:    strings.NewReader(queryBody),
 	}
 
-	response, err := o.db.Client.Search(ctx, &request)
+	searchResp, err := o.db.Client.Search(ctx, &searchReq)
 	if err != nil {
 		return nil, nil, fmt.Errorf("%w: %w", errutil.ErrOpensearchQuery, err)
 	}
 
-	test.PrintAsJSON(response)
+	articles, newNextPageToken, err := parseSearchArticleResponse(searchResp, limit)
+	if err != nil {
+		return nil, nil, err
+	}
 
+	return articles, newNextPageToken, nil
+}
+
+func (o articleOpensearchRepository) FindArticlesByTag(ctx context.Context, tag string, limit int, nextPageToken *string) ([]domain.Article, *string, error) {
+	matchByTag := map[string]any{
+		"match": map[string]any{
+			"tagList": tag,
+		},
+	}
+
+	queryBody, err := prepareQueryWithPagination(matchByTag, limit, nextPageToken)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	searchReq := opensearchapi.SearchReq{
+		Indices: []string{articleIndex},
+		Body:    strings.NewReader(queryBody),
+	}
+
+	searchResp, err := o.db.Client.Search(ctx, &searchReq)
+	if err != nil {
+		return nil, nil, fmt.Errorf("%w: %w", errutil.ErrOpensearchQuery, err)
+	}
+
+	articles, newNextPageToken, err := parseSearchArticleResponse(searchResp, limit)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return articles, newNextPageToken, nil
+}
+
+func parseSearchArticleResponse(response *opensearchapi.SearchResp, limit int) ([]domain.Article, *string, error) {
 	articles := make([]domain.Article, 0)
 	for _, hit := range response.Hits.Hits {
 		article := OpensearchArticleDocument{}
@@ -98,89 +121,46 @@ func (o articleOpensearchRepository) FindAllArticles(ctx context.Context, limit 
 		}
 		articles = append(articles, article.toDomainArticle())
 	}
-
-	return articles, nil, nil
+	// records last item's sort value as nextPageToken
+	// if we get fewer documents than limit, then there is no next page
+	var nextPageToken *string
+	if limit == len(response.Hits.Hits) {
+		bytes, err := json.Marshal(response.Hits.Hits[len(response.Hits.Hits)-1].Sort)
+		if err != nil {
+			return nil, nil, fmt.Errorf("%w: %w", errutil.ErrOpensearchMarshalling, err)
+		}
+		// ToDo @ender let's base64 encode this
+		s := string(bytes)
+		nextPageToken = &s
+	}
+	return articles, nextPageToken, nil
 }
 
-func (o articleOpensearchRepository) FindArticlesByTag(ctx context.Context, tag string, limit int, nextPageToken *string) ([]domain.Article, *string, error) {
-	// using only the provided api surface from opensearch-go there is no way to pass search_after
-	// thus I decided to simply build the query myself as json object which is represented as a map[string]any in golang.
+// using only the provided api surface from opensearch-go there is no way to pass `search_after`
+// therefore I decided to simply build the query myself as json object which is represented as a map[string]any in golang.
+func prepareQueryWithPagination(query map[string]any, limit int, nextPageToken *string) (string, error) {
 	queryMap := map[string]any{
-		"size": limit,
-		"query": map[string]any{
-			"match": map[string]any{
-				"tagList": tag,
-			},
-		},
+		"size":  limit,
+		"query": query,
 		"sort": []map[string]any{
 			{"createdAt": "desc"},
 		},
 	}
 	if nextPageToken != nil {
-		searchAfter := make([]int, 0)
+		searchAfter := make([]any, 0)
 		err := json.Unmarshal([]byte(*nextPageToken), &searchAfter)
 		if err != nil {
-			return nil, nil, fmt.Errorf("%w: %w", errutil.ErrOpensearchMarshalling, err)
+			return "", fmt.Errorf("%w: %w", errutil.ErrOpensearchMarshalling, err)
 		}
 		queryMap["search_after"] = searchAfter
 	}
 
-	test.PrintAsJSON(queryMap)
-
-	//query := strings.NewReader(fmt.Sprintf(`
-	//{
-	//	"size": %d,
-	//	"query": {
-	//		"match": {
-	//			"tagList": "%s"
-	//		}
-	//	},
-	//	"sort":[
-	//		{ "createdAt": "desc" }
-	//	]
-	//}`, limit, tag))
-
 	queryBody, err := json.Marshal(queryMap)
 	if err != nil {
-		return nil, nil, fmt.Errorf("%w: %w", errutil.ErrOpensearchMarshalling, err)
+		return "", fmt.Errorf("%w: %w", errutil.ErrOpensearchMarshalling, err)
 	}
 
-	test.PrintAsJSON(queryBody)
-	request := opensearchapi.SearchReq{
-		Indices: []string{articleIndex},
-		Body:    strings.NewReader(string(queryBody)),
-	}
-
-	response, err := o.db.Client.Search(ctx, &request)
-	if err != nil {
-		return nil, nil, fmt.Errorf("%w: %w", errutil.ErrOpensearchQuery, err)
-	}
-
-	test.PrintAsJSON(response)
-
-	articles := make([]domain.Article, 0)
-	var newNextPageToken *string
-	for i, hit := range response.Hits.Hits {
-		article := OpensearchArticleDocument{}
-		err := json.Unmarshal(hit.Source, &article)
-		if err != nil {
-			return nil, nil, fmt.Errorf("%w: %w", errutil.ErrOpensearchMarshalling, err)
-		}
-		articles = append(articles, article.toDomainArticle())
-
-		// records last item's sort value as nextPageToken
-		if i == len(response.Hits.Hits)-1 {
-			bytes, err := json.Marshal(hit.Sort)
-			if err != nil {
-				return nil, nil, fmt.Errorf("%w: %w", errutil.ErrOpensearchMarshalling, err)
-			}
-			s := string(bytes)
-			newNextPageToken = &s
-		}
-
-	}
-
-	return articles, newNextPageToken, nil
+	return string(queryBody), nil
 }
 
 // "size: 0" at root means we don't want documents to be returned, just the aggregation

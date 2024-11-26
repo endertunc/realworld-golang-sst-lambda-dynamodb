@@ -6,7 +6,6 @@ import (
 	"realworld-aws-lambda-dynamodb-golang/internal/domain"
 	"realworld-aws-lambda-dynamodb-golang/internal/domain/dto"
 	"realworld-aws-lambda-dynamodb-golang/internal/service"
-	"strconv"
 )
 
 type ArticleApi struct {
@@ -152,21 +151,9 @@ func (aa ArticleApi) ListArticles(ctx context.Context, loggedInUserId *uuid.UUID
 		} else if queryOptions.FavoritedBy != nil {
 			return aa.articleListService.GetMostRecentArticlesFavoritedByUser(ctx, loggedInUserId, *queryOptions.FavoritedBy, limit, nextPageToken)
 		} else if queryOptions.Tag != nil {
-			result, nextToken, err := aa.articleListService.GetMostRecentArticlesFavoritedByTag(ctx, loggedInUserId, *queryOptions.Tag, limit, nextPageToken)
-			return result, nextToken, err
+			return aa.articleListService.GetMostRecentArticlesFavoritedByTag(ctx, loggedInUserId, *queryOptions.Tag, limit, nextPageToken)
 		} else {
-			offset, err := parseNextPageTokenAsOffset(nextPageToken)
-			if err != nil {
-				return nil, nil, err
-			}
-			result, nextToken, err := aa.articleListService.GetMostRecentArticlesGlobally(ctx, loggedInUserId, limit, offset)
-
-			var nextTokenStr *string
-			if nextToken != nil {
-				s := strconv.Itoa(*nextToken)
-				nextTokenStr = &s // ToDo @ender do not use aws like this directly...
-			}
-			return result, nextTokenStr, err
+			return aa.articleListService.GetMostRecentArticlesGlobally(ctx, loggedInUserId, limit, nextPageToken)
 		}
 	}()
 
@@ -182,20 +169,4 @@ func (aa ArticleApi) GetTags(ctx context.Context) (dto.TagsResponseDTO, error) {
 		return dto.TagsResponseDTO{}, err
 	}
 	return dto.TagsResponseDTO{Tags: tags}, nil
-}
-
-// parseNextPageTokenAsOffset parses the nextPageToken as an integer to be used in opensearch queries.
-// list articles use-cases uses different pagination strategies depending on the storage.
-// in the case of dynamodb, we use scrolling pagination with LastEvaluatedKey is used and represents as string
-// in the case of opensearch, we use regular offset is used and represents as integer
-func parseNextPageTokenAsOffset(nextPageToken *string) (*int, error) {
-	var offset *int
-	if nextPageToken != nil {
-		offsetInt, err := strconv.Atoi(*nextPageToken)
-		if err != nil {
-			return nil, err // ToDo @ender needs a domain error
-		}
-		offset = &offsetInt
-	}
-	return offset, nil
 }

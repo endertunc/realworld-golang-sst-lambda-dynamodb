@@ -21,7 +21,7 @@ var paginationConfig = api.GetPaginationConfig()
 
 func handler(w http.ResponseWriter, r *http.Request, userId *uuid.UUID, _ *domain.Token) {
 	ctx := r.Context()
-	limit, offset, listArticlesQueryOptions, ok := extractArticleListRequestParameters(ctx, w, r)
+	listArticlesQueryOptions, limit, offset, ok := extractArticleListRequestParameters(ctx, w, r)
 	if !ok {
 		return
 	}
@@ -39,27 +39,27 @@ func handler(w http.ResponseWriter, r *http.Request, userId *uuid.UUID, _ *domai
 	return
 }
 
-func extractArticleListRequestParameters(ctx context.Context, w http.ResponseWriter, r *http.Request) (int, *string, api.ListArticlesQueryOptions, bool) {
+func extractArticleListRequestParameters(ctx context.Context, w http.ResponseWriter, r *http.Request) (api.ListArticlesQueryOptions, int, *string, bool) {
 	limit, ok := api.GetIntQueryParamOrDefaultHTTP(ctx, w, r, "limit", paginationConfig.DefaultLimit, &paginationConfig.MinLimit, &paginationConfig.MaxLimit)
 	if !ok {
-		return 0, nil, api.ListArticlesQueryOptions{}, ok
+		return api.ListArticlesQueryOptions{}, 0, nil, ok
 	}
 	offset, ok := api.GetOptionalStringQueryParamHTTP(w, r, "offset")
 	if !ok {
-		return 0, nil, api.ListArticlesQueryOptions{}, ok
+		return api.ListArticlesQueryOptions{}, 0, nil, ok
 	}
-	// ToDo @ender errors should NOT be ignored here
+
 	author, ok := api.GetOptionalStringQueryParamHTTP(w, r, "author")
 	if !ok {
-		return 0, nil, api.ListArticlesQueryOptions{}, ok
+		return api.ListArticlesQueryOptions{}, 0, nil, ok
 	}
 	favoritedBy, ok := api.GetOptionalStringQueryParamHTTP(w, r, "favorited")
 	if !ok {
-		return 0, nil, api.ListArticlesQueryOptions{}, ok
+		return api.ListArticlesQueryOptions{}, 0, nil, ok
 	}
 	tag, ok := api.GetOptionalStringQueryParamHTTP(w, r, "tag")
 	if !ok {
-		return 0, nil, api.ListArticlesQueryOptions{}, ok
+		return api.ListArticlesQueryOptions{}, 0, nil, ok
 	}
 	listArticlesQueryOptions := api.ListArticlesQueryOptions{
 		Author:      author,
@@ -67,7 +67,7 @@ func extractArticleListRequestParameters(ctx context.Context, w http.ResponseWri
 		Tag:         tag,
 	}
 
-	return limit, offset, listArticlesQueryOptions, ok
+	return listArticlesQueryOptions, limit, offset, ok
 }
 
 func main() {

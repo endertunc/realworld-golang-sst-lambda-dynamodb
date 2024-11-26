@@ -13,7 +13,7 @@ type ArticleListServiceInterface interface {
 	GetMostRecentArticlesByAuthor(ctx context.Context, userId *uuid.UUID, author string, limit int, nextPageToken *string) ([]domain.ArticleAggregateView, *string, error)
 	GetMostRecentArticlesFavoritedByUser(ctx context.Context, loggedInUser *uuid.UUID, favoritedByUsername string, limit int, nextPageToken *string) ([]domain.ArticleAggregateView, *string, error)
 	GetMostRecentArticlesFavoritedByTag(ctx context.Context, loggedInUser *uuid.UUID, tag string, limit int, nextPageToken *string) ([]domain.ArticleAggregateView, *string, error)
-	GetMostRecentArticlesGlobally(ctx context.Context, loggedInUser *uuid.UUID, limit int, nextPageToken *int) ([]domain.ArticleAggregateView, *int, error)
+	GetMostRecentArticlesGlobally(ctx context.Context, loggedInUser *uuid.UUID, limit int, nextPageToken *string) ([]domain.ArticleAggregateView, *string, error)
 }
 
 type articleListService struct {
@@ -39,7 +39,7 @@ func NewArticleListService(
 }
 
 // articleRetrievalStrategy is used to provide different article retrival strategies (e.g. by author, by tag, globally) to collectArticlesWithMetadata function
-type articleRetrievalStrategy[T any] func(ctx context.Context, limit int, offset *T) ([]domain.Article, *T, error)
+type articleRetrievalStrategy func() ([]domain.Article, *string, error)
 
 // - - - - - - - - - - - - - - - - ArticlesWithMetadataResult - - - - - - - - - - - - - - - -
 // ArticlesWithMetadataResult is an intermediate struct that holds the result of the common article aggregate query
@@ -71,8 +71,11 @@ func (r ArticlesWithMetadataResult) toArticleAggregateView() []domain.ArticleAgg
 
 // ToDo @ender to keep things short - we better pass limit and nextPageToken struct Pagination or something like that.
 // ToDo @ender iteration #2 - finalize the code
-func (al articleListService) GetMostRecentArticlesGlobally(ctx context.Context, loggedInUser *uuid.UUID, limit int, nextPageToken *int) ([]domain.ArticleAggregateView, *int, error) {
-	result, nextToken, err := collectArticlesWithMetadata(ctx, al, loggedInUser, limit, nextPageToken, al.articleOpensearchRepository.FindAllArticles)
+func (al articleListService) GetMostRecentArticlesGlobally(ctx context.Context, loggedInUser *uuid.UUID, limit int, nextPageToken *string) ([]domain.ArticleAggregateView, *string, error) {
+	var findAllArticles articleRetrievalStrategy = func() ([]domain.Article, *string, error) {
+		return al.articleOpensearchRepository.FindAllArticles(ctx, limit, nextPageToken)
+	}
+	result, nextToken, err := collectArticlesWithMetadata(ctx, al, loggedInUser, findAllArticles)
 
 	if err != nil {
 		return nil, nil, err
@@ -87,11 +90,11 @@ func (al articleListService) GetMostRecentArticlesByAuthor(ctx context.Context, 
 		return nil, nil, err
 	}
 
-	var articlesByAuthorProvider articleRetrievalStrategy[string] = func(ctx context.Context, limit int, nextPageToken *string) ([]domain.Article, *string, error) {
+	var articlesByAuthorProvider articleRetrievalStrategy = func() ([]domain.Article, *string, error) {
 		return al.articleRepository.FindArticlesByAuthor(ctx, authorUser.Id, limit, nextPageToken)
 	}
 
-	result, nextToken, err := collectArticlesWithMetadata(ctx, al, loggedInUser, limit, nextPageToken, articlesByAuthorProvider)
+	result, nextToken, err := collectArticlesWithMetadata(ctx, al, loggedInUser, articlesByAuthorProvider)
 
 	if err != nil {
 		return nil, nil, err
@@ -101,10 +104,10 @@ func (al articleListService) GetMostRecentArticlesByAuthor(ctx context.Context, 
 }
 
 func (al articleListService) GetMostRecentArticlesFavoritedByTag(ctx context.Context, loggedInUser *uuid.UUID, tag string, limit int, nextPageToken *string) ([]domain.ArticleAggregateView, *string, error) {
-	var articlesByTagProvider articleRetrievalStrategy[string] = func(ctx context.Context, limit int, offset *string) ([]domain.Article, *string, error) {
-		return al.articleOpensearchRepository.FindArticlesByTag(ctx, tag, limit, offset)
+	var articlesByTagProvider articleRetrievalStrategy = func() ([]domain.Article, *string, error) {
+		return al.articleOpensearchRepository.FindArticlesByTag(ctx, tag, limit, nextPageToken)
 	}
-	result, nextToken, err := collectArticlesWithMetadata[string](ctx, al, loggedInUser, limit, nextPageToken, articlesByTagProvider)
+	result, nextToken, err := collectArticlesWithMetadata[string](ctx, al, loggedInUser, articlesByTagProvider)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -122,7 +125,7 @@ func (al articleListService) GetMostRecentArticlesFavoritedByUser(ctx context.Co
 		return nil, nil, err
 	}
 
-	var articlesFavoritedByUserProvider articleRetrievalStrategy[string] = func(ctx context.Context, limit int, nextPageToken *string) ([]domain.Article, *string, error) {
+	var articlesFavoritedByUserProvider articleRetrievalStrategy = func() ([]domain.Article, *string, error) {
 		articles, err := al.articleRepository.FindArticlesByIds(ctx, articleIds)
 		if err != nil {
 			return nil, nil, err
@@ -130,7 +133,7 @@ func (al articleListService) GetMostRecentArticlesFavoritedByUser(ctx context.Co
 		return articles, nextToken, nil
 	}
 
-	result, nextToken, err := collectArticlesWithMetadata(ctx, al, loggedInUser, limit, nextPageToken, articlesFavoritedByUserProvider)
+	result, nextToken, err := collectArticlesWithMetadata(ctx, al, loggedInUser, articlesFavoritedByUserProvider)
 
 	if err != nil {
 		return nil, nil, err
@@ -164,9 +167,9 @@ func (al articleListService) GetMostRecentArticlesFavoritedByUser(ctx context.Co
 	return articleAggregateViews, nextToken, nil
 }
 
-func collectArticlesWithMetadata[T any](ctx context.Context, al articleListService, loggedInUser *uuid.UUID, limit int, nextPageToken *T, articleProviderFunc articleRetrievalStrategy[T]) (ArticlesWithMetadataResult, *T, error) {
+func collectArticlesWithMetadata(ctx context.Context, al articleListService, loggedInUser *uuid.UUID, articleProviderFunc articleRetrievalStrategy) (ArticlesWithMetadataResult, *string, error) {
 	// Fetch articles using the provided function
-	articles, nextToken, err := articleProviderFunc(ctx, limit, nextPageToken)
+	articles, nextToken, err := articleProviderFunc()
 	if err != nil {
 		return ArticlesWithMetadataResult{}, nil, err
 	}

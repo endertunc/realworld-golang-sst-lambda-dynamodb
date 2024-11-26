@@ -28,12 +28,10 @@ func TestArticleOpensearchRepository_FindAllArticles(t *testing.T) {
 		article2 := generateOpensearchArticleDocument()
 		article3 := generateOpensearchArticleDocument()
 
-		// set different CreatedAt times
 		article1.CreatedAt = time.Now().Unix()
 		article2.CreatedAt = time.Now().Add(-time.Hour * 24).Unix()
 		article3.CreatedAt = time.Now().Add(-time.Hour * 48).Unix()
 
-		// create test articles with delays to ensure different creation times
 		createArticleDocument(t, osStore, article3)
 		createArticleDocument(t, osStore, article2)
 		createArticleDocument(t, osStore, article1)
@@ -42,17 +40,18 @@ func TestArticleOpensearchRepository_FindAllArticles(t *testing.T) {
 			assert.EventuallyWithT(t, func(ct *assert.CollectT) {
 				// test first page
 				limit := 2
-				articles, _, err := repo.FindAllArticles(context.Background(), limit, nil)
+				articles, nextPageToken, err := repo.FindAllArticles(context.Background(), limit, nil)
 				assert.NoError(ct, err)
+				assert.NotEmpty(ct, nextPageToken)
 				assert.Equal(ct, 2, len(articles))
 				// articles should be sorted by createdAt desc
 				expectedArticles := []domain.Article{article1.toDomainArticle(), article2.toDomainArticle()}
 				assert.Equal(ct, expectedArticles, articles)
 
 				// test second page
-				offset := 2
-				articles, _, err = repo.FindAllArticles(context.Background(), limit, &offset)
+				articles, nextPageToken, err = repo.FindAllArticles(context.Background(), limit, nextPageToken)
 				assert.NoError(ct, err)
+				assert.Empty(ct, nextPageToken)
 				assert.Equal(ct, 1, len(articles))
 				expectedArticles = []domain.Article{article3.toDomainArticle()}
 				assert.Equal(ct, expectedArticles, articles)
@@ -63,54 +62,58 @@ func TestArticleOpensearchRepository_FindAllArticles(t *testing.T) {
 
 func TestArticleOpensearchRepository_FindArticlesByTag(t *testing.T) {
 	withOpensearchCleanup(t, osStore, func() {
-
 		// setup articles with different tags and creation times
 		article1 := generateOpensearchArticleDocument()
 		article2 := generateOpensearchArticleDocument()
 		article3 := generateOpensearchArticleDocument()
+		article4 := generateOpensearchArticleDocument()
 
 		article1.TagList = []string{"tag1", "tag2"}
 		article2.TagList = []string{"tag2", "tag3"}
-		article3.TagList = []string{"tag3", "tag4"}
+		article3.TagList = []string{}
+		article4.TagList = []string{"tag1", "tag2"}
 
 		article1.CreatedAt = time.Now().Unix()
 		article2.CreatedAt = time.Now().Add(-time.Hour * 24).Unix()
 		article3.CreatedAt = time.Now().Add(-time.Hour * 48).Unix()
+		article4.CreatedAt = time.Now().Add(-time.Hour * 72).Unix()
 
 		createArticleDocument(t, osStore, article1)
 		createArticleDocument(t, osStore, article2)
 		createArticleDocument(t, osStore, article3)
-
+		createArticleDocument(t, osStore, article4)
+		//{"query":{"match":{"tagList":"tag2"}},"size":2,"sort":[{"createdAt":"desc"}]}
+		//{"query":{"match":{"tagList":"tag2"}},"search_after":[1732546752],"size":2,"sort":[{"createdAt":"desc"}]}
+		//{"query":{"match":{"match_all":{}  }},"size":2,"sort":[{"createdAt":"desc"}]}
 		t.Run("should return articles by tag with pagination", func(t *testing.T) {
 			assert.EventuallyWithT(t, func(ct *assert.CollectT) {
 				// test first page
-				limit := 1
+				limit := 2
 				articles, nextPageToken, err := repo.FindArticlesByTag(context.Background(), "tag2", limit, nil)
 				require.NoError(ct, err)
-				assert.Equal(ct, 1, len(articles))
+				assert.Equal(ct, 2, len(articles))
 				assert.NotEmpty(ct, nextPageToken)
-				assert.Equal(ct, []domain.Article{article1.toDomainArticle()}, articles)
+				// articles should be sorted by createdAt desc
+				expectedArticles := []domain.Article{article1.toDomainArticle(), article2.toDomainArticle()}
+				assert.Equal(ct, expectedArticles, articles)
 
 				// test second page
 				articles, nextPageToken, err = repo.FindArticlesByTag(context.Background(), "tag2", limit, nextPageToken)
 				require.NoError(ct, err)
-				assert.Equal(ct, 1, len(articles))
-				assert.Equal(ct, []domain.Article{article2.toDomainArticle()}, articles)
-
-				// test third page
-				articles, nextPageToken, err = repo.FindArticlesByTag(context.Background(), "tag2", limit, nextPageToken)
-				require.NoError(ct, err)
 				assert.Empty(ct, nextPageToken)
-				assert.Equal(ct, 0, len(articles))
+				assert.Equal(ct, 1, len(articles))
+				expectedArticles = []domain.Article{article4.toDomainArticle()} // article3 is not tagged with tag2
+				assert.Equal(ct, expectedArticles, articles)
+
 			}, 5*time.Second, 500*time.Millisecond)
 
 		})
 
 		t.Run("should return empty list for non-existent tag", func(t *testing.T) {
-			articles, total, err := repo.FindArticlesByTag(context.Background(), "non-existent", 10, nil)
+			articles, nextTokenPage, err := repo.FindArticlesByTag(context.Background(), "non-existent", 10, nil)
 			require.NoError(t, err)
 			assert.Empty(t, articles)
-			assert.Equal(t, 0, *total)
+			assert.Empty(t, nextTokenPage)
 		})
 	})
 }
