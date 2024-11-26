@@ -21,12 +21,12 @@ func NewUserFeedApi(feedService service.FeedServiceInterface, paginationConfig P
 }
 
 func (uf UserFeedApi) FetchUserFeed(ctx context.Context, w http.ResponseWriter, r *http.Request, userId uuid.UUID) {
-	limit, ok := GetIntQueryParamOrDefaultHTTP(ctx, w, r, "limit", uf.paginationConfig.DefaultLimit, &uf.paginationConfig.MinLimit, &uf.paginationConfig.MaxLimit)
+	limit, ok := GetIntQueryParamOrDefault(ctx, w, r, "limit", uf.paginationConfig.DefaultLimit, &uf.paginationConfig.MinLimit, &uf.paginationConfig.MaxLimit)
 	if !ok {
 		return
 	}
 
-	nextPageToken, ok := GetOptionalStringQueryParamHTTP(w, r, "offset")
+	nextPageToken, ok := GetOptionalStringQueryParam(w, r, "offset")
 	if !ok {
 		return
 	}

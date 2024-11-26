@@ -278,27 +278,28 @@ func (aa ArticleApi) GetTags(ctx context.Context, w http.ResponseWriter) {
 }
 
 func extractArticleListRequestParameters(ctx context.Context, w http.ResponseWriter, r *http.Request, config PaginationConfig) (ListArticlesQueryOptions, int, *string, bool) {
-	limit, ok := GetIntQueryParamOrDefaultHTTP(ctx, w, r, "limit", config.DefaultLimit, &config.MinLimit, &config.MaxLimit)
+	limit, ok := GetIntQueryParamOrDefault(ctx, w, r, "limit", config.DefaultLimit, &config.MinLimit, &config.MaxLimit)
 	if !ok {
 		return ListArticlesQueryOptions{}, 0, nil, ok
 	}
-	offset, ok := GetOptionalStringQueryParamHTTP(w, r, "offset")
+	offset, ok := GetOptionalStringQueryParam(w, r, "offset")
 	if !ok {
 		return ListArticlesQueryOptions{}, 0, nil, ok
 	}
 
-	author, ok := GetOptionalStringQueryParamHTTP(w, r, "author")
+	author, ok := GetOptionalStringQueryParam(w, r, "author")
 	if !ok {
 		return ListArticlesQueryOptions{}, 0, nil, ok
 	}
-	favoritedBy, ok := GetOptionalStringQueryParamHTTP(w, r, "favorited")
+	favoritedBy, ok := GetOptionalStringQueryParam(w, r, "favorited")
 	if !ok {
 		return ListArticlesQueryOptions{}, 0, nil, ok
 	}
-	tag, ok := GetOptionalStringQueryParamHTTP(w, r, "tag")
+	tag, ok := GetOptionalStringQueryParam(w, r, "tag")
 	if !ok {
 		return ListArticlesQueryOptions{}, 0, nil, ok
 	}
+
 	listArticlesQueryOptions := ListArticlesQueryOptions{
 		Author:      author,
 		FavoritedBy: favoritedBy,

@@ -9,80 +9,7 @@ import (
 	"realworld-aws-lambda-dynamodb-golang/internal/domain/dto"
 	"strconv"
 	"strings"
-
-	"github.com/aws/aws-lambda-go/events"
 )
-
-func GetOptionalIntQueryParam(
-	ctx context.Context,
-	request events.APIGatewayProxyRequest,
-	paramName string,
-	min,
-	max *int,
-) (*int, *events.APIGatewayProxyResponse) {
-	param, ok := request.QueryStringParameters[paramName]
-	if !ok {
-		return nil, nil
-	}
-
-	value, err := strconv.Atoi(param)
-	if err != nil {
-		message := fmt.Sprintf("query parameter %s must be a valid integer", paramName)
-		response := ToSimpleError(ctx, http.StatusBadRequest, message)
-		return nil, &response
-	}
-
-	if min != nil && value < *min {
-		message := fmt.Sprintf("query parameter %s must be greater than or equal to %d", paramName, *min)
-		response := ToSimpleError(ctx, http.StatusBadRequest, message)
-		return nil, &response
-	}
-
-	if max != nil && value > *max {
-		message := fmt.Sprintf("query parameter %s must be less than or equal to %d", paramName, *max)
-		response := ToSimpleError(ctx, http.StatusBadRequest, message)
-		return nil, &response
-	}
-
-	return &value, nil
-}
-
-func GetIntQueryParamOrDefault(
-	ctx context.Context,
-	request events.APIGatewayProxyRequest,
-	paramName string,
-	defaultValue int,
-	min,
-	max *int,
-) (int, *events.APIGatewayProxyResponse) {
-	param, response := GetOptionalIntQueryParam(ctx, request, paramName, min, max)
-	if response != nil {
-		return 0, response
-	} else if param == nil {
-		return defaultValue, nil
-	} else {
-		return *param, nil
-	}
-}
-
-func GetOptionalStringQueryParam(
-	ctx context.Context,
-	request events.APIGatewayProxyRequest,
-	paramName string,
-) (*string, *events.APIGatewayProxyResponse) {
-	param, ok := request.QueryStringParameters[paramName]
-	if !ok {
-		return nil, nil
-	}
-
-	if strings.TrimSpace(param) == "" {
-		message := fmt.Sprintf("query parameter %s cannot be blank", paramName)
-		response := ToSimpleError(ctx, http.StatusBadRequest, message)
-		return nil, &response
-	}
-
-	return &param, nil
-}
 
 func GetPathParamHTTP(ctx context.Context, w http.ResponseWriter, r *http.Request, paramName string) (string, bool) {
 	param := r.PathValue(paramName)
@@ -125,7 +52,7 @@ func ParseAndValidateBody[T dto.Validatable](ctx context.Context, w http.Respons
 	return &out, true
 }
 
-func GetOptionalIntQueryParamHTTP(
+func GetOptionalIntQueryParam(
 	ctx context.Context,
 	w http.ResponseWriter,
 	r *http.Request,
@@ -157,7 +84,7 @@ func GetOptionalIntQueryParamHTTP(
 	return &value, true
 }
 
-func GetIntQueryParamOrDefaultHTTP(
+func GetIntQueryParamOrDefault(
 	ctx context.Context,
 	w http.ResponseWriter,
 	r *http.Request,
@@ -166,7 +93,7 @@ func GetIntQueryParamOrDefaultHTTP(
 	min,
 	max *int,
 ) (int, bool) {
-	param, ok := GetOptionalIntQueryParamHTTP(ctx, w, r, paramName, min, max)
+	param, ok := GetOptionalIntQueryParam(ctx, w, r, paramName, min, max)
 	if !ok {
 		return 0, false
 	} else if param == nil {
@@ -176,7 +103,7 @@ func GetIntQueryParamOrDefaultHTTP(
 	}
 }
 
-func GetOptionalStringQueryParamHTTP(
+func GetOptionalStringQueryParam(
 	w http.ResponseWriter,
 	r *http.Request,
 	paramName string,
