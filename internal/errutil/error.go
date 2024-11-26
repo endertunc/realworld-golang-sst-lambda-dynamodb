@@ -28,7 +28,7 @@ var (
 	ErrUserNotFound          = errors.New("user not found")
 	ErrInvalidPassword       = errors.New("invalid password")
 	ErrArticleNotFound       = errors.New("article not found")
-	// ErrHashPassword this will be mapped to InternalServerError anyway, so I might as well remove this.
+	// ErrHashPassword will be mapped to InternalServerError anyway, so I might as well remove this.
 	ErrHashPassword            = errors.New("hash password failed")
 	ErrTokenGenerate           = errors.New("generate token failed")
 	ErrDynamoQuery             = errors.New("dynamodb query failed")

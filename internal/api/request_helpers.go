@@ -13,42 +13,6 @@ import (
 	"github.com/aws/aws-lambda-go/events"
 )
 
-func GetPathParam(ctx context.Context, request events.APIGatewayProxyRequest, paramName, handlerName string) (string, *events.APIGatewayProxyResponse) {
-	param, ok := request.PathParameters[paramName]
-	if !ok {
-		message := fmt.Sprintf("path parameter %s is missing", paramName)
-		response := ToSimpleError(ctx, http.StatusBadRequest, message)
-		//response := ToErrorAPIGatewayProxyResponse(ctx, handlerName, errutil.BadRequestError(paramName, message))
-		return "", &response
-	}
-	return param, nil
-}
-
-func ParseBodyAs[T any](ctx context.Context, request events.APIGatewayProxyRequest) (*T, *events.APIGatewayProxyResponse) {
-	var out T
-	err := json.Unmarshal([]byte(request.Body), &out)
-	if err != nil {
-		cause := fmt.Errorf("error decoding request body: %w", err)
-		slog.WarnContext(ctx, "error decoding request body", slog.Any("error", cause))
-
-		// A note on err.Error():
-		// json module returns a descriptive enough error message that we can use as is.
-		// As far as I can tell, there is not much of risk of leaking sensitive information here.
-		//
-		// It's unnecessary in this project, but one could use *json.SyntaxError and *json.UnmarshalTypeError
-		// to provide more structured error messages.
-		// JsonParsingErrorStruct {
-		//  Field string
-		// 	Message string
-		// 	Position int
-		//  etc...
-		// }
-		response := ToSimpleError(ctx, http.StatusBadRequest, err.Error())
-		return nil, &response
-	}
-	return &out, nil
-}
-
 func GetOptionalIntQueryParam(
 	ctx context.Context,
 	request events.APIGatewayProxyRequest,
@@ -120,45 +84,6 @@ func GetOptionalStringQueryParam(
 	return &param, nil
 }
 
-//func GetOptionalStringQueryParamWithDefault(
-//	ctx context.Context,
-//	request events.APIGatewayProxyRequest,
-//	paramName string,
-//	defaultValue string,
-//) (string, *events.APIGatewayProxyResponse) {
-//	param, response := GetOptionalStringQueryParam(ctx, request, paramName)
-//	if response != nil {
-//		return "", response
-//	} else if param == nil {
-//		return defaultValue, nil
-//	} else {
-//		return *param, nil
-//	}
-//}
-//
-//func GetRequiredStringQueryParam(
-//	ctx context.Context,
-//	request events.APIGatewayProxyRequest,
-//	paramName string,
-//) (string, *events.APIGatewayProxyResponse) {
-//	param, ok := request.QueryStringParameters[paramName]
-//	if !ok {
-//		message := fmt.Sprintf("query parameter %s is missing", paramName)
-//		response := ToSimpleError(ctx, http.StatusBadRequest, message)
-//		return "", &response
-//	}
-//
-//	if strings.TrimSpace(param) == "" {
-//		message := fmt.Sprintf("query parameter %s cannot be blank", paramName)
-//		response := ToSimpleError(ctx, http.StatusBadRequest, message)
-//		return "", &response
-//	}
-//
-//	return param, nil
-//}
-
-// HTTP-specific request helpers using net/http library
-
 func GetPathParamHTTP(ctx context.Context, w http.ResponseWriter, r *http.Request, paramName string) (string, bool) {
 	param := r.PathValue(paramName)
 	if param == "" {
@@ -168,24 +93,24 @@ func GetPathParamHTTP(ctx context.Context, w http.ResponseWriter, r *http.Reques
 	return param, true
 }
 
-func ParseBodyAsHTTP[T any](ctx context.Context, w http.ResponseWriter, r *http.Request) (*T, bool) {
-	var out T
-	err := json.NewDecoder(r.Body).Decode(&out)
-	if err != nil {
-		cause := fmt.Errorf("error decoding request body: %w", err)
-		slog.WarnContext(ctx, "error decoding request body", slog.Any("error", cause))
-		ToSimpleHTTPError(w, http.StatusBadRequest, err.Error())
-		return nil, false
-	}
-	return &out, true
-}
-
 func ParseAndValidateBody[T dto.Validatable](ctx context.Context, w http.ResponseWriter, r *http.Request) (*T, bool) {
 	var out T
 	err := json.NewDecoder(r.Body).Decode(&out)
 	if err != nil {
 		cause := fmt.Errorf("error decoding request body: %w", err)
 		slog.WarnContext(ctx, "error decoding request body", slog.Any("error", cause))
+		// A note on err.Error():
+		// json module returns a descriptive enough error message that we can use as is.
+		// As far as I can tell, there is not much of risk of leaking sensitive information here.
+		//
+		// It's unnecessary in this project, but one could use *json.SyntaxError and *json.UnmarshalTypeError
+		// to provide more structured error messages.
+		// JsonParsingErrorStruct {
+		//  Field string
+		// 	Message string
+		// 	Position int
+		//  etc...
+		// }
 		ToSimpleHTTPError(w, http.StatusBadRequest, err.Error())
 		return nil, false
 	}

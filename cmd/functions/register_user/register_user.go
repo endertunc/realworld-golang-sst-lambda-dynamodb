@@ -1,9 +1,7 @@
 package main
 
 import (
-	"context"
 	"errors"
-	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/awslabs/aws-lambda-go-api-proxy/httpadapter"
 	sloghttp "github.com/samber/slog-http"
@@ -15,13 +13,11 @@ import (
 	"realworld-aws-lambda-dynamodb-golang/internal/errutil"
 )
 
-const handlerName = "RegisterUserHandler"
-
 func init() {
-	http.Handle("POST /api/users", sloghttp.New(slog.Default())(http.HandlerFunc(HandlerHTTP)))
+	http.Handle("POST /api/users", sloghttp.New(slog.Default())(http.HandlerFunc(handler)))
 }
 
-func HandlerHTTP(w http.ResponseWriter, r *http.Request) {
+func handler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	newUserRequestBodyDTO, ok := api.ParseAndValidateBody[dto.NewUserRequestBodyDTO](ctx, w, r)
@@ -51,32 +47,7 @@ func HandlerHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	api.ToSuccessHTTPResponse(w, result)
-}
-
-func Handler(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	newUserRequestBodyDTO, errResponse := api.ParseBodyAs[dto.NewUserRequestBodyDTO](ctx, request)
-
-	if errResponse != nil {
-		return *errResponse, nil
-	}
-
-	result, err := functions.UserApi.RegisterUser(ctx, *newUserRequestBodyDTO)
-	if err != nil {
-		if errors.Is(err, errutil.ErrUsernameAlreadyExists) {
-			username := newUserRequestBodyDTO.User.Username
-			slog.WarnContext(ctx, "username already exists", slog.String("username", username), slog.Any("error", err))
-			return api.ToSimpleError(ctx, http.StatusConflict, "username already exists"), nil
-		}
-
-		if errors.Is(err, errutil.ErrEmailAlreadyExists) {
-			email := newUserRequestBodyDTO.User.Email
-			slog.WarnContext(ctx, "email already exists", slog.String("email", email), slog.Any("error", err))
-			return api.ToSimpleError(ctx, http.StatusConflict, "email already exists"), nil
-		}
-		return api.ToInternalServerError(ctx, err), nil
-	} else {
-		return api.ToSuccessAPIGatewayProxyResponse(ctx, result, handlerName), nil
-	}
+	return
 }
 
 func main() {

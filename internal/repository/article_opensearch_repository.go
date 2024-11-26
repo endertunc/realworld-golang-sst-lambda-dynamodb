@@ -20,7 +20,7 @@ type articleOpensearchRepository struct {
 
 type ArticleOpensearchRepositoryInterface interface {
 	FindAllArticles(ctx context.Context, limit int, offset *int) ([]domain.Article, *int, error)
-	FindArticlesByTag(ctx context.Context, tag string, limit int, offset *int) ([]domain.Article, *int, error)
+	FindArticlesByTag(ctx context.Context, tag string, limit int, offset *string) ([]domain.Article, *string, error)
 	FindAllTags(ctx context.Context) ([]string, error)
 }
 
@@ -74,8 +74,7 @@ func (o articleOpensearchRepository) FindAllArticles(ctx context.Context, limit 
         			"order": "desc"
 				}
 			}
-		],
-		"track_total_hits": true
+		]
 	}`, from, limit))
 
 	request := opensearchapi.SearchReq{
@@ -103,34 +102,53 @@ func (o articleOpensearchRepository) FindAllArticles(ctx context.Context, limit 
 	return articles, nil, nil
 }
 
-func (o articleOpensearchRepository) FindArticlesByTag(ctx context.Context, tag string, limit int, offset *int) ([]domain.Article, *int, error) {
-	from := 0
-	if offset != nil {
-		from = *offset
+func (o articleOpensearchRepository) FindArticlesByTag(ctx context.Context, tag string, limit int, nextPageToken *string) ([]domain.Article, *string, error) {
+	// using only the provided api surface from opensearch-go there is no way to pass search_after
+	// thus I decided to simply build the query myself as json object which is represented as a map[string]any in golang.
+	queryMap := map[string]any{
+		"size": limit,
+		"query": map[string]any{
+			"match": map[string]any{
+				"tagList": tag,
+			},
+		},
+		"sort": []map[string]any{
+			{"createdAt": "desc"},
+		},
+	}
+	if nextPageToken != nil {
+		searchAfter := make([]int, 0)
+		err := json.Unmarshal([]byte(*nextPageToken), &searchAfter)
+		if err != nil {
+			return nil, nil, fmt.Errorf("%w: %w", errutil.ErrOpensearchMarshalling, err)
+		}
+		queryMap["search_after"] = searchAfter
 	}
 
-	query := strings.NewReader(fmt.Sprintf(`
-	{
-		"from": %d,
-		"size": %d,
-		"query": {
-			"match": {
-				"tagList": "%s"
-			}
-		},
-		"sort":[
-			{
-				"createdAt": {
-        			"order": "desc"
-				}
-			}
-		],
-		"track_total_hits": true
-	}`, from, limit, tag))
+	test.PrintAsJSON(queryMap)
 
+	//query := strings.NewReader(fmt.Sprintf(`
+	//{
+	//	"size": %d,
+	//	"query": {
+	//		"match": {
+	//			"tagList": "%s"
+	//		}
+	//	},
+	//	"sort":[
+	//		{ "createdAt": "desc" }
+	//	]
+	//}`, limit, tag))
+
+	queryBody, err := json.Marshal(queryMap)
+	if err != nil {
+		return nil, nil, fmt.Errorf("%w: %w", errutil.ErrOpensearchMarshalling, err)
+	}
+
+	test.PrintAsJSON(queryBody)
 	request := opensearchapi.SearchReq{
 		Indices: []string{articleIndex},
-		Body:    query,
+		Body:    strings.NewReader(string(queryBody)),
 	}
 
 	response, err := o.db.Client.Search(ctx, &request)
@@ -138,17 +156,31 @@ func (o articleOpensearchRepository) FindArticlesByTag(ctx context.Context, tag 
 		return nil, nil, fmt.Errorf("%w: %w", errutil.ErrOpensearchQuery, err)
 	}
 
+	test.PrintAsJSON(response)
+
 	articles := make([]domain.Article, 0)
-	for _, hit := range response.Hits.Hits {
+	var newNextPageToken *string
+	for i, hit := range response.Hits.Hits {
 		article := OpensearchArticleDocument{}
 		err := json.Unmarshal(hit.Source, &article)
 		if err != nil {
 			return nil, nil, fmt.Errorf("%w: %w", errutil.ErrOpensearchMarshalling, err)
 		}
 		articles = append(articles, article.toDomainArticle())
+
+		// records last item's sort value as nextPageToken
+		if i == len(response.Hits.Hits)-1 {
+			bytes, err := json.Marshal(hit.Sort)
+			if err != nil {
+				return nil, nil, fmt.Errorf("%w: %w", errutil.ErrOpensearchMarshalling, err)
+			}
+			s := string(bytes)
+			newNextPageToken = &s
+		}
+
 	}
 
-	return articles, nil, nil
+	return articles, newNextPageToken, nil
 }
 
 // "size: 0" at root means we don't want documents to be returned, just the aggregation

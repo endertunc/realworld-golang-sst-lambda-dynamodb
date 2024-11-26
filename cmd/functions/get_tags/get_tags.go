@@ -9,10 +9,10 @@ import (
 )
 
 func init() {
-	http.Handle("GET /api/tags", api.RequestLoggerMiddleware(http.HandlerFunc(HandlerHTTP)))
+	http.Handle("GET /api/tags", api.RequestLoggerMiddleware(http.HandlerFunc(handler)))
 }
 
-func HandlerHTTP(w http.ResponseWriter, r *http.Request) {
+func handler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	result, err := functions.ArticleApi.GetTags(ctx)
 	if err != nil {
@@ -20,6 +20,7 @@ func HandlerHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	api.ToSuccessHTTPResponse(w, result)
+	return
 }
 
 func main() {

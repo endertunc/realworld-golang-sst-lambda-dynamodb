@@ -1,8 +1,6 @@
 package main
 
 import (
-	"context"
-	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/awslabs/aws-lambda-go-api-proxy/httpadapter"
 	"github.com/google/uuid"
@@ -13,13 +11,11 @@ import (
 	"realworld-aws-lambda-dynamodb-golang/internal/domain/dto"
 )
 
-const handlerName = "CreateArticleHandler"
-
 func init() {
-	http.Handle("POST /api/articles", api.StartAuthenticatedHandlerHTTP(HandlerHTTP))
+	http.Handle("POST /api/articles", api.StartAuthenticatedHandlerHTTP(handler))
 }
 
-func HandlerHTTP(w http.ResponseWriter, r *http.Request, userId uuid.UUID, _ domain.Token) {
+func handler(w http.ResponseWriter, r *http.Request, userId uuid.UUID, _ domain.Token) {
 	ctx := r.Context()
 
 	createArticleRequestBodyDTO, ok := api.ParseAndValidateBody[dto.CreateArticleRequestBodyDTO](ctx, w, r)
@@ -36,22 +32,7 @@ func HandlerHTTP(w http.ResponseWriter, r *http.Request, userId uuid.UUID, _ dom
 	}
 
 	api.ToSuccessHTTPResponse(w, result)
-}
-
-func Handler(context context.Context, request events.APIGatewayProxyRequest, userId uuid.UUID, _ domain.Token) events.APIGatewayProxyResponse {
-	createArticleRequestBodyDTO, errResponse := api.ParseBodyAs[dto.CreateArticleRequestBodyDTO](context, request)
-
-	if errResponse != nil {
-		return *errResponse
-	}
-
-	result, err := functions.ArticleApi.CreateArticle(context, userId, *createArticleRequestBodyDTO)
-
-	if err != nil {
-		return api.ToInternalServerError(context, err)
-	} else {
-		return api.ToSuccessAPIGatewayProxyResponse(context, result, handlerName)
-	}
+	return
 }
 
 func main() {

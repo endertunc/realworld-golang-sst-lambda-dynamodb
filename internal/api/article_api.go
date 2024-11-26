@@ -30,7 +30,6 @@ func NewArticleApi(
 }
 
 func (aa ArticleApi) GetArticle(ctx context.Context, loggedInUserId *uuid.UUID, slug string) (dto.ArticleResponseBodyDTO, error) {
-	// ToDo @ender [maybe not] --- we could get article and author in BatchGetItem
 	article, err := aa.articleService.GetArticle(ctx, slug)
 	if err != nil {
 		return dto.ArticleResponseBodyDTO{}, err
@@ -153,29 +152,12 @@ func (aa ArticleApi) ListArticles(ctx context.Context, loggedInUserId *uuid.UUID
 		} else if queryOptions.FavoritedBy != nil {
 			return aa.articleListService.GetMostRecentArticlesFavoritedByUser(ctx, loggedInUserId, *queryOptions.FavoritedBy, limit, nextPageToken)
 		} else if queryOptions.Tag != nil {
-			var offset *int
-			if nextPageToken != nil {
-				offsetInt, err := strconv.Atoi(*nextPageToken)
-				if err != nil {
-					return nil, nil, err // ToDo @ender needs a domain error
-				}
-				offset = &offsetInt
-			}
-			result, nextToken, err := aa.articleListService.GetMostRecentArticlesFavoritedByTag(ctx, loggedInUserId, *queryOptions.Tag, limit, offset)
-			var nextTokenStr *string
-			if nextToken != nil {
-				s := strconv.Itoa(*nextToken)
-				nextTokenStr = &s // ToDo @ender do not use aws like this directly...
-			}
-			return result, nextTokenStr, err
+			result, nextToken, err := aa.articleListService.GetMostRecentArticlesFavoritedByTag(ctx, loggedInUserId, *queryOptions.Tag, limit, nextPageToken)
+			return result, nextToken, err
 		} else {
-			var offset *int
-			if nextPageToken != nil {
-				offsetInt, err := strconv.Atoi(*nextPageToken)
-				if err != nil {
-					return nil, nil, err // ToDo @ender needs a domain error
-				}
-				offset = &offsetInt
+			offset, err := parseNextPageTokenAsOffset(nextPageToken)
+			if err != nil {
+				return nil, nil, err
 			}
 			result, nextToken, err := aa.articleListService.GetMostRecentArticlesGlobally(ctx, loggedInUserId, limit, offset)
 
@@ -200,4 +182,20 @@ func (aa ArticleApi) GetTags(ctx context.Context) (dto.TagsResponseDTO, error) {
 		return dto.TagsResponseDTO{}, err
 	}
 	return dto.TagsResponseDTO{Tags: tags}, nil
+}
+
+// parseNextPageTokenAsOffset parses the nextPageToken as an integer to be used in opensearch queries.
+// list articles use-cases uses different pagination strategies depending on the storage.
+// in the case of dynamodb, we use scrolling pagination with LastEvaluatedKey is used and represents as string
+// in the case of opensearch, we use regular offset is used and represents as integer
+func parseNextPageTokenAsOffset(nextPageToken *string) (*int, error) {
+	var offset *int
+	if nextPageToken != nil {
+		offsetInt, err := strconv.Atoi(*nextPageToken)
+		if err != nil {
+			return nil, err // ToDo @ender needs a domain error
+		}
+		offset = &offsetInt
+	}
+	return offset, nil
 }

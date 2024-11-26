@@ -5,7 +5,7 @@ import { VPCStack } from "./stacks/VPCStack";
 import type { SSTConfig } from "sst";
 
 export default {
-  config(_input) {
+  config() {
     return {
       name: "real-world-golang-sst-lambda-dynamodb",
       region: "eu-west-1"

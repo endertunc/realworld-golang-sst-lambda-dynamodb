@@ -1,35 +1,41 @@
 package main
 
 import (
-	"context"
-	"github.com/aws/aws-lambda-go/events"
+	"github.com/aws/aws-lambda-go/lambda"
+	"github.com/awslabs/aws-lambda-go-api-proxy/httpadapter"
 	"github.com/google/uuid"
+	"net/http"
 	"realworld-aws-lambda-dynamodb-golang/cmd/functions"
 	"realworld-aws-lambda-dynamodb-golang/internal/api"
 	"realworld-aws-lambda-dynamodb-golang/internal/domain"
 )
 
-const handlerName = "DeleteArticleHandler"
+func init() {
+	http.Handle("DELETE /api/articles/{slug}", api.StartAuthenticatedHandlerHTTP(handler))
+}
 
-func Handler(context context.Context, request events.APIGatewayProxyRequest, userId uuid.UUID, _ domain.Token) events.APIGatewayProxyResponse {
-	// it's a bit annoying that this could fail even tho the path is required for this endpoint to match...
-	slug, response := api.GetPathParam(context, request, "slug", handlerName)
+func handler(w http.ResponseWriter, r *http.Request, userId uuid.UUID, token domain.Token) {
+	ctx := r.Context()
 
-	if response != nil {
-		return *response
+	// Get slug from the request path
+	slug, ok := api.GetPathParamHTTP(ctx, w, r, "slug")
+	if !ok {
+		return
 	}
 
-	err := functions.ArticleApi.DeleteArticle(context, userId, slug)
+	// Delete article
+	err := functions.ArticleApi.DeleteArticle(ctx, userId, slug)
 
 	if err != nil {
 		// ToDo @ender handle article not found and forbidden
-		return api.ToInternalServerError(context, err)
+		api.ToInternalServerHTTPError(w, err)
+		return
 	}
 
-	return api.ToSuccessAPIGatewayProxyResponse(context, nil, handlerName)
+	// Success response
+	api.ToSuccessHTTPResponse(w, nil)
 }
 
 func main() {
-	api.StartAuthenticatedHandler(Handler)
-
+	lambda.Start(httpadapter.NewV2(http.DefaultServeMux).ProxyWithContext)
 }

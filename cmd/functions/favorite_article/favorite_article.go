@@ -1,9 +1,7 @@
 package main
 
 import (
-	"context"
 	"errors"
-	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/awslabs/aws-lambda-go-api-proxy/httpadapter"
 	"github.com/google/uuid"
@@ -15,13 +13,11 @@ import (
 	"realworld-aws-lambda-dynamodb-golang/internal/errutil"
 )
 
-const handlerName = "FavoriteArticleHandler"
-
 func init() {
-	http.Handle("POST /api/articles/{slug}/favorite", api.StartAuthenticatedHandlerHTTP(HandlerHTTP))
+	http.Handle("POST /api/articles/{slug}/favorite", api.StartAuthenticatedHandlerHTTP(handler))
 }
 
-func HandlerHTTP(w http.ResponseWriter, r *http.Request, userId uuid.UUID, token domain.Token) {
+func handler(w http.ResponseWriter, r *http.Request, userId uuid.UUID, token domain.Token) {
 	ctx := r.Context()
 
 	slug, ok := api.GetPathParamHTTP(ctx, w, r, "slug")
@@ -47,32 +43,7 @@ func HandlerHTTP(w http.ResponseWriter, r *http.Request, userId uuid.UUID, token
 	}
 
 	api.ToSuccessHTTPResponse(w, result)
-}
-
-func Handler(context context.Context, request events.APIGatewayProxyRequest, userId uuid.UUID, _ domain.Token) events.APIGatewayProxyResponse {
-	// it's a bit annoying that this could fail even tho the path is required for this endpoint to match...
-	slug, response := api.GetPathParam(context, request, "slug", handlerName)
-
-	if response != nil {
-		return *response
-	}
-
-	result, err := functions.ArticleApi.FavoriteArticle(context, userId, slug)
-
-	if err != nil {
-		if errors.Is(err, errutil.ErrArticleNotFound) {
-			slog.DebugContext(context, "article not found", slog.String("slug", slug))
-			return api.ToSimpleError(context, http.StatusNotFound, "article not found")
-		} else if errors.Is(err, errutil.ErrAlreadyFavorited) {
-			slog.DebugContext(context, "article already favorited", slog.String("slug", slug), slog.String("userId", userId.String()))
-			return api.ToSimpleError(context, http.StatusConflict, "article already favorited")
-		} else {
-			return api.ToInternalServerError(context, err)
-		}
-	} else {
-		return api.ToSuccessAPIGatewayProxyResponse(context, result, handlerName)
-	}
-
+	return
 }
 
 func main() {

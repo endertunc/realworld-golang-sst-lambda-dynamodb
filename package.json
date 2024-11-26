@@ -13,26 +13,26 @@
     "lint:fix": "npx eslint . --fix"
   },
   "devDependencies": {
+    "@aws-cdk/aws-cognito-identitypool-alpha": "2.142.1-alpha.0",
     "@tsconfig/node18": "18.2.4",
+    "@types/node": "18.19.44",
     "@typescript-eslint/eslint-plugin": "5.62.0",
     "@typescript-eslint/parser": "5.62.0",
-    "@types/node": "18.19.44",
     "aws-cdk-lib": "2.142.1",
+    "cdk-fck-nat": "1.5.6",
     "constructs": "10.3.0",
-    "sst": "2.43.4",
-    "typescript": "5.5.4",
+    "cross-var": "1.1.0",
     "dotenv": "16.4.5",
     "dotenv-cli": "7.4.2",
-    "cross-var": "1.1.0",
-    "pino-pretty": "11.2.2",
-    "prettier": "2.8.8",
     "eslint": "8.57.0",
     "eslint-import-resolver-typescript": "3.6.1",
     "eslint-plugin-import": "2.29.1",
     "eslint-plugin-json": "3.1.0",
     "eslint-plugin-prettier": "4.2.1",
-    "cdk-fck-nat": "1.5.6",
-    "@aws-cdk/aws-cognito-identitypool-alpha": "2.142.1-alpha.0"
+    "pino-pretty": "11.2.2",
+    "prettier": "2.8.8",
+    "sst": "2.43.4",
+    "typescript": "5.5.4"
   },
   "dependencies": {
     "dotenv": "16.4.5"

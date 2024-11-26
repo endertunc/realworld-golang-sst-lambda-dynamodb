@@ -44,11 +44,9 @@ func (aa CommentApi) GetArticleComments(ctx context.Context, loggedInUserId *uui
 	if len(comments) == 0 {
 		return dto.MultiCommentsResponseBodyDTO{Comment: []dto.CommentResponseDTO{}}, nil
 	} else {
-		// ToDo @ender we would like to extract unique author ids from comments
-		// 	 check if we can simplify this later
-		authorIdsMap := make(map[uuid.UUID]bool) // New empty set
+		authorIdsMap := make(map[uuid.UUID]struct{})
 		for _, comment := range comments {
-			authorIdsMap[comment.AuthorId] = true
+			authorIdsMap[comment.AuthorId] = struct{}{}
 		}
 
 		uniqueAuthorIdsList := make([]uuid.UUID, 0, len(authorIdsMap))

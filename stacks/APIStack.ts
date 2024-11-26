@@ -132,11 +132,6 @@ export function APIStack({ stack }: StackContext) {
   const getTags = createLambdaFunction("get-tags", "get_tags/get_tags.go");
   getTags.addToRolePolicy(openSearchPolicy);
 
-  // const privateKey = new secretsmanager.Secret(stack, 'private-key', {
-  //     secretName: 'private-key',
-  //     removalPolicy: RemovalPolicy.DESTROY,
-  // });
-
   const realWorldApi = new Api(stack, "real-world-api", {
     // prettier-ignore
     routes: {

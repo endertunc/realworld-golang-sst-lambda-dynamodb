@@ -85,22 +85,22 @@ func TestArticleOpensearchRepository_FindArticlesByTag(t *testing.T) {
 			assert.EventuallyWithT(t, func(ct *assert.CollectT) {
 				// test first page
 				limit := 1
-				articles, _, err := repo.FindArticlesByTag(context.Background(), "tag2", limit, nil)
+				articles, nextPageToken, err := repo.FindArticlesByTag(context.Background(), "tag2", limit, nil)
 				require.NoError(ct, err)
 				assert.Equal(ct, 1, len(articles))
+				assert.NotEmpty(ct, nextPageToken)
 				assert.Equal(ct, []domain.Article{article1.toDomainArticle()}, articles)
 
 				// test second page
-				offset := 1
-				articles, _, err = repo.FindArticlesByTag(context.Background(), "tag2", limit, &offset)
+				articles, nextPageToken, err = repo.FindArticlesByTag(context.Background(), "tag2", limit, nextPageToken)
 				require.NoError(ct, err)
 				assert.Equal(ct, 1, len(articles))
 				assert.Equal(ct, []domain.Article{article2.toDomainArticle()}, articles)
 
 				// test third page
-				offset = 2
-				articles, _, err = repo.FindArticlesByTag(context.Background(), "tag2", limit, &offset)
+				articles, nextPageToken, err = repo.FindArticlesByTag(context.Background(), "tag2", limit, nextPageToken)
 				require.NoError(ct, err)
+				assert.Empty(ct, nextPageToken)
 				assert.Equal(ct, 0, len(articles))
 			}, 5*time.Second, 500*time.Millisecond)
 

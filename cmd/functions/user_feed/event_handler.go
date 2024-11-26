@@ -20,12 +20,6 @@ type BatchResult struct {
 	BatchItemFailures []BatchItemFailure `json:"BatchItemFailures"`
 }
 
-//type ArticleInsertedEvent struct {
-//	ArticleId string    `dynamodbav:"articleId"`
-//	AuthorId  string    `dynamodbav:"authorId"`
-//	CreatedAt time.Time `dynamodbav:"createdAt:unixtime"`
-//}
-
 func handleRequest(ctx context.Context, event events.DynamoDBEvent) (BatchResult, error) {
 	var batchItemFailures []BatchItemFailure
 	for _, record := range event.Records {
@@ -57,28 +51,27 @@ func parseDynamoDBEventRecord(record events.DynamoDBEventRecord) (uuid.UUID, uui
 	// ToDo @ender why somewhere we use pk and other places regular field name...
 	articleId, err := uuid.Parse(record.Change.NewImage["pk"].String())
 	if err != nil {
-		return uuid.UUID{}, uuid.UUID{}, time.Time{}, err
+		return uuid.Nil, uuid.Nil, time.Time{}, err
 	}
 	authorId, err := uuid.Parse(record.Change.NewImage["authorId"].String())
 
 	if err != nil {
-		return uuid.UUID{}, uuid.UUID{}, time.Time{}, err
+		return uuid.Nil, uuid.Nil, time.Time{}, err
 	}
 
 	createdAt, err := decodeUnixTime(record.Change.NewImage["createdAt"].Number())
 	if err != nil {
-		return uuid.UUID{}, uuid.UUID{}, time.Time{}, err
+		return uuid.Nil, uuid.Nil, time.Time{}, err
 	}
 	return articleId, authorId, createdAt, nil
 }
 
-// ToDo @ender this must go to a shared package
 func decodeUnixTime(n string) (time.Time, error) {
 	v, err := strconv.ParseInt(n, 10, 64)
 	if err != nil {
 		return time.Time{}, err
 	}
-	return time.Unix(v, 0), nil
+	return time.UnixMilli(v), nil
 }
 
 func main() {
