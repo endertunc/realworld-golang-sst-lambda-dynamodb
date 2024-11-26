@@ -2,10 +2,10 @@ package service
 
 import (
 	"context"
-	"errors"
 	mapset "github.com/deckarep/golang-set/v2"
 	"github.com/google/uuid"
 	"realworld-aws-lambda-dynamodb-golang/internal/domain"
+	"realworld-aws-lambda-dynamodb-golang/internal/errutil"
 	"realworld-aws-lambda-dynamodb-golang/internal/repository"
 )
 
@@ -101,8 +101,7 @@ func (as articleService) DeleteArticle(ctx context.Context, authorId uuid.UUID, 
 	}
 
 	if article.AuthorId != authorId {
-		// ToDo @ender return a proper error
-		return errors.New("you can't touch this")
+		return errutil.ErrCantDeleteOthersArticle
 	}
 
 	err = as.articleRepository.DeleteArticleById(ctx, article.Id)

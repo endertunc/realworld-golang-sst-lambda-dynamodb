@@ -2,10 +2,11 @@ package api
 
 import (
 	"context"
-	"github.com/google/uuid"
 	"net/http"
 	"realworld-aws-lambda-dynamodb-golang/internal/domain/dto"
 	"realworld-aws-lambda-dynamodb-golang/internal/service"
+
+	"github.com/google/uuid"
 )
 
 type UserFeedApi struct {

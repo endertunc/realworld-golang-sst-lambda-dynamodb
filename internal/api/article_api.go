@@ -222,12 +222,29 @@ func (aa ArticleApi) FavoriteArticle(ctx context.Context, w http.ResponseWriter,
 	return
 }
 
-func (aa ArticleApi) DeleteArticle(ctx context.Context, loggedInUserId uuid.UUID, slug string) error {
+func (aa ArticleApi) DeleteArticle(ctx context.Context, w http.ResponseWriter, r *http.Request, loggedInUserId uuid.UUID) {
+	slug, ok := GetPathParamHTTP(ctx, w, r, "slug")
+	if !ok {
+		return
+	}
+
 	err := aa.articleService.DeleteArticle(ctx, loggedInUserId, slug)
 	if err != nil {
-		return err
+		if errors.Is(err, errutil.ErrArticleNotFound) {
+			slog.DebugContext(ctx, "article not found", slog.String("slug", slug))
+			ToSimpleHTTPError(w, http.StatusNotFound, "article not found")
+			return
+		}
+		if errors.Is(err, errutil.ErrCantDeleteOthersArticle) {
+			slog.DebugContext(ctx, "user can't delete others article", slog.String("slug", slug), slog.String("userId", loggedInUserId.String()))
+			ToSimpleHTTPError(w, http.StatusForbidden, "forbidden")
+			return
+		}
+		ToInternalServerHTTPError(w, err)
+		return
 	}
-	return nil
+	ToSuccessHTTPResponse(w, nil)
+	return
 }
 
 type ListArticlesQueryOptions struct {

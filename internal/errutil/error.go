@@ -40,6 +40,7 @@ var (
 	ErrDynamoTokenEncoding     = errors.New("dynamodb token encoding failed")
 	ErrCantFollowYourself      = errors.New("cannot follow yourself")
 	ErrCantDeleteOthersComment = errors.New("cannot delete other's comment")
+	ErrCantDeleteOthersArticle = errors.New("cannot delete other's article")
 	ErrCommentNotFound         = errors.New("comment not found")
 	ErrAlreadyFavorited        = errors.New("already favorited")
 	ErrAlreadyUnfavorited      = errors.New("already unfavorited")

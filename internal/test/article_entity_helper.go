@@ -33,6 +33,14 @@ func CreateArticleWithResponse[T any](t *testing.T, article dto.CreateArticleReq
 	return ExecuteRequest[T](t, "POST", "/api/articles", reqBody, expectedStatusCode, &token)
 }
 
+func DeleteArticle(t *testing.T, slug string, token string) {
+	DeleteArticleWithResponse[Nothing](t, slug, token, http.StatusOK)
+}
+
+func DeleteArticleWithResponse[T interface{}](t *testing.T, slug string, token string, expectedStatusCode int) T {
+	return ExecuteRequest[T](t, "DELETE", "/api/articles/"+slug, nil, expectedStatusCode, &token)
+}
+
 func FavoriteArticle(t *testing.T, slug string, token string) dto.ArticleResponseDTO {
 	return FavoriteArticleWithResponse[dto.ArticleResponseBodyDTO](t, slug, token, http.StatusOK).Article
 }

@@ -15,25 +15,7 @@ func init() {
 }
 
 func handler(w http.ResponseWriter, r *http.Request, userId uuid.UUID, token domain.Token) {
-	ctx := r.Context()
-
-	// Get slug from the request path
-	slug, ok := api.GetPathParamHTTP(ctx, w, r, "slug")
-	if !ok {
-		return
-	}
-
-	// Delete article
-	err := functions.ArticleApi.DeleteArticle(ctx, userId, slug)
-
-	if err != nil {
-		// ToDo @ender handle article not found and forbidden
-		api.ToInternalServerHTTPError(w, err)
-		return
-	}
-
-	// Success response
-	api.ToSuccessHTTPResponse(w, nil)
+	functions.ArticleApi.DeleteArticle(r.Context(), w, r, userId)
 }
 
 func main() {

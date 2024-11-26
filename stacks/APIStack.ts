@@ -101,7 +101,8 @@ export function APIStack({ stack }: StackContext) {
   dynamodbStack.followerTable.grantReadData(listArticles);
   listArticles.addToRolePolicy(openSearchPolicy);
 
-  // const deleteArticle = createLambdaFunction("delete-article", "delete_article/delete_article.go");
+  const deleteArticle = createLambdaFunction("delete-article", "delete_article/delete_article.go");
+  dynamodbStack.articleTable.grantReadWriteData(deleteArticle);
 
   const favoriteArticle = createLambdaFunction("favorite-article", "favorite_article/favorite_article.go");
   dynamodbStack.favoritedTable.grantWriteData(favoriteArticle);
@@ -148,7 +149,7 @@ export function APIStack({ stack }: StackContext) {
       "GET    /api/articles":                       listArticles,
       "GET    /api/articles/feed":                  getUserFeed,
       "GET    /api/articles/{slug}":                getArticle,
-      // "DELETE /api/articles/{slug}":               deleteArticle,
+      "DELETE /api/articles/{slug}":               deleteArticle,
       "POST   /api/articles/{slug}/favorite":       favoriteArticle,
       "DELETE /api/articles/{slug}/favorite":       unfavoriteArticle,
       "POST   /api/articles/{slug}/comments":       addComment,
