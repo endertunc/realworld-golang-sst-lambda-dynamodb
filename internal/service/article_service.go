@@ -32,7 +32,7 @@ type ArticleServiceInterface interface {
 	GetTags(ctx context.Context) ([]string, error)
 }
 
-var _ ArticleServiceInterface = articleService{}
+var _ ArticleServiceInterface = articleService{} //nolint:golint,exhaustruct
 
 func NewArticleService(
 	articleRepository repository.ArticleRepositoryInterface,

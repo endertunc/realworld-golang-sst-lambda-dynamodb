@@ -41,7 +41,6 @@ func (pa ProfileApi) UnfollowUserByUsername(ctx context.Context, w http.Response
 	}
 	resp := dto.ToProfileResponseBodyDTO(user, false)
 	ToSuccessHTTPResponse(w, resp)
-	return
 }
 
 func (pa ProfileApi) FollowUserByUsername(ctx context.Context, w http.ResponseWriter, r *http.Request, loggedInUser uuid.UUID) {
@@ -67,7 +66,6 @@ func (pa ProfileApi) FollowUserByUsername(ctx context.Context, w http.ResponseWr
 	}
 	resp := dto.ToProfileResponseBodyDTO(user, true)
 	ToSuccessHTTPResponse(w, resp)
-	return
 }
 
 func (pa ProfileApi) GetUserProfile(ctx context.Context, w http.ResponseWriter, r *http.Request, loggedInUserId *uuid.UUID) {
@@ -88,5 +86,5 @@ func (pa ProfileApi) GetUserProfile(ctx context.Context, w http.ResponseWriter, 
 	}
 	resp := dto.ToProfileResponseBodyDTO(user, isFollowing)
 	ToSuccessHTTPResponse(w, resp)
-	return
+
 }

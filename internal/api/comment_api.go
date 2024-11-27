@@ -53,7 +53,6 @@ func (aa CommentApi) GetArticleComments(ctx context.Context, w http.ResponseWrit
 			return
 		}
 		ToInternalServerHTTPError(w, err)
-		return
 	}
 
 	comments, err := aa.commentService.GetArticleComments(ctx, slug)
@@ -124,7 +123,6 @@ func (aa CommentApi) AddComment(ctx context.Context, w http.ResponseWriter, r *h
 			return
 		}
 		ToInternalServerHTTPError(w, err)
-		return
 	}
 
 	comment, err := aa.commentService.AddComment(ctx, loggedInUserId, slug, addCommentRequestBodyDTO.Comment.Body)
@@ -145,7 +143,6 @@ func (aa CommentApi) AddComment(ctx context.Context, w http.ResponseWriter, r *h
 
 	// Success response
 	ToSuccessHTTPResponse(w, resp)
-	return
 }
 
 func (aa CommentApi) DeleteComment(ctx context.Context, w http.ResponseWriter, r *http.Request, loggedInUserId uuid.UUID) {
@@ -186,5 +183,4 @@ func (aa CommentApi) DeleteComment(ctx context.Context, w http.ResponseWriter, r
 		}
 	}
 	ToSuccessHTTPResponse(w, nil)
-	return
 }

@@ -15,7 +15,6 @@ func init() {
 
 func handler(w http.ResponseWriter, r *http.Request) {
 	functions.UserApi.RegisterUser(r.Context(), w, r)
-	return
 }
 
 func main() {

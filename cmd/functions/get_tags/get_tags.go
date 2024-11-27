@@ -14,7 +14,6 @@ func init() {
 
 func handler(w http.ResponseWriter, r *http.Request) {
 	functions.ArticleApi.GetTags(r.Context(), w)
-	return
 }
 
 func main() {

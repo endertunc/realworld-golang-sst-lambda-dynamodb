@@ -87,6 +87,7 @@ func TestQueryManyWithInternalPagination(t *testing.T) {
 				return item
 			})
 			// assert that the second page is full fetched and lastEvaluatedKey is empty
+			assert.NoError(testingT, err)
 			assert.Equal(testingT, 10, len(dynamodbCommentItemsPageTwo))
 			assert.Empty(testingT, lastEvaluatedKeyPageTwo)
 		}, 5*time.Second, 1*time.Second)

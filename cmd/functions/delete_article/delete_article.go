@@ -14,7 +14,7 @@ func init() {
 	http.Handle("DELETE /api/articles/{slug}", api.StartAuthenticatedHandlerHTTP(handler))
 }
 
-func handler(w http.ResponseWriter, r *http.Request, userId uuid.UUID, token domain.Token) {
+func handler(w http.ResponseWriter, r *http.Request, userId uuid.UUID, _ domain.Token) {
 	functions.ArticleApi.DeleteArticle(r.Context(), w, r, userId)
 }
 

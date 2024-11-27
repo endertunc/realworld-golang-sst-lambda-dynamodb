@@ -17,7 +17,6 @@ func init() {
 func handler(w http.ResponseWriter, r *http.Request, userId uuid.UUID, token domain.Token) {
 	ctx := r.Context()
 	functions.UserApi.GetCurrentUser(ctx, w, r, userId, token)
-	return
 }
 
 func main() {

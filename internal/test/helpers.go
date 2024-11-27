@@ -18,7 +18,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
-	ddbtypes "github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/joho/godotenv"
 )
 
@@ -62,11 +62,11 @@ func truncateTable(t *testing.T, tableName string, pkName string, skName *string
 	}
 
 	// Batch delete items
-	var writeRequests []ddbtypes.WriteRequest
+	var writeRequests []types.WriteRequest
 	totalItemsToDelete := len(result.Items)
 
 	for i, item := range result.Items {
-		key := make(map[string]ddbtypes.AttributeValue)
+		key := make(map[string]types.AttributeValue)
 
 		// Extract the primary key
 		if pkValue, ok := item[pkName]; ok {
@@ -84,8 +84,8 @@ func truncateTable(t *testing.T, tableName string, pkName string, skName *string
 			}
 		}
 
-		writeRequests = append(writeRequests, ddbtypes.WriteRequest{
-			DeleteRequest: &ddbtypes.DeleteRequest{
+		writeRequests = append(writeRequests, types.WriteRequest{
+			DeleteRequest: &types.DeleteRequest{
 				Key: key,
 			},
 		})
@@ -93,14 +93,14 @@ func truncateTable(t *testing.T, tableName string, pkName string, skName *string
 		// Perform the batch delete operation with 25 items at a time
 		if len(writeRequests) == 25 || totalItemsToDelete == i+1 {
 			_, err = DynamodbClient().BatchWriteItem(ctx, &dynamodb.BatchWriteItemInput{
-				RequestItems: map[string][]ddbtypes.WriteRequest{
+				RequestItems: map[string][]types.WriteRequest{
 					tableName: writeRequests,
 				},
 			})
 			if err != nil {
 				t.Fatalf("failed to batch delete items: %v", err)
 			}
-			writeRequests = make([]ddbtypes.WriteRequest, 0)
+			writeRequests = make([]types.WriteRequest, 0)
 		}
 
 	}

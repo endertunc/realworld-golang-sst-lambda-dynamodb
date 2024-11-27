@@ -24,7 +24,7 @@ type ProfileServiceInterface interface {
 	IsFollowingBulk(ctx context.Context, follower uuid.UUID, followee []uuid.UUID) (mapset.Set[uuid.UUID], error)
 }
 
-var _ ProfileServiceInterface = profileService{}
+var _ ProfileServiceInterface = profileService{} //nolint:golint,exhaustruct
 
 func NewProfileService(followerRepository repository.FollowerRepositoryInterface, userRepository repository.UserRepositoryInterface) ProfileServiceInterface {
 	return profileService{followerRepository: followerRepository, userRepository: userRepository}

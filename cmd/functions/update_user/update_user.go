@@ -11,7 +11,7 @@ func main() {
 
 	http.HandleFunc("GET /api/{username}", func(w http.ResponseWriter, r *http.Request) {
 		r.PathValue("username")
-		io.WriteString(w, "Hello")
+		_, _ = io.WriteString(w, "Hello")
 	})
 
 	lambda.Start(httpadapter.NewV2(http.DefaultServeMux).ProxyWithContext)

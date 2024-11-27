@@ -50,7 +50,6 @@ func (aa ArticleApi) GetArticle(ctx context.Context, w http.ResponseWriter, r *h
 		}
 
 		ToInternalServerHTTPError(w, err)
-		return
 	}
 
 	article, err := aa.articleService.GetArticle(ctx, slug)
@@ -130,7 +129,6 @@ func (aa ArticleApi) CreateArticle(ctx context.Context, w http.ResponseWriter, r
 	// the article has just been created thus we simply pass isFavorited as false
 	resp := dto.ToArticleResponseBodyDTO(article, user, false, false)
 	ToSuccessHTTPResponse(w, resp)
-	return
 }
 
 func (aa ArticleApi) UnfavoriteArticle(ctx context.Context, w http.ResponseWriter, r *http.Request, loggedInUserId uuid.UUID) {
@@ -175,7 +173,6 @@ func (aa ArticleApi) UnfavoriteArticle(ctx context.Context, w http.ResponseWrite
 
 	resp := dto.ToArticleResponseBodyDTO(article, author, false, isFollowing)
 	ToSuccessHTTPResponse(w, resp)
-	return
 }
 
 func (aa ArticleApi) FavoriteArticle(ctx context.Context, w http.ResponseWriter, r *http.Request, loggedInUserId uuid.UUID) {
@@ -196,7 +193,6 @@ func (aa ArticleApi) FavoriteArticle(ctx context.Context, w http.ResponseWriter,
 			return
 		}
 		ToInternalServerHTTPError(w, err)
-		return
 	}
 
 	article, err := aa.articleService.FavoriteArticle(ctx, loggedInUserId, slug)
@@ -219,7 +215,6 @@ func (aa ArticleApi) FavoriteArticle(ctx context.Context, w http.ResponseWriter,
 
 	resp := dto.ToArticleResponseBodyDTO(article, author, true, isFollowing)
 	ToSuccessHTTPResponse(w, resp)
-	return
 }
 
 func (aa ArticleApi) DeleteArticle(ctx context.Context, w http.ResponseWriter, r *http.Request, loggedInUserId uuid.UUID) {
@@ -244,7 +239,6 @@ func (aa ArticleApi) DeleteArticle(ctx context.Context, w http.ResponseWriter, r
 		return
 	}
 	ToSuccessHTTPResponse(w, nil)
-	return
 }
 
 type ListArticlesQueryOptions struct {
@@ -280,7 +274,6 @@ func (aa ArticleApi) ListArticles(ctx context.Context, w http.ResponseWriter, r 
 	}
 	// Success response
 	ToSuccessHTTPResponse(w, dto.ToMultipleArticlesResponseBodyDTO(articleAggregateViews, newNextPageToken))
-	return
 }
 
 func (aa ArticleApi) GetTags(ctx context.Context, w http.ResponseWriter) {
@@ -291,30 +284,31 @@ func (aa ArticleApi) GetTags(ctx context.Context, w http.ResponseWriter) {
 	}
 	resp := dto.TagsResponseDTO{Tags: tags}
 	ToSuccessHTTPResponse(w, resp)
-	return
 }
+
+var zeroQueryOptions = ListArticlesQueryOptions{} //nolint:golint,exhaustruct
 
 func extractArticleListRequestParameters(ctx context.Context, w http.ResponseWriter, r *http.Request, config PaginationConfig) (ListArticlesQueryOptions, int, *string, bool) {
 	limit, ok := GetIntQueryParamOrDefault(ctx, w, r, "limit", config.DefaultLimit, &config.MinLimit, &config.MaxLimit)
 	if !ok {
-		return ListArticlesQueryOptions{}, 0, nil, ok
+		return zeroQueryOptions, 0, nil, ok
 	}
 	offset, ok := GetOptionalStringQueryParam(w, r, "offset")
 	if !ok {
-		return ListArticlesQueryOptions{}, 0, nil, ok
+		return zeroQueryOptions, 0, nil, ok
 	}
 
 	author, ok := GetOptionalStringQueryParam(w, r, "author")
 	if !ok {
-		return ListArticlesQueryOptions{}, 0, nil, ok
+		return zeroQueryOptions, 0, nil, ok
 	}
 	favoritedBy, ok := GetOptionalStringQueryParam(w, r, "favorited")
 	if !ok {
-		return ListArticlesQueryOptions{}, 0, nil, ok
+		return zeroQueryOptions, 0, nil, ok
 	}
 	tag, ok := GetOptionalStringQueryParam(w, r, "tag")
 	if !ok {
-		return ListArticlesQueryOptions{}, 0, nil, ok
+		return zeroQueryOptions, 0, nil, ok
 	}
 
 	listArticlesQueryOptions := ListArticlesQueryOptions{

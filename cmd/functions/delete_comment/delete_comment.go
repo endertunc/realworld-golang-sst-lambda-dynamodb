@@ -16,7 +16,6 @@ func init() {
 
 func handler(w http.ResponseWriter, r *http.Request, userId uuid.UUID, _ domain.Token) {
 	functions.CommentApi.DeleteComment(r.Context(), w, r, userId)
-	return
 }
 
 func main() {

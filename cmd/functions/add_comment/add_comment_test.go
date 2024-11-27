@@ -18,6 +18,7 @@ func TestAuthenticationScenarios(t *testing.T) {
 	})
 }
 
+//nolint:golint,exhaustruct
 func TestRequestValidation(t *testing.T) {
 	// create a user
 	_, token := test.CreateAndLoginUser(t, dtogen.GenerateNewUserRequestUserDto())

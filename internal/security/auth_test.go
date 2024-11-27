@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+//nolint:golint,exhaustruct
 func TestGetLoggedInUser(t *testing.T) {
 	ctx := context.Background()
 	validUserId := uuid.New()
@@ -98,6 +99,7 @@ func TestGetLoggedInUser(t *testing.T) {
 	}
 }
 
+//nolint:golint,exhaustruct
 func TestGetOptionalLoggedInUser(t *testing.T) {
 	ctx := context.Background()
 	validUserId := uuid.New()

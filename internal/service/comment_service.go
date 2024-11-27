@@ -19,7 +19,7 @@ type CommentServiceInterface interface {
 	DeleteComment(ctx context.Context, author uuid.UUID, slug string, commentId uuid.UUID) error
 }
 
-var _ CommentServiceInterface = commentService{}
+var _ CommentServiceInterface = commentService{} //nolint:golint,exhaustruct
 
 func NewCommentService(commentRepository repository.CommentRepositoryInterface, articleService ArticleServiceInterface) CommentServiceInterface {
 	return commentService{

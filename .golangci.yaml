@@ -1,0 +1,13 @@
+linters:
+  enable:
+    - exhaustruct
+linters-settings:
+  exhaustruct:
+    exclude:
+      - "^github.com/aws/aws-lambda-go.*"
+      - "^github.com/aws/aws-sdk-go-v2.*"
+      - "^github.com/opensearch-project.*"
+      - "^github.com/veqryn/slog-context.*"
+      - "^github.com/swaggest/openapi-go.*"
+      - "^github.com/golang-jwt/jwt.*"
+      - "^net/http.*"

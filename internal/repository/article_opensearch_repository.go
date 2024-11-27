@@ -23,7 +23,7 @@ type ArticleOpensearchRepositoryInterface interface {
 	FindAllTags(ctx context.Context) ([]string, error)
 }
 
-var _ ArticleOpensearchRepositoryInterface = articleOpensearchRepository{}
+var _ ArticleOpensearchRepositoryInterface = articleOpensearchRepository{} //nolint:golint,exhaustruct
 
 func NewArticleOpensearchRepository(db *database.OpenSearchStore) ArticleOpensearchRepositoryInterface {
 	return articleOpensearchRepository{db: db}
@@ -114,7 +114,7 @@ func (o articleOpensearchRepository) FindArticlesByTag(ctx context.Context, tag 
 func parseSearchArticleResponse(response *opensearchapi.SearchResp, limit int) ([]domain.Article, *string, error) {
 	articles := make([]domain.Article, 0)
 	for _, hit := range response.Hits.Hits {
-		article := OpensearchArticleDocument{}
+		var article OpensearchArticleDocument
 		err := json.Unmarshal(hit.Source, &article)
 		if err != nil {
 			return nil, nil, fmt.Errorf("%w: %w", errutil.ErrOpensearchMarshalling, err)
@@ -189,7 +189,7 @@ func (o articleOpensearchRepository) FindAllTags(ctx context.Context) ([]string,
 		return nil, fmt.Errorf("%w: %w", errutil.ErrOpensearchQuery, err)
 	}
 
-	tagAggregationsResult := TagAggregationsResult{}
+	var tagAggregationsResult TagAggregationsResult
 	err = json.Unmarshal(response.Aggregations, &tagAggregationsResult)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", errutil.ErrOpensearchMarshalling, err)

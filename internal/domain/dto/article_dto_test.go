@@ -1,3 +1,4 @@
+//nolint:golint,exhaustruct
 package dto
 
 import (
@@ -205,6 +206,7 @@ func TestCreateArticleRequestBodyDTO_Validate(t *testing.T) {
 	}
 }
 
+//nolint:golint,exhaustruct
 func TestAddCommentRequestBodyDTO_Validate(t *testing.T) {
 	tests := []ValidationTestCase[AddCommentRequestBodyDTO]{
 		{

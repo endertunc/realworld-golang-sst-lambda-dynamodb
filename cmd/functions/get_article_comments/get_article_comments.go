@@ -16,7 +16,6 @@ func init() {
 
 func HandlerHTTP(w http.ResponseWriter, r *http.Request, userId *uuid.UUID, token *domain.Token) {
 	functions.CommentApi.GetArticleComments(r.Context(), w, r, userId)
-	return
 }
 
 func main() {

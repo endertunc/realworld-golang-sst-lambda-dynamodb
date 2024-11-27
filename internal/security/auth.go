@@ -200,5 +200,5 @@ func toSimpleHTTPError(w http.ResponseWriter, statusCode int, message string) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
-	w.Write(body)
+	_, _ = w.Write(body)
 }

@@ -61,12 +61,16 @@ func GenerateUser() domain.User {
 		url := gofakeit.URL()
 		image = &url
 	}
+	date := gofakeit.PastDate()
 	return domain.User{
-		Id:       generateUUID(),
-		Username: gofakeit.Username(),
-		Email:    gofakeit.Email(),
-		Bio:      bio,
-		Image:    image,
+		Id:             generateUUID(),
+		Username:       gofakeit.Username(),
+		Email:          gofakeit.Email(),
+		Bio:            bio,
+		Image:          image,
+		HashedPassword: gofakeit.LetterN(64),
+		CreatedAt:      date,
+		UpdatedAt:      date,
 	}
 }
 

@@ -1,3 +1,4 @@
+//nolint:golint,exhaustruct
 package main
 
 import (

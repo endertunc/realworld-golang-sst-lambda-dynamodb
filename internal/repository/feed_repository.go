@@ -27,7 +27,7 @@ type UserFeedRepositoryInterface interface {
 	FindArticleIdsInUserFeed(ctx context.Context, userId uuid.UUID, limit int, nextPageToken *string) ([]uuid.UUID, *string, error)
 }
 
-var _ UserFeedRepositoryInterface = userFeedRepository{}
+var _ UserFeedRepositoryInterface = userFeedRepository{} //nolint:golint,exhaustruct
 
 func NewUserFeedRepository(db *database.DynamoDBStore) UserFeedRepositoryInterface {
 	return userFeedRepository{db: db}
@@ -58,7 +58,7 @@ func (uf userFeedRepository) FanoutArticle(ctx context.Context, articleId, autho
 		}
 		var writeRequests []types.WriteRequest
 		for _, item := range result.Items {
-			dynamodbFollowerItem := DynamodbFollowerItem{}
+			var dynamodbFollowerItem DynamodbFollowerItem
 			err = attributevalue.UnmarshalMap(item, &dynamodbFollowerItem)
 			if err != nil {
 				return fmt.Errorf("%w: %w", errutil.ErrDynamoMapping, err)

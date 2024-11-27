@@ -23,7 +23,7 @@ func (_m *MockArticleOpensearchRepositoryInterface) EXPECT() *MockArticleOpensea
 }
 
 // FindAllArticles provides a mock function with given fields: ctx, limit, offset
-func (_m *MockArticleOpensearchRepositoryInterface) FindAllArticles(ctx context.Context, limit int, offset *int) ([]domain.Article, *int, error) {
+func (_m *MockArticleOpensearchRepositoryInterface) FindAllArticles(ctx context.Context, limit int, offset *string) ([]domain.Article, *string, error) {
 	ret := _m.Called(ctx, limit, offset)
 
 	if len(ret) == 0 {
@@ -31,12 +31,12 @@ func (_m *MockArticleOpensearchRepositoryInterface) FindAllArticles(ctx context.
 	}
 
 	var r0 []domain.Article
-	var r1 *int
+	var r1 *string
 	var r2 error
-	if rf, ok := ret.Get(0).(func(context.Context, int, *int) ([]domain.Article, *int, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, int, *string) ([]domain.Article, *string, error)); ok {
 		return rf(ctx, limit, offset)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, int, *int) []domain.Article); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, int, *string) []domain.Article); ok {
 		r0 = rf(ctx, limit, offset)
 	} else {
 		if ret.Get(0) != nil {
@@ -44,15 +44,15 @@ func (_m *MockArticleOpensearchRepositoryInterface) FindAllArticles(ctx context.
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, int, *int) *int); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, int, *string) *string); ok {
 		r1 = rf(ctx, limit, offset)
 	} else {
 		if ret.Get(1) != nil {
-			r1 = ret.Get(1).(*int)
+			r1 = ret.Get(1).(*string)
 		}
 	}
 
-	if rf, ok := ret.Get(2).(func(context.Context, int, *int) error); ok {
+	if rf, ok := ret.Get(2).(func(context.Context, int, *string) error); ok {
 		r2 = rf(ctx, limit, offset)
 	} else {
 		r2 = ret.Error(2)
@@ -69,24 +69,24 @@ type MockArticleOpensearchRepositoryInterface_FindAllArticles_Call struct {
 // FindAllArticles is a helper method to define mock.On call
 //   - ctx context.Context
 //   - limit int
-//   - offset *int
+//   - offset *string
 func (_e *MockArticleOpensearchRepositoryInterface_Expecter) FindAllArticles(ctx interface{}, limit interface{}, offset interface{}) *MockArticleOpensearchRepositoryInterface_FindAllArticles_Call {
 	return &MockArticleOpensearchRepositoryInterface_FindAllArticles_Call{Call: _e.mock.On("FindAllArticles", ctx, limit, offset)}
 }
 
-func (_c *MockArticleOpensearchRepositoryInterface_FindAllArticles_Call) Run(run func(ctx context.Context, limit int, offset *int)) *MockArticleOpensearchRepositoryInterface_FindAllArticles_Call {
+func (_c *MockArticleOpensearchRepositoryInterface_FindAllArticles_Call) Run(run func(ctx context.Context, limit int, offset *string)) *MockArticleOpensearchRepositoryInterface_FindAllArticles_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(int), args[2].(*int))
+		run(args[0].(context.Context), args[1].(int), args[2].(*string))
 	})
 	return _c
 }
 
-func (_c *MockArticleOpensearchRepositoryInterface_FindAllArticles_Call) Return(_a0 []domain.Article, _a1 *int, _a2 error) *MockArticleOpensearchRepositoryInterface_FindAllArticles_Call {
+func (_c *MockArticleOpensearchRepositoryInterface_FindAllArticles_Call) Return(_a0 []domain.Article, _a1 *string, _a2 error) *MockArticleOpensearchRepositoryInterface_FindAllArticles_Call {
 	_c.Call.Return(_a0, _a1, _a2)
 	return _c
 }
 
-func (_c *MockArticleOpensearchRepositoryInterface_FindAllArticles_Call) RunAndReturn(run func(context.Context, int, *int) ([]domain.Article, *int, error)) *MockArticleOpensearchRepositoryInterface_FindAllArticles_Call {
+func (_c *MockArticleOpensearchRepositoryInterface_FindAllArticles_Call) RunAndReturn(run func(context.Context, int, *string) ([]domain.Article, *string, error)) *MockArticleOpensearchRepositoryInterface_FindAllArticles_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -150,7 +150,7 @@ func (_c *MockArticleOpensearchRepositoryInterface_FindAllTags_Call) RunAndRetur
 }
 
 // FindArticlesByTag provides a mock function with given fields: ctx, tag, limit, offset
-func (_m *MockArticleOpensearchRepositoryInterface) FindArticlesByTag(ctx context.Context, tag string, limit int, offset *int) ([]domain.Article, *int, error) {
+func (_m *MockArticleOpensearchRepositoryInterface) FindArticlesByTag(ctx context.Context, tag string, limit int, offset *string) ([]domain.Article, *string, error) {
 	ret := _m.Called(ctx, tag, limit, offset)
 
 	if len(ret) == 0 {
@@ -158,12 +158,12 @@ func (_m *MockArticleOpensearchRepositoryInterface) FindArticlesByTag(ctx contex
 	}
 
 	var r0 []domain.Article
-	var r1 *int
+	var r1 *string
 	var r2 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, int, *int) ([]domain.Article, *int, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, string, int, *string) ([]domain.Article, *string, error)); ok {
 		return rf(ctx, tag, limit, offset)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, string, int, *int) []domain.Article); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, string, int, *string) []domain.Article); ok {
 		r0 = rf(ctx, tag, limit, offset)
 	} else {
 		if ret.Get(0) != nil {
@@ -171,15 +171,15 @@ func (_m *MockArticleOpensearchRepositoryInterface) FindArticlesByTag(ctx contex
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, string, int, *int) *int); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, string, int, *string) *string); ok {
 		r1 = rf(ctx, tag, limit, offset)
 	} else {
 		if ret.Get(1) != nil {
-			r1 = ret.Get(1).(*int)
+			r1 = ret.Get(1).(*string)
 		}
 	}
 
-	if rf, ok := ret.Get(2).(func(context.Context, string, int, *int) error); ok {
+	if rf, ok := ret.Get(2).(func(context.Context, string, int, *string) error); ok {
 		r2 = rf(ctx, tag, limit, offset)
 	} else {
 		r2 = ret.Error(2)
@@ -197,24 +197,24 @@ type MockArticleOpensearchRepositoryInterface_FindArticlesByTag_Call struct {
 //   - ctx context.Context
 //   - tag string
 //   - limit int
-//   - offset *int
+//   - offset *string
 func (_e *MockArticleOpensearchRepositoryInterface_Expecter) FindArticlesByTag(ctx interface{}, tag interface{}, limit interface{}, offset interface{}) *MockArticleOpensearchRepositoryInterface_FindArticlesByTag_Call {
 	return &MockArticleOpensearchRepositoryInterface_FindArticlesByTag_Call{Call: _e.mock.On("FindArticlesByTag", ctx, tag, limit, offset)}
 }
 
-func (_c *MockArticleOpensearchRepositoryInterface_FindArticlesByTag_Call) Run(run func(ctx context.Context, tag string, limit int, offset *int)) *MockArticleOpensearchRepositoryInterface_FindArticlesByTag_Call {
+func (_c *MockArticleOpensearchRepositoryInterface_FindArticlesByTag_Call) Run(run func(ctx context.Context, tag string, limit int, offset *string)) *MockArticleOpensearchRepositoryInterface_FindArticlesByTag_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(string), args[2].(int), args[3].(*int))
+		run(args[0].(context.Context), args[1].(string), args[2].(int), args[3].(*string))
 	})
 	return _c
 }
 
-func (_c *MockArticleOpensearchRepositoryInterface_FindArticlesByTag_Call) Return(_a0 []domain.Article, _a1 *int, _a2 error) *MockArticleOpensearchRepositoryInterface_FindArticlesByTag_Call {
+func (_c *MockArticleOpensearchRepositoryInterface_FindArticlesByTag_Call) Return(_a0 []domain.Article, _a1 *string, _a2 error) *MockArticleOpensearchRepositoryInterface_FindArticlesByTag_Call {
 	_c.Call.Return(_a0, _a1, _a2)
 	return _c
 }
 
-func (_c *MockArticleOpensearchRepositoryInterface_FindArticlesByTag_Call) RunAndReturn(run func(context.Context, string, int, *int) ([]domain.Article, *int, error)) *MockArticleOpensearchRepositoryInterface_FindArticlesByTag_Call {
+func (_c *MockArticleOpensearchRepositoryInterface_FindArticlesByTag_Call) RunAndReturn(run func(context.Context, string, int, *string) ([]domain.Article, *string, error)) *MockArticleOpensearchRepositoryInterface_FindArticlesByTag_Call {
 	_c.Call.Return(run)
 	return _c
 }

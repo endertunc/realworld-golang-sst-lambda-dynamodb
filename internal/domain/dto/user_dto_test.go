@@ -5,6 +5,7 @@ import (
 	"testing"
 )
 
+//nolint:golint,exhaustruct
 func TestLoginRequestBodyDTO_Validate(t *testing.T) {
 	tests := []ValidationTestCase[LoginRequestBodyDTO]{
 		{
@@ -90,6 +91,7 @@ func TestLoginRequestBodyDTO_Validate(t *testing.T) {
 	}
 }
 
+//nolint:golint,exhaustruct
 func TestNewUserRequestBodyDTO_Validate(t *testing.T) {
 	tests := []ValidationTestCase[NewUserRequestBodyDTO]{
 		{

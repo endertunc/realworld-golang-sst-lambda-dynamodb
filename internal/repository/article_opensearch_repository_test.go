@@ -190,7 +190,6 @@ func createArticleDocument(t *testing.T, db *database.OpenSearchStore, articleIt
 	var indexResp opensearchapi.IndexResp
 	_, err = db.Client.Client.Do(context.Background(), &request, &indexResp)
 	require.NoError(t, err)
-	return
 }
 
 func generateOpensearchArticleDocument() OpensearchArticleDocument {

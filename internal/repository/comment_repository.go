@@ -25,7 +25,7 @@ type CommentRepositoryInterface interface {
 	FindCommentByCommentIdAndArticleId(ctx context.Context, commentId, articleId uuid.UUID) (domain.Comment, error)
 }
 
-var _ CommentRepositoryInterface = dynamodbCommentRepository{}
+var _ CommentRepositoryInterface = dynamodbCommentRepository{} //nolint:golint,exhaustruct
 
 func NewDynamodbCommentRepository(db *database.DynamoDBStore) CommentRepositoryInterface {
 	return dynamodbCommentRepository{db: db}
@@ -118,7 +118,7 @@ func (c dynamodbCommentRepository) FindCommentByCommentIdAndArticleId(ctx contex
 		return domain.Comment{}, errutil.ErrCommentNotFound
 	}
 
-	dynamodbCommentItem := DynamodbCommentItem{}
+	var dynamodbCommentItem DynamodbCommentItem
 	err = attributevalue.UnmarshalMap(result.Item, &dynamodbCommentItem)
 	if err != nil {
 		return domain.Comment{}, fmt.Errorf("%w: %w", errutil.ErrDynamoMapping, err)

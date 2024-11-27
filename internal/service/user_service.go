@@ -23,7 +23,7 @@ type UserServiceInterface interface {
 	GetUserListByUserIDs(ctx context.Context, userIds []uuid.UUID) ([]domain.User, error)
 }
 
-var _ UserServiceInterface = userService{}
+var _ UserServiceInterface = userService{} //nolint:golint,exhaustruct
 
 func NewUserService(userRepository repository.UserRepositoryInterface) UserServiceInterface {
 	return userService{userRepository: userRepository}

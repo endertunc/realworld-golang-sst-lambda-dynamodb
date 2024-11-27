@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 )
 
+//nolint:all
 func main() {
 	// Generate a new key pair
 	publicKey, privateKey, err := ed25519.GenerateKey(rand.Reader)

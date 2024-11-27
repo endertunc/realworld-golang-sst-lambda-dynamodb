@@ -39,7 +39,6 @@ func (ua UserApi) LoginUser(ctx context.Context, w http.ResponseWriter, r *http.
 	}
 	resp := dto.ToUserResponseBodyDTO(*user, *token)
 	ToSuccessHTTPResponse(w, resp)
-	return
 }
 
 func (ua UserApi) RegisterUser(ctx context.Context, w http.ResponseWriter, r *http.Request) {
@@ -69,7 +68,6 @@ func (ua UserApi) RegisterUser(ctx context.Context, w http.ResponseWriter, r *ht
 	}
 	resp := dto.ToUserResponseBodyDTO(*user, *token)
 	ToSuccessHTTPResponse(w, resp)
-	return
 }
 
 func (ua UserApi) GetCurrentUser(ctx context.Context, w http.ResponseWriter, r *http.Request, userID uuid.UUID, token domain.Token) {
@@ -85,5 +83,4 @@ func (ua UserApi) GetCurrentUser(ctx context.Context, w http.ResponseWriter, r *
 	}
 	resp := dto.ToUserResponseBodyDTO(user, token)
 	ToSuccessHTTPResponse(w, resp)
-	return
 }

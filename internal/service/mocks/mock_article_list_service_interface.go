@@ -96,7 +96,7 @@ func (_c *MockArticleListServiceInterface_GetMostRecentArticlesByAuthor_Call) Ru
 }
 
 // GetMostRecentArticlesFavoritedByTag provides a mock function with given fields: ctx, loggedInUser, tag, limit, nextPageToken
-func (_m *MockArticleListServiceInterface) GetMostRecentArticlesFavoritedByTag(ctx context.Context, loggedInUser *uuid.UUID, tag string, limit int, nextPageToken *int) ([]domain.ArticleAggregateView, *int, error) {
+func (_m *MockArticleListServiceInterface) GetMostRecentArticlesFavoritedByTag(ctx context.Context, loggedInUser *uuid.UUID, tag string, limit int, nextPageToken *string) ([]domain.ArticleAggregateView, *string, error) {
 	ret := _m.Called(ctx, loggedInUser, tag, limit, nextPageToken)
 
 	if len(ret) == 0 {
@@ -104,12 +104,12 @@ func (_m *MockArticleListServiceInterface) GetMostRecentArticlesFavoritedByTag(c
 	}
 
 	var r0 []domain.ArticleAggregateView
-	var r1 *int
+	var r1 *string
 	var r2 error
-	if rf, ok := ret.Get(0).(func(context.Context, *uuid.UUID, string, int, *int) ([]domain.ArticleAggregateView, *int, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, *uuid.UUID, string, int, *string) ([]domain.ArticleAggregateView, *string, error)); ok {
 		return rf(ctx, loggedInUser, tag, limit, nextPageToken)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, *uuid.UUID, string, int, *int) []domain.ArticleAggregateView); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, *uuid.UUID, string, int, *string) []domain.ArticleAggregateView); ok {
 		r0 = rf(ctx, loggedInUser, tag, limit, nextPageToken)
 	} else {
 		if ret.Get(0) != nil {
@@ -117,15 +117,15 @@ func (_m *MockArticleListServiceInterface) GetMostRecentArticlesFavoritedByTag(c
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, *uuid.UUID, string, int, *int) *int); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *uuid.UUID, string, int, *string) *string); ok {
 		r1 = rf(ctx, loggedInUser, tag, limit, nextPageToken)
 	} else {
 		if ret.Get(1) != nil {
-			r1 = ret.Get(1).(*int)
+			r1 = ret.Get(1).(*string)
 		}
 	}
 
-	if rf, ok := ret.Get(2).(func(context.Context, *uuid.UUID, string, int, *int) error); ok {
+	if rf, ok := ret.Get(2).(func(context.Context, *uuid.UUID, string, int, *string) error); ok {
 		r2 = rf(ctx, loggedInUser, tag, limit, nextPageToken)
 	} else {
 		r2 = ret.Error(2)
@@ -144,24 +144,24 @@ type MockArticleListServiceInterface_GetMostRecentArticlesFavoritedByTag_Call st
 //   - loggedInUser *uuid.UUID
 //   - tag string
 //   - limit int
-//   - nextPageToken *int
+//   - nextPageToken *string
 func (_e *MockArticleListServiceInterface_Expecter) GetMostRecentArticlesFavoritedByTag(ctx interface{}, loggedInUser interface{}, tag interface{}, limit interface{}, nextPageToken interface{}) *MockArticleListServiceInterface_GetMostRecentArticlesFavoritedByTag_Call {
 	return &MockArticleListServiceInterface_GetMostRecentArticlesFavoritedByTag_Call{Call: _e.mock.On("GetMostRecentArticlesFavoritedByTag", ctx, loggedInUser, tag, limit, nextPageToken)}
 }
 
-func (_c *MockArticleListServiceInterface_GetMostRecentArticlesFavoritedByTag_Call) Run(run func(ctx context.Context, loggedInUser *uuid.UUID, tag string, limit int, nextPageToken *int)) *MockArticleListServiceInterface_GetMostRecentArticlesFavoritedByTag_Call {
+func (_c *MockArticleListServiceInterface_GetMostRecentArticlesFavoritedByTag_Call) Run(run func(ctx context.Context, loggedInUser *uuid.UUID, tag string, limit int, nextPageToken *string)) *MockArticleListServiceInterface_GetMostRecentArticlesFavoritedByTag_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(*uuid.UUID), args[2].(string), args[3].(int), args[4].(*int))
+		run(args[0].(context.Context), args[1].(*uuid.UUID), args[2].(string), args[3].(int), args[4].(*string))
 	})
 	return _c
 }
 
-func (_c *MockArticleListServiceInterface_GetMostRecentArticlesFavoritedByTag_Call) Return(_a0 []domain.ArticleAggregateView, _a1 *int, _a2 error) *MockArticleListServiceInterface_GetMostRecentArticlesFavoritedByTag_Call {
+func (_c *MockArticleListServiceInterface_GetMostRecentArticlesFavoritedByTag_Call) Return(_a0 []domain.ArticleAggregateView, _a1 *string, _a2 error) *MockArticleListServiceInterface_GetMostRecentArticlesFavoritedByTag_Call {
 	_c.Call.Return(_a0, _a1, _a2)
 	return _c
 }
 
-func (_c *MockArticleListServiceInterface_GetMostRecentArticlesFavoritedByTag_Call) RunAndReturn(run func(context.Context, *uuid.UUID, string, int, *int) ([]domain.ArticleAggregateView, *int, error)) *MockArticleListServiceInterface_GetMostRecentArticlesFavoritedByTag_Call {
+func (_c *MockArticleListServiceInterface_GetMostRecentArticlesFavoritedByTag_Call) RunAndReturn(run func(context.Context, *uuid.UUID, string, int, *string) ([]domain.ArticleAggregateView, *string, error)) *MockArticleListServiceInterface_GetMostRecentArticlesFavoritedByTag_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -238,7 +238,7 @@ func (_c *MockArticleListServiceInterface_GetMostRecentArticlesFavoritedByUser_C
 }
 
 // GetMostRecentArticlesGlobally provides a mock function with given fields: ctx, loggedInUser, limit, nextPageToken
-func (_m *MockArticleListServiceInterface) GetMostRecentArticlesGlobally(ctx context.Context, loggedInUser *uuid.UUID, limit int, nextPageToken *int) ([]domain.ArticleAggregateView, *int, error) {
+func (_m *MockArticleListServiceInterface) GetMostRecentArticlesGlobally(ctx context.Context, loggedInUser *uuid.UUID, limit int, nextPageToken *string) ([]domain.ArticleAggregateView, *string, error) {
 	ret := _m.Called(ctx, loggedInUser, limit, nextPageToken)
 
 	if len(ret) == 0 {
@@ -246,12 +246,12 @@ func (_m *MockArticleListServiceInterface) GetMostRecentArticlesGlobally(ctx con
 	}
 
 	var r0 []domain.ArticleAggregateView
-	var r1 *int
+	var r1 *string
 	var r2 error
-	if rf, ok := ret.Get(0).(func(context.Context, *uuid.UUID, int, *int) ([]domain.ArticleAggregateView, *int, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, *uuid.UUID, int, *string) ([]domain.ArticleAggregateView, *string, error)); ok {
 		return rf(ctx, loggedInUser, limit, nextPageToken)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, *uuid.UUID, int, *int) []domain.ArticleAggregateView); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, *uuid.UUID, int, *string) []domain.ArticleAggregateView); ok {
 		r0 = rf(ctx, loggedInUser, limit, nextPageToken)
 	} else {
 		if ret.Get(0) != nil {
@@ -259,15 +259,15 @@ func (_m *MockArticleListServiceInterface) GetMostRecentArticlesGlobally(ctx con
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, *uuid.UUID, int, *int) *int); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *uuid.UUID, int, *string) *string); ok {
 		r1 = rf(ctx, loggedInUser, limit, nextPageToken)
 	} else {
 		if ret.Get(1) != nil {
-			r1 = ret.Get(1).(*int)
+			r1 = ret.Get(1).(*string)
 		}
 	}
 
-	if rf, ok := ret.Get(2).(func(context.Context, *uuid.UUID, int, *int) error); ok {
+	if rf, ok := ret.Get(2).(func(context.Context, *uuid.UUID, int, *string) error); ok {
 		r2 = rf(ctx, loggedInUser, limit, nextPageToken)
 	} else {
 		r2 = ret.Error(2)
@@ -285,24 +285,24 @@ type MockArticleListServiceInterface_GetMostRecentArticlesGlobally_Call struct {
 //   - ctx context.Context
 //   - loggedInUser *uuid.UUID
 //   - limit int
-//   - nextPageToken *int
+//   - nextPageToken *string
 func (_e *MockArticleListServiceInterface_Expecter) GetMostRecentArticlesGlobally(ctx interface{}, loggedInUser interface{}, limit interface{}, nextPageToken interface{}) *MockArticleListServiceInterface_GetMostRecentArticlesGlobally_Call {
 	return &MockArticleListServiceInterface_GetMostRecentArticlesGlobally_Call{Call: _e.mock.On("GetMostRecentArticlesGlobally", ctx, loggedInUser, limit, nextPageToken)}
 }
 
-func (_c *MockArticleListServiceInterface_GetMostRecentArticlesGlobally_Call) Run(run func(ctx context.Context, loggedInUser *uuid.UUID, limit int, nextPageToken *int)) *MockArticleListServiceInterface_GetMostRecentArticlesGlobally_Call {
+func (_c *MockArticleListServiceInterface_GetMostRecentArticlesGlobally_Call) Run(run func(ctx context.Context, loggedInUser *uuid.UUID, limit int, nextPageToken *string)) *MockArticleListServiceInterface_GetMostRecentArticlesGlobally_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(*uuid.UUID), args[2].(int), args[3].(*int))
+		run(args[0].(context.Context), args[1].(*uuid.UUID), args[2].(int), args[3].(*string))
 	})
 	return _c
 }
 
-func (_c *MockArticleListServiceInterface_GetMostRecentArticlesGlobally_Call) Return(_a0 []domain.ArticleAggregateView, _a1 *int, _a2 error) *MockArticleListServiceInterface_GetMostRecentArticlesGlobally_Call {
+func (_c *MockArticleListServiceInterface_GetMostRecentArticlesGlobally_Call) Return(_a0 []domain.ArticleAggregateView, _a1 *string, _a2 error) *MockArticleListServiceInterface_GetMostRecentArticlesGlobally_Call {
 	_c.Call.Return(_a0, _a1, _a2)
 	return _c
 }
 
-func (_c *MockArticleListServiceInterface_GetMostRecentArticlesGlobally_Call) RunAndReturn(run func(context.Context, *uuid.UUID, int, *int) ([]domain.ArticleAggregateView, *int, error)) *MockArticleListServiceInterface_GetMostRecentArticlesGlobally_Call {
+func (_c *MockArticleListServiceInterface_GetMostRecentArticlesGlobally_Call) RunAndReturn(run func(context.Context, *uuid.UUID, int, *string) ([]domain.ArticleAggregateView, *string, error)) *MockArticleListServiceInterface_GetMostRecentArticlesGlobally_Call {
 	_c.Call.Return(run)
 	return _c
 }

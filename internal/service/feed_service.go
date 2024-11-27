@@ -21,7 +21,7 @@ type FeedServiceInterface interface {
 	FetchArticlesFromFeed(ctx context.Context, userId uuid.UUID, limit int, nextPageToken *string) ([]domain.ArticleAggregateView, *string, error)
 }
 
-var _ FeedServiceInterface = userFeedService{}
+var _ FeedServiceInterface = userFeedService{} //nolint:golint,exhaustruct
 
 func NewUserFeedService(
 	userFeedRepository repository.UserFeedRepositoryInterface,

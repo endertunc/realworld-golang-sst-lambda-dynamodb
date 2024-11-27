@@ -38,7 +38,7 @@ type ArticleRepositoryInterface interface {
 	FindArticlesFavoritedByUser(ctx context.Context, userId uuid.UUID, limit int, nextPageToken *string) ([]uuid.UUID, *string, error)
 }
 
-var _ ArticleRepositoryInterface = dynamodbArticleRepository{}
+var _ ArticleRepositoryInterface = dynamodbArticleRepository{} //nolint:golint,exhaustruct
 
 func NewDynamodbArticleRepository(db *database.DynamoDBStore) ArticleRepositoryInterface {
 	return dynamodbArticleRepository{db: db}

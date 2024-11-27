@@ -10,6 +10,7 @@ import (
 	"testing"
 )
 
+//nolint:golint,exhaustruct
 func TestRequestValidation(t *testing.T) {
 	tests := []test.ApiRequestValidationTest[dto.LoginRequestUserDto]{
 		{

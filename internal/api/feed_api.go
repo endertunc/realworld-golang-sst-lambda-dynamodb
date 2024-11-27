@@ -39,5 +39,4 @@ func (uf UserFeedApi) FetchUserFeed(ctx context.Context, w http.ResponseWriter, 
 	}
 	resp := dto.ToMultipleArticlesResponseBodyDTO(feedItems, nextToken)
 	ToSuccessHTTPResponse(w, resp)
-	return
 }

@@ -18,6 +18,7 @@ func TestAuthenticationScenarios(t *testing.T) {
 	})
 }
 
+//nolint:golint,exhaustruct
 func TestRequestValidation(t *testing.T) {
 	// create a user
 	_, token := test.CreateAndLoginUser(t, dtogen.GenerateNewUserRequestUserDto())
@@ -235,7 +236,7 @@ func TestCreateArticlesWithSameTitle(t *testing.T) {
 		assert.NotEmpty(t, secondRespBody.Slug)
 
 		// Verify other fields are set correctly for both articles
-		baseExpectedArticle := dto.ArticleResponseDTO{
+		baseExpectedArticle := dto.ArticleResponseDTO{ //nolint:golint,exhaustruct
 			Title:          article.Title,
 			Description:    article.Description,
 			Body:           article.Body,

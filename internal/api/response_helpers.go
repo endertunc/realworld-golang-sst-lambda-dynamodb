@@ -46,7 +46,7 @@ func ToSuccessHTTPResponse(w http.ResponseWriter, body interface{}) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	w.Write(bodyJson)
+	_, _ = w.Write(bodyJson)
 }
 
 func ToSimpleHTTPError(w http.ResponseWriter, statusCode int, message string) {
@@ -59,7 +59,7 @@ func ToSimpleHTTPError(w http.ResponseWriter, statusCode int, message string) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
-	w.Write(body)
+	_, _ = w.Write(body)
 }
 
 func ToFieldValidationHTTPError(w http.ResponseWriter, statusCode int, validationErrors dto.ValidationErrors) {
@@ -72,7 +72,7 @@ func ToFieldValidationHTTPError(w http.ResponseWriter, statusCode int, validatio
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
-	w.Write(body)
+	_, _ = w.Write(body)
 }
 
 func ToInternalServerHTTPError(w http.ResponseWriter, err error) {

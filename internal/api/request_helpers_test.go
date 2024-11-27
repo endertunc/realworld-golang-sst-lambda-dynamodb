@@ -1,3 +1,4 @@
+//nolint:golint,exhaustruct
 package api
 
 import (
@@ -278,7 +279,7 @@ func TestGetPathParamHTTP(t *testing.T) {
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		value, ok := GetPathParamHTTP(ctx, w, r, "id")
 		if ok {
-			w.Write([]byte(value))
+			_, _ = w.Write([]byte(value))
 		}
 	})
 

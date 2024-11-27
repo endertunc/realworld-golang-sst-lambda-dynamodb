@@ -16,7 +16,6 @@ func init() {
 
 func handler(w http.ResponseWriter, r *http.Request, userId uuid.UUID, token domain.Token) {
 	functions.ArticleApi.FavoriteArticle(r.Context(), w, r, userId)
-	return
 }
 
 func main() {

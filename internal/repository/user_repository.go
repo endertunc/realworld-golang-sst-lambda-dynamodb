@@ -35,7 +35,7 @@ type UserRepositoryInterface interface {
 	FindUserListByUserIDs(c context.Context, userIds []uuid.UUID) ([]domain.User, error)
 }
 
-var _ UserRepositoryInterface = dynamodbUserRepository{}
+var _ UserRepositoryInterface = dynamodbUserRepository{} //nolint:golint,exhaustruct
 
 func NewDynamodbUserRepository(db *database.DynamoDBStore) UserRepositoryInterface {
 	return dynamodbUserRepository{db: db}
@@ -150,7 +150,7 @@ func (s dynamodbUserRepository) FindUserById(c context.Context, userId uuid.UUID
 		return domain.User{}, errutil.ErrUserNotFound
 	}
 
-	dynamodbUser := DynamodbUserItem{}
+	var dynamodbUser DynamodbUserItem
 	err = attributevalue.UnmarshalMap(response.Item, &dynamodbUser)
 
 	if err != nil {

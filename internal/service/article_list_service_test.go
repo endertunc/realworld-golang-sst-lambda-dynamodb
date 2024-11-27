@@ -1,3 +1,4 @@
+//nolint:golint,exhaustruct
 package service
 
 import (
@@ -400,8 +401,8 @@ func TestListArticleByFavorited(t *testing.T) {
 
 func TestListAaticleByTag(t *testing.T) {
 	var (
-		nextPageTokenRequest  *int = nil
-		nextPageTokenResponse *int = nil
+		nextPageTokenRequest  *string = nil
+		nextPageTokenResponse *string = nil
 	)
 
 	t.Run("no auth", func(t *testing.T) {

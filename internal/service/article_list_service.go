@@ -23,7 +23,7 @@ type articleListService struct {
 	profileService              ProfileServiceInterface
 }
 
-var _ ArticleListServiceInterface = articleListService{}
+var _ ArticleListServiceInterface = articleListService{} //nolint:golint,exhaustruct
 
 func NewArticleListService(
 	articleRepository repository.ArticleRepositoryInterface,
