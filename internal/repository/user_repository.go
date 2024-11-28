@@ -33,6 +33,7 @@ type UserRepositoryInterface interface {
 	FindUserById(c context.Context, userId uuid.UUID) (domain.User, error)
 	InsertNewUser(c context.Context, newUser domain.User) (domain.User, error)
 	FindUserListByUserIDs(c context.Context, userIds []uuid.UUID) ([]domain.User, error)
+	UpdateUser(c context.Context, user domain.User, oldEmail string, oldUsername string) (domain.User, error)
 }
 
 var _ UserRepositoryInterface = dynamodbUserRepository{} //nolint:golint,exhaustruct
@@ -198,6 +199,92 @@ func (s dynamodbUserRepository) FindUserByUsernameTBD(ctx context.Context, usern
 		}
 		return domain.User{}, err
 	}
+	return user, nil
+}
+
+func (s dynamodbUserRepository) UpdateUser(ctx context.Context, user domain.User, oldEmail string, oldUsername string) (domain.User, error) {
+	dynamodbUserItem := toDynamoDbUser(user)
+	userAttributes, err := attributevalue.MarshalMap(dynamodbUserItem)
+	if err != nil {
+		return domain.User{}, fmt.Errorf("%w: %w", errutil.ErrDynamoMapping, err)
+	}
+
+	transactItems := []ddbtypes.TransactWriteItem{
+		{
+			Put: &ddbtypes.Put{
+				TableName: aws.String(userTable),
+				Item:     userAttributes,
+			},
+		},
+	}
+
+	// If email changed, update email index
+	if user.Email != oldEmail {
+		transactItems = append(transactItems,
+			ddbtypes.TransactWriteItem{
+				Delete: &ddbtypes.Delete{
+					TableName: aws.String(userTable),
+					Key: map[string]ddbtypes.AttributeValue{
+						"pk": &ddbtypes.AttributeValueMemberS{Value: "email#" + oldEmail},
+					},
+				},
+			},
+			ddbtypes.TransactWriteItem{
+				Put: &ddbtypes.Put{
+					TableName: aws.String(userTable),
+					Item: map[string]ddbtypes.AttributeValue{
+						"pk": &ddbtypes.AttributeValueMemberS{Value: "email#" + user.Email},
+					},
+					ConditionExpression: aws.String("attribute_not_exists(pk)"),
+				},
+			},
+		)
+	}
+
+	// If username changed, update username index
+	if user.Username != oldUsername {
+		transactItems = append(transactItems,
+			ddbtypes.TransactWriteItem{
+				Delete: &ddbtypes.Delete{
+					TableName: aws.String(userTable),
+					Key: map[string]ddbtypes.AttributeValue{
+						"pk": &ddbtypes.AttributeValueMemberS{Value: "username#" + oldUsername},
+					},
+				},
+			},
+			ddbtypes.TransactWriteItem{
+				Put: &ddbtypes.Put{
+					TableName: aws.String(userTable),
+					Item: map[string]ddbtypes.AttributeValue{
+						"pk": &ddbtypes.AttributeValueMemberS{Value: "username#" + user.Username},
+					},
+					ConditionExpression: aws.String("attribute_not_exists(pk)"),
+				},
+			},
+		)
+	}
+
+	_, err = s.db.Client.TransactWriteItems(ctx, &dynamodb.TransactWriteItemsInput{
+		TransactItems: transactItems,
+	})
+
+	if err != nil {
+		var canceledException *ddbtypes.TransactionCanceledException
+		if errors.As(err, &canceledException) {
+			for _, reason := range canceledException.CancellationReasons {
+				if reason.Code != nil && *reason.Code == conditionalCheckFailed {
+					if user.Email != oldEmail {
+						return domain.User{}, fmt.Errorf("%w: %w", errutil.ErrEmailAlreadyExists, err)
+					}
+					if user.Username != oldUsername {
+						return domain.User{}, fmt.Errorf("%w: %w", errutil.ErrUsernameAlreadyExists, err)
+					}
+				}
+			}
+		}
+		return domain.User{}, fmt.Errorf("%w: %w", errutil.ErrDynamoQuery, err)
+	}
+
 	return user, nil
 }
 

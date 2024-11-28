@@ -9,6 +9,7 @@ import (
 	"realworld-aws-lambda-dynamodb-golang/internal/errutil"
 	"realworld-aws-lambda-dynamodb-golang/internal/repository"
 	"realworld-aws-lambda-dynamodb-golang/internal/security"
+	"time"
 )
 
 type userService struct {
@@ -21,6 +22,7 @@ type UserServiceInterface interface {
 	GetUserByUserId(ctx context.Context, userID uuid.UUID) (domain.User, error)
 	GetUserByUsername(ctx context.Context, username string) (domain.User, error)
 	GetUserListByUserIDs(ctx context.Context, userIds []uuid.UUID) ([]domain.User, error)
+	UpdateUser(ctx context.Context, userID uuid.UUID, email, username, plainTextPassword *string, bio, image *string) (*domain.Token, *domain.User, error)
 }
 
 var _ UserServiceInterface = userService{} //nolint:golint,exhaustruct
@@ -89,4 +91,49 @@ func (s userService) GetUserListByUserIDs(c context.Context, userIds []uuid.UUID
 
 func (s userService) GetUserByUsername(ctx context.Context, username string) (domain.User, error) {
 	return s.userRepository.FindUserByUsername(ctx, username)
+}
+
+func (s userService) UpdateUser(ctx context.Context, userID uuid.UUID, email, username, plainTextPassword *string, bio, image *string) (*domain.Token, *domain.User, error) {
+	user, err := s.userRepository.FindUserById(ctx, userID)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	oldEmail := user.Email
+	oldUsername := user.Username
+
+	// Update fields if provided
+	if email != nil {
+		user.Email = *email
+	}
+	if username != nil {
+		user.Username = *username
+	}
+	if plainTextPassword != nil {
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(*plainTextPassword), bcrypt.DefaultCost)
+		if err != nil {
+			return nil, nil, fmt.Errorf("%w: %w", errutil.ErrHashPassword, err)
+		}
+		user.HashedPassword = string(hashedPassword)
+	}
+	if bio != nil {
+		user.Bio = bio
+	}
+	if image != nil {
+		user.Image = image
+	}
+
+	user.UpdatedAt = time.Now()
+
+	updatedUser, err := s.userRepository.UpdateUser(ctx, user, oldEmail, oldUsername)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	token, err := security.GenerateToken(updatedUser.Id)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return token, &updatedUser, nil
 }

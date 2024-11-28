@@ -34,6 +34,23 @@ func (s NewUserRequestBodyDTO) Validate() ValidationErrors {
 	return validateStruct(s)
 }
 
+// update user request dtos
+type UpdateUserRequestBodyDTO struct {
+	User UpdateUserRequestUserDTO `json:"user" validate:"required"`
+}
+
+type UpdateUserRequestUserDTO struct {
+	Email    *string `json:"email" validate:"omitempty,email"`
+	Password *string `json:"password" validate:"omitempty,notblank,min=6,max=20"`
+	Username *string `json:"username" validate:"omitempty,notblank,min=3,max=64"`
+	Bio      *string `json:"bio" validate:"omitempty"`
+	Image    *string `json:"image" validate:"omitempty,url"`
+}
+
+func (s UpdateUserRequestBodyDTO) Validate() ValidationErrors {
+	return validateStruct(s)
+}
+
 // user response dtos
 type UserResponseBodyDTO struct {
 	User UserResponseUserDto `json:"user"`

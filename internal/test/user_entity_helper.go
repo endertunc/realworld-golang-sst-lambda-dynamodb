@@ -64,3 +64,12 @@ func RegisterUserWithResponse[T interface{}](t *testing.T, user dto.NewUserReque
 	reqBody := dto.NewUserRequestBodyDTO{User: user}
 	return ExecuteRequest[T](t, "POST", "/api/users", reqBody, expectedStatusCode, nil)
 }
+
+func UpdateUser(t *testing.T, token string, updateReq dto.UpdateUserRequestUserDTO) dto.UserResponseUserDto {
+	return UpdateUserWithResponse[dto.UserResponseBodyDTO](t, token, updateReq, http.StatusOK).User
+}
+
+func UpdateUserWithResponse[T interface{}](t *testing.T, token string, user dto.UpdateUserRequestUserDTO, expectedStatusCode int) T {
+	reqBody := dto.UpdateUserRequestBodyDTO{User: user}
+	return ExecuteRequest[T](t, "PUT", "/api/user", reqBody, expectedStatusCode, &token)
+}

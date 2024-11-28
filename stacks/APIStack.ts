@@ -61,7 +61,8 @@ export function APIStack({ stack }: StackContext) {
   const getCurrentUser = createLambdaFunction("get-current-user", "get_current_user/get_current_user.go");
   dynamodbStack.userTable.grantReadData(getCurrentUser);
 
-  // const updateUser = createLambdaFunction("update-user", "update_user/update_user.go");
+  const updateUser = createLambdaFunction("update-user", "update_user/update_user.go");
+  dynamodbStack.userTable.grantReadWriteData(updateUser);
 
   const getUserProfile = createLambdaFunction("get-user-profile", "get_user_profile/get_user_profile.go");
   dynamodbStack.userTable.grantReadData(getUserProfile);
@@ -140,7 +141,7 @@ export function APIStack({ stack }: StackContext) {
       "POST   /api/users/login":                    loginUser,
       "POST   /api/users":                          registerUser,
       "GET    /api/user":                           getCurrentUser,
-      // "PUT    /api/user":                         updateUser,
+      "PUT    /api/user":                         updateUser,
       "GET    /api/profiles/{username}":            getUserProfile,
       "POST   /api/profiles/{username}/follow":     followUser,
       "DELETE /api/profiles/{username}/follow":     unfollowUser,
