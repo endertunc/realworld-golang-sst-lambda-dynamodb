@@ -33,6 +33,15 @@ func CreateArticleWithResponse[T any](t *testing.T, article dto.CreateArticleReq
 	return ExecuteRequest[T](t, "POST", "/api/articles", reqBody, expectedStatusCode, &token)
 }
 
+func UpdateArticle(t *testing.T, slug string, article dto.UpdateArticleRequestDTO, token string) dto.ArticleResponseDTO {
+	return UpdateArticleWithResponse[dto.ArticleResponseBodyDTO](t, slug, article, token, http.StatusOK).Article
+}
+
+func UpdateArticleWithResponse[T any](t *testing.T, slug string, article dto.UpdateArticleRequestDTO, token string, expectedStatusCode int) T {
+	reqBody := dto.UpdateArticleRequestBodyDTO{Article: article}
+	return ExecuteRequest[T](t, "PUT", "/api/articles/"+slug, reqBody, expectedStatusCode, &token)
+}
+
 func DeleteArticle(t *testing.T, slug string, token string) {
 	DeleteArticleWithResponse[Nothing](t, slug, token, http.StatusOK)
 }

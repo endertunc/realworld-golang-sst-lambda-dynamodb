@@ -5,13 +5,15 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"github.com/golang-jwt/jwt/v5"
-	"github.com/google/uuid"
 	"os"
 	"path/filepath"
 	"realworld-aws-lambda-dynamodb-golang/internal/domain"
 	"realworld-aws-lambda-dynamodb-golang/internal/errutil"
+	"sync"
 	"time"
+
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 )
 
 const (
@@ -26,8 +28,18 @@ var (
 	ErrTokenSubjectInvalid       = errors.New("invalid uuid subject")
 )
 
-// Load keys from files
-var publicKey, privateKey = loadKeys()
+type keypair struct {
+	PublicKey  ed25519.PublicKey
+	PrivateKey ed25519.PrivateKey
+}
+
+var keys = sync.OnceValue(func() keypair {
+	publicKey, privateKey := loadKeys()
+	return keypair{
+		PublicKey:  publicKey,
+		PrivateKey: privateKey,
+	}
+})
 
 func loadKeys() (ed25519.PublicKey, ed25519.PrivateKey) {
 	keysDirectory := os.Getenv("JWT_KEYS_DIRECTORY")
@@ -84,7 +96,7 @@ func GenerateToken(userId uuid.UUID) (*domain.Token, error) {
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodEdDSA, claims)
-	signedString, err := token.SignedString(privateKey)
+	signedString, err := token.SignedString(keys().PrivateKey)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", errutil.ErrTokenGenerate, err)
 	}
@@ -102,7 +114,7 @@ func ValidateToken(tokenString string) (uuid.UUID, error) {
 	}
 
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-		return publicKey, nil
+		return keys().PublicKey, nil
 	}, parserOptions...)
 
 	if err != nil {

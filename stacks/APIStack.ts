@@ -80,7 +80,10 @@ export function APIStack({ stack }: StackContext) {
   dynamodbStack.articleTable.grantWriteData(postArticle);
   dynamodbStack.userTable.grantReadData(postArticle);
 
-  // const updateArticle = createLambdaFunction("update-article", "update_article/update_article.go");
+  const updateArticle = createLambdaFunction("update-article", "update_article/update_article.go");
+  dynamodbStack.articleTable.grantReadWriteData(updateArticle);
+  dynamodbStack.userTable.grantReadData(updateArticle);
+  dynamodbStack.favoritedTable.grantReadData(updateArticle);
 
   const getArticle = createLambdaFunction("get-article", "get_article/get_article.go");
   dynamodbStack.articleTable.grantReadData(getArticle);
@@ -141,16 +144,16 @@ export function APIStack({ stack }: StackContext) {
       "POST   /api/users/login":                    loginUser,
       "POST   /api/users":                          registerUser,
       "GET    /api/user":                           getCurrentUser,
-      "PUT    /api/user":                         updateUser,
+      "PUT    /api/user":                           updateUser,
       "GET    /api/profiles/{username}":            getUserProfile,
       "POST   /api/profiles/{username}/follow":     followUser,
       "DELETE /api/profiles/{username}/follow":     unfollowUser,
       "POST   /api/articles":                       postArticle,
-      // "PUT    /api/articles/{slug}":               updateArticle,
+      "PUT    /api/articles/{slug}":                updateArticle,
       "GET    /api/articles":                       listArticles,
       "GET    /api/articles/feed":                  getUserFeed,
       "GET    /api/articles/{slug}":                getArticle,
-      "DELETE /api/articles/{slug}":               deleteArticle,
+      "DELETE /api/articles/{slug}":                deleteArticle,
       "POST   /api/articles/{slug}/favorite":       favoriteArticle,
       "DELETE /api/articles/{slug}/favorite":       unfavoriteArticle,
       "POST   /api/articles/{slug}/comments":       addComment,
@@ -164,11 +167,21 @@ export function APIStack({ stack }: StackContext) {
   dynamodbStack.feedTable.grantWriteData(userFeedEventHandler);
   dynamodbStack.followerTable.grantReadData(userFeedEventHandler);
   dynamodbStack.articleTable.grantStreamRead(userFeedEventHandler);
+
   userFeedEventHandler.addEventSource(
     new DynamoEventSource(dynamodbStack.articleTable, {
       enabled: true,
       startingPosition: StartingPosition.LATEST,
-      filters: [FilterCriteria.filter({ eventName: FilterRule.isEqual("INSERT") })],
+      filters: [
+        FilterCriteria.filter({
+          eventName: FilterRule.isEqual("INSERT"),
+          dynamodb: {
+            Keys: {
+              pk: { S: [{ "anything-but": { prefix: "slug#" } }] }
+            }
+          }
+        })
+      ],
       reportBatchItemFailures: true,
       retryAttempts: 5,
       onFailure: undefined // ToDo @ender add DeadLetterQueue

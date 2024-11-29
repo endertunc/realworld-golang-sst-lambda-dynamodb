@@ -2,11 +2,13 @@ package service
 
 import (
 	"context"
-	mapset "github.com/deckarep/golang-set/v2"
-	"github.com/google/uuid"
 	"realworld-aws-lambda-dynamodb-golang/internal/domain"
 	"realworld-aws-lambda-dynamodb-golang/internal/errutil"
 	"realworld-aws-lambda-dynamodb-golang/internal/repository"
+	"time"
+
+	mapset "github.com/deckarep/golang-set/v2"
+	"github.com/google/uuid"
 )
 
 type articleService struct {
@@ -22,6 +24,7 @@ type ArticleServiceInterface interface {
 	GetArticleBySlug(ctx context.Context, slug string) (domain.Article, error)
 
 	CreateArticle(ctx context.Context, author uuid.UUID, title, description, body string, tagList []string) (domain.Article, error)
+	UpdateArticle(ctx context.Context, authorId uuid.UUID, slug string, title, description, body *string) (domain.Article, error)
 	DeleteArticle(ctx context.Context, author uuid.UUID, slug string) error
 
 	FavoriteArticle(ctx context.Context, userId uuid.UUID, slug string) (domain.Article, error)
@@ -63,6 +66,37 @@ func (as articleService) CreateArticle(ctx context.Context, author uuid.UUID, ti
 		return domain.Article{}, err
 	}
 	return article, nil
+}
+
+func (as articleService) UpdateArticle(ctx context.Context, authorId uuid.UUID, slug string, title, description, body *string) (domain.Article, error) {
+	article, err := as.articleRepository.FindArticleBySlug(ctx, slug)
+	if err != nil {
+		return domain.Article{}, err
+	}
+
+	if article.AuthorId != authorId {
+		return domain.Article{}, errutil.ErrCantUpdateOthersArticle
+	}
+
+	// Update fields if provided
+	if title != nil {
+		article.Title = *title
+		article.Slug = domain.GenerateSlug(*title)
+	}
+	if description != nil {
+		article.Description = *description
+	}
+	if body != nil {
+		article.Body = *body
+	}
+	article.UpdatedAt = time.Now().Truncate(time.Millisecond)
+
+	updatedArticle, err := as.articleRepository.UpdateArticle(ctx, article, slug)
+	if err != nil {
+		return domain.Article{}, err
+	}
+
+	return updatedArticle, nil
 }
 
 func (as articleService) UnfavoriteArticle(ctx context.Context, loggedInUserId uuid.UUID, slug string) (domain.Article, error) {

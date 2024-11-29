@@ -4,26 +4,62 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"log/slog"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
 
+	"github.com/joho/godotenv"
 	"github.com/stretchr/testify/require"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
-	"github.com/joho/godotenv"
 )
 
-// ToDo @ender this actually doesn't work...
-var _ = godotenv.Load("../../.env")
+func init() {
+	loadEnv()
+}
+
+// loadEnv loads the .env file from the project root, regardless of the current working directory
+func loadEnv() {
+	rootDir, err := findProjectRoot()
+	if err != nil {
+		log.Fatalf("error finding project root: %v", err)
+	}
+	envPath := filepath.Join(rootDir, ".env")
+	if err := godotenv.Load(envPath); err != nil {
+		log.Printf("no .env file found at %s: %v", envPath, err)
+	}
+}
+
+// findProjectRoot attempts to find the project root by looking for a go.mod file
+func findProjectRoot() (string, error) {
+	// Start from the current working directory
+	currentDir, err := os.Getwd()
+	if err != nil {
+		return "", err
+	}
+
+	// Traverse up the directory tree looking for go.mod
+	for {
+		if _, err := os.Stat(filepath.Join(currentDir, "go.mod")); err == nil {
+			return currentDir, nil
+		}
+		parentDir := filepath.Dir(currentDir)
+		if parentDir == currentDir {
+			return "", fmt.Errorf("could not find project root (go.mod file)")
+		}
+		currentDir = parentDir
+	}
+}
 
 // This really feels like an overkill tbh...
 var apiUrl = sync.OnceValue(func() string {

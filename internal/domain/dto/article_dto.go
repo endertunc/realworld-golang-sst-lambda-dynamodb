@@ -14,10 +14,24 @@ type CreateArticleRequestDTO struct {
 	Title       string   `json:"title" validate:"required,notblank,max=255"`
 	Description string   `json:"description" validate:"required,notblank,max=1024"`
 	Body        string   `json:"body" validate:"required,notblank"`
-	TagList     []string `json:"tagList" validate:"gt=0,unique,dive,notblank,max=64"`
+	TagList     []string `json:"tagList" validate:"gt=0,unique,dive,notblank,max=64"` // ToDo @ender we should have max number of tags limit
 }
 
 func (s CreateArticleRequestBodyDTO) Validate() ValidationErrors {
+	return validateStruct(s)
+}
+
+type UpdateArticleRequestBodyDTO struct {
+	Article UpdateArticleRequestDTO `json:"article" validate:"required"`
+}
+
+type UpdateArticleRequestDTO struct {
+	Title       *string `json:"title" validate:"omitempty,notblank,max=255"`
+	Description *string `json:"description" validate:"omitempty,notblank,max=1024"`
+	Body        *string `json:"body" validate:"omitempty,notblank"`
+}
+
+func (s UpdateArticleRequestBodyDTO) Validate() ValidationErrors {
 	return validateStruct(s)
 }
 

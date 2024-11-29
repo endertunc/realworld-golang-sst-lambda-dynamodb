@@ -8,6 +8,7 @@ import (
 	"realworld-aws-lambda-dynamodb-golang/internal/database"
 	"realworld-aws-lambda-dynamodb-golang/internal/domain"
 	"realworld-aws-lambda-dynamodb-golang/internal/errutil"
+	"realworld-aws-lambda-dynamodb-golang/internal/test"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -28,6 +29,7 @@ type ArticleRepositoryInterface interface {
 	FindArticlesByAuthor(ctx context.Context, authorId uuid.UUID, limit int, nextPageToken *string) ([]domain.Article, *string, error)
 
 	CreateArticle(ctx context.Context, article domain.Article) (domain.Article, error)
+	UpdateArticle(ctx context.Context, article domain.Article, oldSlug string) (domain.Article, error)
 	DeleteArticleById(ctx context.Context, articleId uuid.UUID) error
 
 	UnfavoriteArticle(ctx context.Context, loggedInUserId uuid.UUID, articleId uuid.UUID) error
@@ -136,7 +138,6 @@ func (d dynamodbArticleRepository) FindArticleById(ctx context.Context, articleI
 	return article, nil
 }
 
-// ToDo there can only be one article with the same slug
 func (d dynamodbArticleRepository) CreateArticle(ctx context.Context, article domain.Article) (domain.Article, error) {
 	dynamodbArticleItem := toDynamodbArticleItem(article)
 	articleAttributes, err := attributevalue.MarshalMap(dynamodbArticleItem)
@@ -144,13 +145,100 @@ func (d dynamodbArticleRepository) CreateArticle(ctx context.Context, article do
 		return domain.Article{}, fmt.Errorf("%w: %w", errutil.ErrDynamoMarshalling, err)
 	}
 
-	input := &dynamodb.PutItemInput{
-		TableName: &articleTable,
-		Item:      articleAttributes,
+	transactWriteItems := dynamodb.TransactWriteItemsInput{
+		TransactItems: []types.TransactWriteItem{
+			{
+				Put: &types.Put{
+					TableName:           &articleTable,
+					Item:                articleAttributes,
+					ConditionExpression: aws.String("attribute_not_exists(pk)"),
+				},
+			},
+			{
+				Put: &types.Put{
+					TableName: &articleTable,
+					Item: map[string]types.AttributeValue{
+						"pk": &types.AttributeValueMemberS{Value: "slug#" + article.Slug},
+					},
+					ConditionExpression: aws.String("attribute_not_exists(pk)"),
+				},
+			},
+		},
 	}
 
-	_, err = d.db.Client.PutItem(ctx, input)
+	_, err = d.db.Client.TransactWriteItems(ctx, &transactWriteItems)
 	if err != nil {
+		var canceledException *types.TransactionCanceledException
+		if errors.As(err, &canceledException) {
+			for index, reason := range canceledException.CancellationReasons {
+				if reason.Code != nil && *reason.Code == conditionalCheckFailed && index == 1 {
+					return domain.Article{}, fmt.Errorf("%w: %w", errutil.ErrSlugAlreadyExists, err)
+				}
+			}
+		}
+		return domain.Article{}, fmt.Errorf("%w: %w", errutil.ErrDynamoQuery, err)
+	}
+
+	return article, nil
+}
+
+func (d dynamodbArticleRepository) UpdateArticle(ctx context.Context, article domain.Article, oldSlug string) (domain.Article, error) {
+	test.PrintAsJSON(article)
+	dynamodbArticleItem := toDynamodbArticleItem(article)
+	articleAttributes, err := attributevalue.MarshalMap(dynamodbArticleItem)
+	if err != nil {
+		return domain.Article{}, fmt.Errorf("%w: %w", errutil.ErrDynamoMarshalling, err)
+	}
+
+	transactItems := []types.TransactWriteItem{
+		{
+			Put: &types.Put{
+				TableName: &articleTable,
+				Item:      articleAttributes,
+			},
+		},
+	}
+
+	// If slug changed, update slug index
+	if article.Slug != oldSlug {
+		transactItems = append(transactItems,
+			types.TransactWriteItem{
+				Delete: &types.Delete{
+					TableName: &articleTable,
+					Key: map[string]types.AttributeValue{
+						"pk": &types.AttributeValueMemberS{Value: "slug#" + oldSlug},
+					},
+				},
+			},
+			types.TransactWriteItem{
+				Put: &types.Put{
+					TableName: &articleTable,
+					Item: map[string]types.AttributeValue{
+						"pk":   &types.AttributeValueMemberS{Value: "slug#" + article.Slug},
+						"slug": &types.AttributeValueMemberS{Value: article.Slug},
+					},
+					ConditionExpression: aws.String("attribute_not_exists(pk)"),
+				},
+			},
+		)
+	}
+
+	_, err = d.db.Client.TransactWriteItems(ctx, &dynamodb.TransactWriteItemsInput{
+		TransactItems: transactItems,
+	})
+
+	if err != nil {
+		var canceledException *types.TransactionCanceledException
+		if errors.As(err, &canceledException) {
+			// Check if the failure was due to slug uniqueness constraint
+			// The slug uniqueness check is always index 2
+			if len(canceledException.CancellationReasons) > 0 {
+				if canceledException.CancellationReasons[2].Code != nil &&
+					*canceledException.CancellationReasons[2].Code == conditionalCheckFailed {
+					return domain.Article{}, fmt.Errorf("%w: %w", errutil.ErrSlugAlreadyExists, err)
+				}
+			}
+		}
 		return domain.Article{}, fmt.Errorf("%w: %w", errutil.ErrDynamoQuery, err)
 	}
 

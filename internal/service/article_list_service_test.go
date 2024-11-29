@@ -3,17 +3,19 @@ package service
 
 import (
 	"context"
-	"github.com/brianvoe/gofakeit/v7"
-	mapset "github.com/deckarep/golang-set/v2"
-	"github.com/stretchr/testify/mock"
 	"realworld-aws-lambda-dynamodb-golang/internal/domain/generator"
 	"realworld-aws-lambda-dynamodb-golang/internal/errutil"
 	"realworld-aws-lambda-dynamodb-golang/internal/service/mocks"
 	"testing"
 
+	"github.com/brianvoe/gofakeit/v7"
+	mapset "github.com/deckarep/golang-set/v2"
+	"github.com/stretchr/testify/mock"
+
+	"realworld-aws-lambda-dynamodb-golang/internal/domain"
+
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
-	"realworld-aws-lambda-dynamodb-golang/internal/domain"
 
 	rmocks "realworld-aws-lambda-dynamodb-golang/internal/repository/mocks"
 )

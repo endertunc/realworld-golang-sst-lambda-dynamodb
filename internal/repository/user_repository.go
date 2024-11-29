@@ -213,7 +213,7 @@ func (s dynamodbUserRepository) UpdateUser(ctx context.Context, user domain.User
 		{
 			Put: &ddbtypes.Put{
 				TableName: aws.String(userTable),
-				Item:     userAttributes,
+				Item:      userAttributes,
 			},
 		},
 	}
@@ -271,12 +271,20 @@ func (s dynamodbUserRepository) UpdateUser(ctx context.Context, user domain.User
 	if err != nil {
 		var canceledException *ddbtypes.TransactionCanceledException
 		if errors.As(err, &canceledException) {
-			for _, reason := range canceledException.CancellationReasons {
+			// Index 0: Main user record update
+			// Index 1-2: Email update (if changed)
+			// Last two indices: Username update (if changed, regardless of email change)
+			emailChanged := user.Email != oldEmail
+			usernameChanged := user.Username != oldUsername
+
+			for i, reason := range canceledException.CancellationReasons {
 				if reason.Code != nil && *reason.Code == conditionalCheckFailed {
-					if user.Email != oldEmail {
+					// Email uniqueness check fails at index 2
+					if emailChanged && i == 2 {
 						return domain.User{}, fmt.Errorf("%w: %w", errutil.ErrEmailAlreadyExists, err)
 					}
-					if user.Username != oldUsername {
+					// Username uniqueness check fails at last index
+					if usernameChanged && i == len(canceledException.CancellationReasons)-1 {
 						return domain.User{}, fmt.Errorf("%w: %w", errutil.ErrUsernameAlreadyExists, err)
 					}
 				}

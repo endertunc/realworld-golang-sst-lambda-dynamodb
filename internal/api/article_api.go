@@ -3,13 +3,14 @@ package api
 import (
 	"context"
 	"errors"
-	"github.com/google/uuid"
 	"log/slog"
 	"net/http"
 	"realworld-aws-lambda-dynamodb-golang/internal/domain"
 	"realworld-aws-lambda-dynamodb-golang/internal/domain/dto"
 	"realworld-aws-lambda-dynamodb-golang/internal/errutil"
 	"realworld-aws-lambda-dynamodb-golang/internal/service"
+
+	"github.com/google/uuid"
 )
 
 type ArticleApi struct {
@@ -128,6 +129,60 @@ func (aa ArticleApi) CreateArticle(ctx context.Context, w http.ResponseWriter, r
 	// the current user is the author, and the user can't follow itself thus we simply pass isFollowing as false
 	// the article has just been created thus we simply pass isFavorited as false
 	resp := dto.ToArticleResponseBodyDTO(article, user, false, false)
+	ToSuccessHTTPResponse(w, resp)
+}
+
+func (aa ArticleApi) UpdateArticle(ctx context.Context, w http.ResponseWriter, r *http.Request, loggedInUserId uuid.UUID) {
+	slug, ok := GetPathParamHTTP(ctx, w, r, "slug")
+	if !ok {
+		return
+	}
+
+	updateArticleRequestBodyDTO, ok := ParseAndValidateBody[dto.UpdateArticleRequestBodyDTO](ctx, w, r)
+	if !ok {
+		return
+	}
+
+	handleError := func(err error) {
+		if errors.Is(err, errutil.ErrArticleNotFound) {
+			slog.DebugContext(ctx, "article not found", slog.String("slug", slug))
+			ToSimpleHTTPError(w, http.StatusNotFound, "article not found")
+			return
+		}
+		if errors.Is(err, errutil.ErrCantUpdateOthersArticle) {
+			slog.DebugContext(ctx, "user can't update others article", slog.String("slug", slug), slog.String("userId", loggedInUserId.String()))
+			ToSimpleHTTPError(w, http.StatusForbidden, "forbidden")
+			return
+		}
+		ToInternalServerHTTPError(w, err)
+	}
+
+	articleBody := updateArticleRequestBodyDTO.Article
+	article, err := aa.articleService.UpdateArticle(
+		ctx,
+		loggedInUserId,
+		slug,
+		articleBody.Title,
+		articleBody.Description,
+		articleBody.Body)
+	if err != nil {
+		handleError(err)
+		return
+	}
+
+	author, err := aa.userService.GetUserByUserId(ctx, article.AuthorId)
+	if err != nil {
+		handleError(err)
+		return
+	}
+
+	isFavorited, err := aa.articleService.IsFavorited(ctx, article.Id, loggedInUserId)
+	if err != nil {
+		handleError(err)
+		return
+	}
+
+	resp := dto.ToArticleResponseBodyDTO(article, author, isFavorited, false)
 	ToSuccessHTTPResponse(w, resp)
 }
 

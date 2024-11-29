@@ -29,7 +29,7 @@ func NewArticle(title, description, body string, tagList []string, authorId uuid
 	return Article{
 		Id:             uuid.New(),
 		Title:          title,
-		Slug:           slug.Make(title),
+		Slug:           GenerateSlug(title),
 		Description:    description,
 		Body:           body,
 		TagList:        tagList,
@@ -38,4 +38,8 @@ func NewArticle(title, description, body string, tagList []string, authorId uuid
 		CreatedAt:      now,
 		UpdatedAt:      now,
 	}
+}
+
+func GenerateSlug(title string) string {
+	return slug.Make(title)
 }
