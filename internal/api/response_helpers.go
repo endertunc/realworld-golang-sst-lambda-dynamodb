@@ -1,7 +1,6 @@
 package api
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -15,20 +14,6 @@ import (
 var InternalServerError = events.APIGatewayProxyResponse{
 	StatusCode: http.StatusInternalServerError,
 	Body:       "internal server error",
-}
-
-func ToSimpleError(ctx context.Context, statusCode int, message string) events.APIGatewayProxyResponse {
-	body, err := json.Marshal(errutil.SimpleError{Message: message})
-	if err != nil {
-		slog.ErrorContext(ctx, "error encoding response body", slog.Any("error", err))
-		return InternalServerError
-	}
-
-	return events.APIGatewayProxyResponse{
-		StatusCode: statusCode,
-		Body:       string(body),
-		Headers:    map[string]string{"Content-Type": "application/json"},
-	}
 }
 
 func ToSuccessHTTPResponse(w http.ResponseWriter, body interface{}) {

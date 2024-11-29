@@ -194,7 +194,7 @@ func createArticleDocument(t *testing.T, db *database.OpenSearchStore, articleIt
 
 func generateOpensearchArticleDocument() OpensearchArticleDocument {
 	title := gofakeit.LoremIpsumSentence(gofakeit.Number(5, 10))
-	date := gofakeit.PastDate()
+	date := gofakeit.PastDate().Truncate(time.Millisecond)
 	return OpensearchArticleDocument{
 		Id:             uuid.New(),
 		Title:          title,

@@ -32,6 +32,7 @@ func NewDynamodbFollowerRepository(db *database.DynamoDBStore) FollowerRepositor
 	return dynamodbFollowerRepository{db: db}
 }
 
+// Todo @ender there is no "use case" at the moment but we should add createdAt to this item
 type DynamodbFollowerItem struct {
 	Follower DynamodbUUID `dynamodbav:"follower"`
 	Followee DynamodbUUID `dynamodbav:"followee"`

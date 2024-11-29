@@ -4,16 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"realworld-aws-lambda-dynamodb-golang/internal/database"
-	"realworld-aws-lambda-dynamodb-golang/internal/domain"
-	"realworld-aws-lambda-dynamodb-golang/internal/errutil"
-	"time"
-
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	ddbtypes "github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/google/uuid"
+	"realworld-aws-lambda-dynamodb-golang/internal/database"
+	"realworld-aws-lambda-dynamodb-golang/internal/domain"
+	"realworld-aws-lambda-dynamodb-golang/internal/errutil"
+	"time"
 )
 
 const (
@@ -49,8 +48,8 @@ type DynamodbUserItem struct {
 	Username       string       `dynamodbav:"username"`
 	Bio            *string      `dynamodbav:"bio,omitempty"`
 	Image          *string      `dynamodbav:"image,omitempty"`
-	CreatedAt      time.Time    `dynamodbav:"createdAt,unixtime"`
-	UpdatedAt      time.Time    `dynamodbav:"updatedAt,unixtime"`
+	CreatedAt      int64        `dynamodbav:"createdAt"`
+	UpdatedAt      int64        `dynamodbav:"updatedAt"`
 }
 
 var _ UserRepositoryInterface = (*dynamodbUserRepository)(nil)
@@ -327,8 +326,8 @@ func toDynamoDbUser(user domain.User) DynamodbUserItem {
 		Username:       user.Username,
 		Bio:            user.Bio,
 		Image:          user.Image,
-		CreatedAt:      user.CreatedAt,
-		UpdatedAt:      user.UpdatedAt,
+		CreatedAt:      user.CreatedAt.UnixMilli(),
+		UpdatedAt:      user.UpdatedAt.UnixMilli(),
 	}
 }
 
@@ -340,7 +339,7 @@ func toDomainUser(user DynamodbUserItem) domain.User {
 		Username:       user.Username,
 		Bio:            user.Bio,
 		Image:          user.Image,
-		CreatedAt:      user.CreatedAt,
-		UpdatedAt:      user.UpdatedAt,
+		CreatedAt:      time.UnixMilli(user.CreatedAt),
+		UpdatedAt:      time.UnixMilli(user.UpdatedAt),
 	}
 }
