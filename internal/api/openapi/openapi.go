@@ -1,11 +1,12 @@
 package openapi
 
 import (
-	"github.com/swaggest/jsonschema-go"
-	"github.com/swaggest/openapi-go/openapi3"
 	"log"
 	"reflect"
 	"strings"
+
+	"github.com/swaggest/jsonschema-go"
+	"github.com/swaggest/openapi-go/openapi3"
 )
 
 var BearerAuthSecurityName = "BearerAuth"

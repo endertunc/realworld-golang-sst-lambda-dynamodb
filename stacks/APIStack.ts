@@ -137,6 +137,8 @@ export function APIStack({ stack }: StackContext) {
   const getTags = createLambdaFunction("get-tags", "get_tags/get_tags.go");
   getTags.addToRolePolicy(openSearchPolicy);
 
+  const swagger = createLambdaFunction("swagger-ui", "swagger/swagger_ui.go");
+
   const realWorldApi = new Api(stack, "real-world-api", {
     // prettier-ignore
     routes: {
@@ -159,7 +161,9 @@ export function APIStack({ stack }: StackContext) {
       "POST   /api/articles/{slug}/comments":       addComment,
       "DELETE /api/articles/{slug}/comments/{id}":  deleteComment,
       "GET    /api/articles/{slug}/comments":       getArticleComments,
-       "GET   /api/tags":                           getTags,
+      "GET    /api/tags":                           getTags,
+      "GET    /docs":                               swagger,
+      "GET    /docs/spec.json":                     swagger,
     }
   });
 

@@ -1,0 +1,646 @@
+openapi: 3.0.0
+info:
+  title: Realworld API Specification
+  version: ""
+servers:
+- url: ""
+paths:
+  /articles:
+    get:
+      parameters:
+      - in: query
+        name: author
+        schema:
+          type: string
+      - in: query
+        name: favorited
+        schema:
+          type: string
+      - in: query
+        name: tag
+        schema:
+          type: string
+      - in: query
+        name: limit
+        schema:
+          default: 20
+          maximum: 100
+          minimum: 1
+          type: integer
+      - in: query
+        name: offset
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MultipleArticlesResponseBodyDTO'
+          description: OK
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleError'
+          description: Internal Server Error
+      security:
+      - BearerAuth: []
+      - NoAuth: []
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateArticleRequestBodyDTO'
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArticleResponseBodyDTO'
+          description: Created
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleError'
+          description: Unauthorized
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleError'
+          description: Internal Server Error
+      security:
+      - BearerAuth: []
+  /articles/{slug}:
+    delete:
+      parameters:
+      - in: path
+        name: slug
+        required: true
+        schema:
+          type: string
+      responses:
+        "204":
+          description: No Content
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleError'
+          description: Unauthorized
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleError'
+          description: Not Found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleError'
+          description: Internal Server Error
+      security:
+      - BearerAuth: []
+    get:
+      parameters:
+      - in: path
+        name: slug
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArticleResponseBodyDTO'
+          description: OK
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleError'
+          description: Not Found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleError'
+          description: Internal Server Error
+      security:
+      - BearerAuth: []
+      - NoAuth: []
+  /articles/{slug}/comments:
+    get:
+      parameters:
+      - in: path
+        name: slug
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MultiCommentsResponseBodyDTO'
+          description: OK
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleError'
+          description: Not Found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleError'
+          description: Internal Server Error
+      security:
+      - BearerAuth: []
+      - NoAuth: []
+    post:
+      parameters:
+      - in: path
+        name: slug
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddCommentRequestBodyDTO'
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SingleCommentResponseBodyDTO'
+          description: OK
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleError'
+          description: Unauthorized
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleError'
+          description: Not Found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleError'
+          description: Internal Server Error
+      security:
+      - BearerAuth: []
+  /articles/{slug}/favorite:
+    delete:
+      parameters:
+      - in: path
+        name: slug
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArticleResponseBodyDTO'
+          description: OK
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleError'
+          description: Unauthorized
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleError'
+          description: Not Found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleError'
+          description: Internal Server Error
+      security:
+      - BearerAuth: []
+    post:
+      parameters:
+      - in: path
+        name: slug
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArticleResponseBodyDTO'
+          description: OK
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleError'
+          description: Unauthorized
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleError'
+          description: Not Found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleError'
+          description: Internal Server Error
+      security:
+      - BearerAuth: []
+  /articles/feed:
+    get:
+      parameters:
+      - in: query
+        name: limit
+        schema:
+          default: 20
+          maximum: 100
+          minimum: 1
+          type: integer
+      - in: query
+        name: offset
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MultipleArticlesResponseBodyDTO'
+          description: OK
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleError'
+          description: Unauthorized
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleError'
+          description: Internal Server Error
+      security:
+      - BearerAuth: []
+  /profiles/{username}:
+    get:
+      parameters:
+      - in: path
+        name: username
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileResponseBodyDTO'
+          description: OK
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleError'
+          description: Unauthorized
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleError'
+          description: Internal Server Error
+      security:
+      - BearerAuth: []
+      - NoAuth: []
+  /profiles/{username}/follow:
+    delete:
+      parameters:
+      - in: path
+        name: username
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileResponseBodyDTO'
+          description: OK
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleError'
+          description: Unauthorized
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleError'
+          description: Internal Server Error
+      security:
+      - BearerAuth: []
+    post:
+      parameters:
+      - in: path
+        name: username
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileResponseBodyDTO'
+          description: OK
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleError'
+          description: Unauthorized
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleError'
+          description: Internal Server Error
+      security:
+      - BearerAuth: []
+  /user:
+    get:
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponseBodyDTO'
+          description: OK
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleError'
+          description: Unauthorized
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleError'
+          description: Internal Server Error
+      security:
+      - BearerAuth: []
+  /users:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewUserRequestBodyDTO'
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponseBodyDTO'
+          description: Created
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleError'
+          description: Conflict
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleError'
+          description: Unprocessable Entity
+  /users/login:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewUserRequestBodyDTO'
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponseBodyDTO'
+          description: OK
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleError'
+          description: Unauthorized
+components:
+  schemas:
+    AddCommentRequestBodyDTO:
+      properties:
+        comment:
+          $ref: '#/components/schemas/AddCommentRequestDTO'
+      type: object
+    AddCommentRequestDTO:
+      properties:
+        body:
+          type: string
+      type: object
+    ArticleResponseBodyDTO:
+      properties:
+        article:
+          $ref: '#/components/schemas/ArticleResponseDTO'
+      type: object
+    ArticleResponseDTO:
+      properties:
+        author:
+          $ref: '#/components/schemas/AuthorDTO'
+        body:
+          type: string
+        createdAt:
+          format: date-time
+          type: string
+        description:
+          type: string
+        favorited:
+          type: boolean
+        favoritesCount:
+          type: integer
+        slug:
+          type: string
+        tagList:
+          items:
+            type: string
+          nullable: true
+          type: array
+        title:
+          type: string
+        updatedAt:
+          format: date-time
+          type: string
+      type: object
+    AuthorDTO:
+      properties:
+        bio:
+          nullable: true
+          type: string
+        following:
+          type: boolean
+        image:
+          nullable: true
+          type: string
+        username:
+          type: string
+      type: object
+    CommentResponseDTO:
+      properties:
+        author:
+          $ref: '#/components/schemas/AuthorDTO'
+        body:
+          type: string
+        createdAt:
+          format: date-time
+          type: string
+        id:
+          type: string
+        updatedAt:
+          format: date-time
+          type: string
+      type: object
+    CreateArticleRequestBodyDTO:
+      properties:
+        article:
+          $ref: '#/components/schemas/CreateArticleRequestDTO'
+      type: object
+    CreateArticleRequestDTO:
+      properties:
+        body:
+          type: string
+        description:
+          type: string
+        tagList:
+          items:
+            type: string
+          nullable: true
+          type: array
+        title:
+          type: string
+      type: object
+    MultiCommentsResponseBodyDTO:
+      properties:
+        comment:
+          items:
+            $ref: '#/components/schemas/CommentResponseDTO'
+          nullable: true
+          type: array
+      type: object
+    MultipleArticlesResponseBodyDTO:
+      properties:
+        article:
+          items:
+            $ref: '#/components/schemas/ArticleResponseDTO'
+          nullable: true
+          type: array
+        articlesCount:
+          type: integer
+        nextPageToken:
+          nullable: true
+          type: string
+      type: object
+    NewUserRequestBodyDTO:
+      properties:
+        user:
+          $ref: '#/components/schemas/NewUserRequestUserDto'
+      type: object
+    NewUserRequestUserDto:
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+        username:
+          type: string
+      type: object
+    ProfileResponseBodyDTO:
+      properties:
+        profile:
+          $ref: '#/components/schemas/ProfileResponseDto'
+      type: object
+    ProfileResponseDto:
+      properties:
+        bio:
+          nullable: true
+          type: string
+        following:
+          type: boolean
+        image:
+          nullable: true
+          type: string
+        username:
+          type: string
+      type: object
+    SimpleError:
+      properties:
+        message:
+          type: string
+      type: object
+    SingleCommentResponseBodyDTO:
+      properties:
+        comment:
+          $ref: '#/components/schemas/CommentResponseDTO'
+      type: object
+    UserResponseBodyDTO:
+      properties:
+        user:
+          $ref: '#/components/schemas/UserResponseUserDto'
+      type: object
+    UserResponseUserDto:
+      properties:
+        bio:
+          nullable: true
+          type: string
+        email:
+          type: string
+        image:
+          nullable: true
+          type: string
+        token:
+          type: string
+        username:
+          type: string
+      type: object
+  securitySchemes:
+    BearerAuth:
+      bearerFormat: JWT
+      description: ""
+      scheme: bearer
+      type: http
