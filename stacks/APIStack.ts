@@ -2,6 +2,7 @@ import * as ec2 from "aws-cdk-lib/aws-ec2";
 import { PolicyStatement } from "aws-cdk-lib/aws-iam";
 import { FilterCriteria, FilterRule, StartingPosition } from "aws-cdk-lib/aws-lambda";
 import { DynamoEventSource } from "aws-cdk-lib/aws-lambda-event-sources";
+import { Secret } from "aws-cdk-lib/aws-secretsmanager";
 import { Api, Function, use } from "sst/constructs";
 import { DynamoDBStack } from "./DynamoDBStack";
 import { OpenSearchStack } from "./OpenSearchStack";
@@ -30,11 +31,18 @@ export function APIStack({ stack }: StackContext) {
       },
       securityGroups: [lambdaSecurityGroupId],
       environment: {
-        OPENSEARCH_URL: `https://${openSearchDomain.domainEndpoint}`
+        OPENSEARCH_URL: `https://${openSearchDomain.domainEndpoint}`,
+        JWT_KEY_PAIR_SECRET_NAME: jwtKeyPairSecret.secretName
       }
     });
+    jwtKeyPairSecret.grantRead(lambda);
     return lambda;
   }
+
+  const jwtKeyPairSecret = new Secret(stack, "real-world-jwt-key-pair", {
+    secretName: "real-world-jwt-key-pair",
+    description: `private/public key pair for JWT tokens`
+  });
 
   const dynamoPolicy = new PolicyStatement({
     actions: ["dynamodb:*"], // ToDo @ender this should be more restrictive
@@ -126,13 +134,17 @@ export function APIStack({ stack }: StackContext) {
   dynamodbStack.userTable.grantReadData(addComment);
 
   const deleteComment = createLambdaFunction("delete-comment", "delete_comment/delete_comment.go");
-  dynamodbStack.commentTable.grantWriteData(deleteComment);
+  dynamodbStack.commentTable.grantReadWriteData(deleteComment);
+  dynamodbStack.articleTable.grantReadData(deleteComment);
 
   const getArticleComments = createLambdaFunction(
     "get-article-comments",
     "get_article_comments/get_article_comments.go"
   );
   dynamodbStack.commentTable.grantReadData(getArticleComments);
+  dynamodbStack.articleTable.grantReadData(getArticleComments);
+  dynamodbStack.userTable.grantReadData(getArticleComments);
+  dynamodbStack.followerTable.grantReadData(getArticleComments);
 
   const getTags = createLambdaFunction("get-tags", "get_tags/get_tags.go");
   getTags.addToRolePolicy(openSearchPolicy);

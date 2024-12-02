@@ -1,19 +1,23 @@
 package security
 
 import (
+	"context"
 	"crypto/ed25519"
+	"encoding/json"
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
+	"log"
 	"realworld-aws-lambda-dynamodb-golang/internal/domain"
 	"realworld-aws-lambda-dynamodb-golang/internal/errutil"
 	"sync"
+	"sync/atomic"
 	"time"
-
-	"github.com/golang-jwt/jwt/v5"
-	"github.com/google/uuid"
 )
 
 const (
@@ -28,58 +32,89 @@ var (
 	ErrTokenSubjectInvalid       = errors.New("invalid uuid subject")
 )
 
-type keypair struct {
-	PublicKey  ed25519.PublicKey
+// instead of creating an interface and implementing using different structs etc,
+// I decided to experiment with the approach where you have an atomic.Value
+// which you set to a desired implementation depending on the context
+var keyProvider atomic.Value
+
+type KeyPair struct {
 	PrivateKey ed25519.PrivateKey
+	PublicKey  ed25519.PublicKey
 }
 
-var keys = sync.OnceValue(func() keypair {
-	publicKey, privateKey := loadKeys()
-	return keypair{
-		PublicKey:  publicKey,
-		PrivateKey: privateKey,
+type KeyProvider interface {
+	GetKeys() KeyPair
+}
+
+func SetKeyProvider(provider KeyProvider) {
+	keyProvider.Store(provider)
+}
+
+type awsKeyProvider struct {
+	SecretName string
+}
+
+func NewAwsKeyProvider(secretName string) KeyProvider {
+	return awsKeyProvider{
+		SecretName: secretName,
 	}
+}
+
+func (a awsKeyProvider) GetKeys() KeyPair {
+	private, public := loadKeysFromSecretStore(a.SecretName)
+	return KeyPair{
+		PrivateKey: private,
+		PublicKey:  public,
+	}
+}
+
+var keys = sync.OnceValue(func() KeyPair {
+	if p := keyProvider.Load(); p != nil {
+		return p.(KeyProvider).GetKeys()
+	}
+	log.Fatalf("no key provider set")
+	return KeyPair{}
 })
 
-func loadKeys() (ed25519.PublicKey, ed25519.PrivateKey) {
-	keysDirectory := os.Getenv("JWT_KEYS_DIRECTORY")
-	// Read private key
-	privateKeyPath := filepath.Join(keysDirectory, "private.pem")
-	privatePEM, err := os.ReadFile(privateKeyPath)
+func loadKeysFromSecretStore(secretName string) (ed25519.PrivateKey, ed25519.PublicKey) {
+	ctx := context.Background()
+	cfg, err := config.LoadDefaultConfig(ctx)
 	if err != nil {
-		panic(fmt.Sprintf("failed to read private key at %s: %v", privateKeyPath, err))
+		log.Fatalf("error loading AWS configuration: %v", err)
 	}
 
-	privateBlock, _ := pem.Decode(privatePEM)
-	if privateBlock == nil {
-		panic("failed to decode private key PEM")
+	svc := secretsmanager.NewFromConfig(cfg)
+
+	input := &secretsmanager.GetSecretValueInput{
+		SecretId: aws.String(secretName),
 	}
 
-	if len(privateBlock.Bytes) != ed25519.PrivateKeySize {
-		panic("invalid private key size")
-	}
-
-	privateKey := ed25519.PrivateKey(privateBlock.Bytes)
-
-	// Read public key
-	publicKeyPath := filepath.Join(keysDirectory, "public.pem")
-	publicPEM, err := os.ReadFile(publicKeyPath)
+	result, err := svc.GetSecretValue(ctx, input)
 	if err != nil {
-		panic(fmt.Sprintf("failed to read public key at %s: %v", publicKeyPath, err))
+		log.Fatalf("failed to get secret value: %v", err)
 	}
 
-	publicBlock, _ := pem.Decode(publicPEM)
-	if publicBlock == nil {
-		panic("failed to decode public key PEM")
+	var secretData struct {
+		PrivateKey string `json:"privateKey"`
+		PublicKey  string `json:"publicKey"`
 	}
 
-	if len(publicBlock.Bytes) != ed25519.PublicKeySize {
-		panic("invalid public key size")
+	err = json.Unmarshal([]byte(*result.SecretString), &secretData)
+	if err != nil {
+		log.Fatalf("failed to unmarshal secret data: %v", err)
 	}
 
-	publicKey := ed25519.PublicKey(publicBlock.Bytes)
+	privateKey, _ := pem.Decode([]byte(secretData.PrivateKey))
+	if privateKey == nil {
+		log.Fatalf("failed to decode private key: %v", err)
+	}
 
-	return publicKey, privateKey
+	publicKey, _ := pem.Decode([]byte(secretData.PublicKey))
+	if publicKey == nil {
+		log.Fatalf("failed to decode public key: %v", err)
+	}
+
+	return privateKey.Bytes, publicKey.Bytes
 }
 
 func GenerateToken(userId uuid.UUID) (*domain.Token, error) {

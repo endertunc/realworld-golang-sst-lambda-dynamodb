@@ -3,11 +3,12 @@ package security
 import (
 	"context"
 	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"realworld-aws-lambda-dynamodb-golang/internal/domain"
 	"realworld-aws-lambda-dynamodb-golang/internal/errutil"
 	"testing"
 
-	"github.com/aws/aws-lambda-go/events"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 )
@@ -21,57 +22,39 @@ func TestGetLoggedInUser(t *testing.T) {
 
 	tests := []struct {
 		name           string
-		request        events.APIGatewayProxyRequest
+		authHeader     string
 		expectedUser   *uuid.UUID
 		expectedToken  *domain.Token
 		expectedStatus int
 		expectedError  string
 	}{
 		{
-			name: "valid token",
-			request: events.APIGatewayProxyRequest{
-				Headers: map[string]string{
-					"authorization": "Token " + string(*validToken),
-				},
-			},
+			name:          "valid token",
+			authHeader:    "Token " + string(*validToken),
 			expectedUser:  &validUserId,
 			expectedToken: validToken,
 		},
 		{
-			name: "missing authorization header",
-			request: events.APIGatewayProxyRequest{
-				Headers: map[string]string{},
-			},
+			name:           "missing authorization header",
+			authHeader:     "",
 			expectedStatus: 401,
 			expectedError:  "authorization header is missing",
 		},
 		{
-			name: "empty authorization header",
-			request: events.APIGatewayProxyRequest{
-				Headers: map[string]string{
-					"authorization": "   ",
-				},
-			},
+			name:           "empty authorization header",
+			authHeader:     "   ",
 			expectedStatus: 401,
 			expectedError:  "authorization header is empty",
 		},
 		{
-			name: "invalid token type",
-			request: events.APIGatewayProxyRequest{
-				Headers: map[string]string{
-					"authorization": "Bearer " + string(*validToken),
-				},
-			},
+			name:           "invalid token type",
+			authHeader:     "Bearer " + string(*validToken),
 			expectedStatus: 401,
 			expectedError:  "invalid token type",
 		},
 		{
-			name: "invalid token",
-			request: events.APIGatewayProxyRequest{
-				Headers: map[string]string{
-					"authorization": "Token invalid-token",
-				},
-			},
+			name:           "invalid token",
+			authHeader:     "Token invalid-token",
 			expectedStatus: 401,
 			expectedError:  "invalid token",
 		},
@@ -79,21 +62,26 @@ func TestGetLoggedInUser(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			userId, token, response := GetLoggedInUser(ctx, tt.request)
+			w := httptest.NewRecorder()
+			r := httptest.NewRequest(http.MethodGet, "/", nil)
+			if tt.authHeader != "" {
+				r.Header.Set("Authorization", tt.authHeader)
+			}
+
+			userId, token, ok := GetLoggedInUser(ctx, w, r)
 
 			if tt.expectedToken != nil {
-				assert.Nil(t, response)
+				assert.True(t, ok)
 				assert.Equal(t, tt.expectedUser, &userId)
 				assert.Equal(t, tt.expectedToken, &token)
 			} else {
-				assert.NotNil(t, response)
-				assert.Equal(t, tt.expectedStatus, response.StatusCode)
+				assert.False(t, ok)
+				assert.Equal(t, tt.expectedStatus, w.Code)
 
 				var errorResponse errutil.SimpleError
-				err := json.Unmarshal([]byte(response.Body), &errorResponse)
+				err := json.Unmarshal(w.Body.Bytes(), &errorResponse)
 				assert.NoError(t, err)
 				assert.Equal(t, tt.expectedError, errorResponse.Message)
-
 			}
 		})
 	}
@@ -108,59 +96,39 @@ func TestGetOptionalLoggedInUser(t *testing.T) {
 
 	tests := []struct {
 		name           string
-		request        events.APIGatewayProxyRequest
+		authHeader     string
 		expectedUser   *uuid.UUID
 		expectedToken  *domain.Token
 		expectedStatus int
 		expectedError  string
 	}{
 		{
-			name: "valid token",
-			request: events.APIGatewayProxyRequest{
-				Headers: map[string]string{
-					"authorization": "Token " + string(*validToken),
-				},
-			},
-			expectedUser:   &validUserId,
-			expectedToken:  validToken,
-			expectedStatus: 0, // expect no response
+			name:          "valid token",
+			authHeader:    "Token " + string(*validToken),
+			expectedUser:  &validUserId,
+			expectedToken: validToken,
 		},
 		{
-			name: "missing authorization header",
-			request: events.APIGatewayProxyRequest{
-				Headers: map[string]string{},
-			},
-			expectedUser:   nil,
-			expectedToken:  nil,
-			expectedStatus: 0, // expect no response
+			name:          "missing authorization header",
+			authHeader:    "",
+			expectedUser:  nil,
+			expectedToken: nil,
 		},
 		{
-			name: "empty authorization header",
-			request: events.APIGatewayProxyRequest{
-				Headers: map[string]string{
-					"authorization": "   ",
-				},
-			},
+			name:           "empty authorization header",
+			authHeader:     "   ",
 			expectedStatus: 401,
 			expectedError:  "authorization header is empty",
 		},
 		{
-			name: "invalid token type",
-			request: events.APIGatewayProxyRequest{
-				Headers: map[string]string{
-					"authorization": "Bearer " + string(*validToken),
-				},
-			},
+			name:           "invalid token type",
+			authHeader:     "Bearer " + string(*validToken),
 			expectedStatus: 401,
 			expectedError:  "invalid token type",
 		},
 		{
-			name: "invalid token",
-			request: events.APIGatewayProxyRequest{
-				Headers: map[string]string{
-					"authorization": "Token invalid-token",
-				},
-			},
+			name:           "invalid token",
+			authHeader:     "Token invalid-token",
 			expectedStatus: 401,
 			expectedError:  "invalid token",
 		},
@@ -168,10 +136,16 @@ func TestGetOptionalLoggedInUser(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			userId, token, response := GetOptionalLoggedInUser(ctx, tt.request)
+			w := httptest.NewRecorder()
+			r := httptest.NewRequest(http.MethodGet, "/", nil)
+			if tt.authHeader != "" {
+				r.Header.Set("Authorization", tt.authHeader)
+			}
 
-			if tt.expectedStatus == 0 {
-				assert.Nil(t, response)
+			userId, token, ok := GetOptionalLoggedInUser(ctx, w, r)
+
+			if tt.expectedError == "" {
+				assert.Equal(t, w.Body.Len(), 0, "response body should be empty")
 				if tt.expectedUser == nil {
 					assert.Nil(t, userId)
 					assert.Nil(t, token)
@@ -179,12 +153,13 @@ func TestGetOptionalLoggedInUser(t *testing.T) {
 					assert.Equal(t, tt.expectedUser, userId)
 					assert.Equal(t, tt.expectedToken, token)
 				}
+				assert.True(t, ok)
 			} else {
-				assert.NotNil(t, response)
-				assert.Equal(t, tt.expectedStatus, response.StatusCode)
+				assert.Equal(t, tt.expectedStatus, w.Code)
+				assert.False(t, ok)
 
 				var errorResponse errutil.SimpleError
-				err := json.Unmarshal([]byte(response.Body), &errorResponse)
+				err := json.Unmarshal(w.Body.Bytes(), &errorResponse)
 				assert.NoError(t, err)
 				assert.Equal(t, tt.expectedError, errorResponse.Message)
 			}

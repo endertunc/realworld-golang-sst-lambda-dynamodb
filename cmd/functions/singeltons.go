@@ -1,14 +1,18 @@
 package functions
 
 import (
-	slogctx "github.com/veqryn/slog-context"
-	veqrynslog "github.com/veqryn/slog-context/http"
+	"github.com/caarlos0/env/v11"
+	"log"
 	"log/slog"
 	"os"
 	"realworld-aws-lambda-dynamodb-golang/internal/api"
 	"realworld-aws-lambda-dynamodb-golang/internal/database"
 	"realworld-aws-lambda-dynamodb-golang/internal/repository"
+	"realworld-aws-lambda-dynamodb-golang/internal/security"
 	"realworld-aws-lambda-dynamodb-golang/internal/service"
+
+	slogctx "github.com/veqryn/slog-context"
+	veqrynslog "github.com/veqryn/slog-context/http"
 )
 
 var (
@@ -41,7 +45,18 @@ var (
 	UserFeedApi        = api.NewUserFeedApi(UserFeedService, paginationConfig)
 )
 
+type AppConfig struct {
+	JWTKeyPairSecretName string `env:"JWT_KEY_PAIR_SECRET_NAME"`
+}
+
 func init() {
+	var appConfig AppConfig
+	err := env.Parse(&appConfig)
+
+	if err != nil {
+		log.Fatalf("failed to parse config: %v", err)
+	}
+
 	h := slogctx.NewHandler(
 		slog.NewJSONHandler(os.Stdout, nil),
 		&slogctx.HandlerOptions{
@@ -51,4 +66,6 @@ func init() {
 		},
 	)
 	slog.SetDefault(slog.New(h))
+
+	security.SetKeyProvider(security.NewAwsKeyProvider(appConfig.JWTKeyPairSecretName))
 }

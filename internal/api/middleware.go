@@ -21,7 +21,7 @@ var RequestLoggerMiddleware func(http.Handler) http.Handler = func(handler http.
 func StartAuthenticatedHandlerHTTP(handlerToWrap AuthenticatedHandlerHTTP) http.Handler {
 	var handlerFunc http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		userId, token, ok := security.GetLoggedInUserHTTP(ctx, w, r)
+		userId, token, ok := security.GetLoggedInUser(ctx, w, r)
 		if !ok {
 			return
 		}
@@ -36,7 +36,7 @@ type OptionallyAuthenticatedHandlerHTTP func(w http.ResponseWriter, r *http.Requ
 func StartOptionallyAuthenticatedHandlerHTTP(handlerToWrap OptionallyAuthenticatedHandlerHTTP) http.Handler {
 	var handlerFunc http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		userId, token, ok := security.GetOptionalLoggedInUserHTTP(ctx, w, r)
+		userId, token, ok := security.GetOptionalLoggedInUser(ctx, w, r)
 		if !ok {
 			return
 		}

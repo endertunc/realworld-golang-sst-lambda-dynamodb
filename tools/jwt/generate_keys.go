@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 )
 
+// you can use this script to generate a private/public key pair for JWT
+//
 //nolint:all
 func main() {
 	// Generate a new key pair

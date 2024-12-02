@@ -4,7 +4,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"net/http"
-	"realworld-aws-lambda-dynamodb-golang/internal/domain/dto"
 	dtogen "realworld-aws-lambda-dynamodb-golang/internal/domain/dto/generator"
 	"realworld-aws-lambda-dynamodb-golang/internal/errutil"
 	"realworld-aws-lambda-dynamodb-golang/internal/test"
@@ -56,12 +55,7 @@ func TestDeleteCommentWithUnrelatedArticle(t *testing.T) {
 		// Create a user and two articles
 		_, token := test.CreateAndLoginUser(t, dtogen.GenerateNewUserRequestUserDto())
 		article1 := test.CreateArticle(t, dtogen.GenerateCreateArticleRequestDTO(), token)
-		article2Request := dto.CreateArticleRequestDTO{
-			Title:       "This is a new kind of article",
-			Description: "Much better than the old one",
-			Body:        "Are you ready for this?",
-			TagList:     []string{},
-		}
+		article2Request := dtogen.GenerateCreateArticleRequestDTO()
 		article2 := test.CreateArticle(t, article2Request, token)
 
 		// Create a comment on article1

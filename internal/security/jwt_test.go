@@ -1,14 +1,40 @@
 package security
 
 import (
+	"crypto/ed25519"
+	"crypto/rand"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
+	"log"
 	"testing"
 	"time"
 )
 
+type statisKeyProvider struct {
+}
+
+func (s statisKeyProvider) GetKeys() KeyPair {
+	publicKey, privateKey, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		log.Fatalf("failed to generate key pair: %v", err)
+	}
+
+	return KeyPair{
+		PrivateKey: privateKey,
+		PublicKey:  publicKey,
+	}
+}
+
+// make sure the key provider is set
+var _ = func() KeyProvider {
+	provider := statisKeyProvider{}
+	SetKeyProvider(provider)
+	return provider
+}()
+
 func TestGenerateAndValidateToken(t *testing.T) {
+
 	userId := uuid.New()
 	token, err := GenerateToken(userId)
 	assert.NoError(t, err)
@@ -54,7 +80,7 @@ func TestValidateToken_ExpiredToken(t *testing.T) {
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodEdDSA, claims)
-	tokenString, err := token.SignedString(privateKey)
+	tokenString, err := token.SignedString(keys().PrivateKey)
 	assert.NoError(t, err)
 
 	// Try to validate the expired token
@@ -75,7 +101,7 @@ func TestValidateToken_InvalidSubject(t *testing.T) {
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodEdDSA, claims)
-	tokenString, err := token.SignedString(privateKey)
+	tokenString, err := token.SignedString(keys().PrivateKey)
 	assert.NoError(t, err)
 
 	// Try to validate the token
@@ -94,7 +120,7 @@ func TestValidateToken_MissingSubject(t *testing.T) {
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodEdDSA, claims)
-	tokenString, err := token.SignedString(privateKey)
+	tokenString, err := token.SignedString(keys().PrivateKey)
 	assert.NoError(t, err)
 
 	// Try to validate the token
@@ -122,7 +148,7 @@ func TestValidateToken_WrongIssuer(t *testing.T) {
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodEdDSA, claims)
-	tokenString, err := token.SignedString(privateKey)
+	tokenString, err := token.SignedString(keys().PrivateKey)
 	assert.NoError(t, err)
 
 	// Try to validate the token
@@ -144,7 +170,7 @@ func TestValidateToken_WrongAudience(t *testing.T) {
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodEdDSA, claims)
-	tokenString, err := token.SignedString(privateKey)
+	tokenString, err := token.SignedString(keys().PrivateKey)
 	assert.NoError(t, err)
 
 	// Try to validate the token

@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -71,7 +70,6 @@ var apiUrl = sync.OnceValue(func() string {
 })
 
 var DynamodbClient = sync.OnceValue(func() *dynamodb.Client {
-	slog.Info("initializing dynamodb client...")
 	ctx := context.Background()
 
 	cfg, err := config.LoadDefaultConfig(ctx, config.WithRegion("eu-west-1"), config.WithSharedConfigProfile("nl2-golang"))
@@ -80,7 +78,6 @@ var DynamodbClient = sync.OnceValue(func() *dynamodb.Client {
 	}
 
 	client := dynamodb.NewFromConfig(cfg)
-	slog.Info("dynamodb client is initialized")
 	return client
 })
 
@@ -143,7 +140,6 @@ func truncateTable(t *testing.T, tableName string, pkName string, skName *string
 }
 
 func cleanupDynamodbTables(t *testing.T) {
-
 	truncateTable(t, "user", "pk", nil)
 	truncateTable(t, "follower", "follower", aws.String("followee"))
 	truncateTable(t, "article", "pk", nil)
