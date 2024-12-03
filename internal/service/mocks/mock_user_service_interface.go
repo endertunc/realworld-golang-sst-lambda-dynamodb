@@ -336,6 +336,79 @@ func (_c *MockUserServiceInterface_RegisterUser_Call) RunAndReturn(run func(cont
 	return _c
 }
 
+// UpdateUser provides a mock function with given fields: ctx, userID, email, username, plainTextPassword, bio, image
+func (_m *MockUserServiceInterface) UpdateUser(ctx context.Context, userID uuid.UUID, email *string, username *string, plainTextPassword *string, bio *string, image *string) (*domain.Token, *domain.User, error) {
+	ret := _m.Called(ctx, userID, email, username, plainTextPassword, bio, image)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpdateUser")
+	}
+
+	var r0 *domain.Token
+	var r1 *domain.User
+	var r2 error
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, *string, *string, *string, *string, *string) (*domain.Token, *domain.User, error)); ok {
+		return rf(ctx, userID, email, username, plainTextPassword, bio, image)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, *string, *string, *string, *string, *string) *domain.Token); ok {
+		r0 = rf(ctx, userID, email, username, plainTextPassword, bio, image)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*domain.Token)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID, *string, *string, *string, *string, *string) *domain.User); ok {
+		r1 = rf(ctx, userID, email, username, plainTextPassword, bio, image)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*domain.User)
+		}
+	}
+
+	if rf, ok := ret.Get(2).(func(context.Context, uuid.UUID, *string, *string, *string, *string, *string) error); ok {
+		r2 = rf(ctx, userID, email, username, plainTextPassword, bio, image)
+	} else {
+		r2 = ret.Error(2)
+	}
+
+	return r0, r1, r2
+}
+
+// MockUserServiceInterface_UpdateUser_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpdateUser'
+type MockUserServiceInterface_UpdateUser_Call struct {
+	*mock.Call
+}
+
+// UpdateUser is a helper method to define mock.On call
+//   - ctx context.Context
+//   - userID uuid.UUID
+//   - email *string
+//   - username *string
+//   - plainTextPassword *string
+//   - bio *string
+//   - image *string
+func (_e *MockUserServiceInterface_Expecter) UpdateUser(ctx interface{}, userID interface{}, email interface{}, username interface{}, plainTextPassword interface{}, bio interface{}, image interface{}) *MockUserServiceInterface_UpdateUser_Call {
+	return &MockUserServiceInterface_UpdateUser_Call{Call: _e.mock.On("UpdateUser", ctx, userID, email, username, plainTextPassword, bio, image)}
+}
+
+func (_c *MockUserServiceInterface_UpdateUser_Call) Run(run func(ctx context.Context, userID uuid.UUID, email *string, username *string, plainTextPassword *string, bio *string, image *string)) *MockUserServiceInterface_UpdateUser_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(uuid.UUID), args[2].(*string), args[3].(*string), args[4].(*string), args[5].(*string), args[6].(*string))
+	})
+	return _c
+}
+
+func (_c *MockUserServiceInterface_UpdateUser_Call) Return(_a0 *domain.Token, _a1 *domain.User, _a2 error) *MockUserServiceInterface_UpdateUser_Call {
+	_c.Call.Return(_a0, _a1, _a2)
+	return _c
+}
+
+func (_c *MockUserServiceInterface_UpdateUser_Call) RunAndReturn(run func(context.Context, uuid.UUID, *string, *string, *string, *string, *string) (*domain.Token, *domain.User, error)) *MockUserServiceInterface_UpdateUser_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // NewMockUserServiceInterface creates a new instance of MockUserServiceInterface. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
 // The first argument is typically a *testing.T value.
 func NewMockUserServiceInterface(t interface {

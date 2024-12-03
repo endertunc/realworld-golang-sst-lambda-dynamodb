@@ -7,6 +7,13 @@ import (
 	"testing"
 )
 
+func TestAuthenticationScenarios(t *testing.T) {
+	test.RunAuthenticationTests(t, test.SharedAuthenticationTestConfig{
+		Method: "GET",
+		Path:   "/api/user",
+	})
+}
+
 func TestSuccessfulGetCurrentUser(t *testing.T) {
 	test.WithSetupAndTeardown(t, func() {
 		userReq := dtogen.GenerateNewUserRequestUserDto()
@@ -19,12 +26,5 @@ func TestSuccessfulGetCurrentUser(t *testing.T) {
 		assert.Equal(t, userReq.Email, respBody.Email)
 		assert.Equal(t, userReq.Username, respBody.Username)
 		assert.NotEmpty(t, respBody.Token)
-	})
-}
-
-func TestAuthenticationScenarios(t *testing.T) {
-	test.RunAuthenticationTests(t, test.SharedAuthenticationTestConfig{
-		Method: "GET",
-		Path:   "/api/user",
 	})
 }

@@ -10,6 +10,13 @@ import (
 	"testing"
 )
 
+func TestAuthenticationScenarios(t *testing.T) {
+	test.RunAuthenticationTests(t, test.SharedAuthenticationTestConfig{
+		Method: "PUT",
+		Path:   "/api/user",
+	})
+}
+
 func TestSuccessfulUpdateAllFields(t *testing.T) {
 	test.WithSetupAndTeardown(t, func() {
 		// Create and login a user first
@@ -101,12 +108,5 @@ func TestUpdateWithExistingUsername(t *testing.T) {
 		assert.Equal(t, originalUser.Username, currentUser.Username)
 		assert.Equal(t, originalUser.Bio, currentUser.Bio)
 		assert.Equal(t, originalUser.Image, currentUser.Image)
-	})
-}
-
-func TestAuthenticationScenarios(t *testing.T) {
-	test.RunAuthenticationTests(t, test.SharedAuthenticationTestConfig{
-		Method: "PUT",
-		Path:   "/api/user",
 	})
 }

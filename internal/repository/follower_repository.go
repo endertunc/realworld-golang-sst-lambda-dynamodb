@@ -20,8 +20,7 @@ type dynamodbFollowerRepository struct {
 }
 
 type FollowerRepositoryInterface interface {
-	IsFollowing(ctx context.Context, follower, followee uuid.UUID) (bool, error)
-	BatchIsFollowing(ctx context.Context, follower uuid.UUID, followee []uuid.UUID) (mapset.Set[uuid.UUID], error)
+	FindFollowees(ctx context.Context, follower uuid.UUID, followee []uuid.UUID) (mapset.Set[uuid.UUID], error)
 	Follow(ctx context.Context, follower, followee uuid.UUID) error
 	UnFollow(ctx context.Context, follower, followee uuid.UUID) error
 }
@@ -95,7 +94,7 @@ func (s dynamodbFollowerRepository) UnFollow(ctx context.Context, follower, foll
 	return nil
 }
 
-func (s dynamodbFollowerRepository) BatchIsFollowing(ctx context.Context, follower uuid.UUID, followees []uuid.UUID) (mapset.Set[uuid.UUID], error) {
+func (s dynamodbFollowerRepository) FindFollowees(ctx context.Context, follower uuid.UUID, followees []uuid.UUID) (mapset.Set[uuid.UUID], error) {
 	resultSet := mapset.NewThreadUnsafeSet[uuid.UUID]()
 	// short circuit if followees is empty, no need to query
 	// also, dynamodb will throw a validation error if we try to query with empty keys

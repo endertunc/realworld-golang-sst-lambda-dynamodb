@@ -9,6 +9,13 @@ import (
 	"testing"
 )
 
+func TestAuthenticationScenarios(t *testing.T) {
+	test.RunAuthenticationTests(t, test.SharedAuthenticationTestConfig{
+		Method: "POST",
+		Path:   "/api/profiles/some-user/follow",
+	})
+}
+
 func TestSuccessfulFollow(t *testing.T) {
 	test.WithSetupAndTeardown(t, func() {
 		// Create and login the follower user

@@ -137,7 +137,7 @@ func TestFindUserListByUserIDs(t *testing.T) {
 				userIDs[i] = insertedUser.Id
 			}
 
-			foundUsers, err := userRepo.FindUserListByUserIDs(ctx, userIDs)
+			foundUsers, err := userRepo.FindUsersByIds(ctx, userIDs)
 			require.NoError(t, err)
 			assert.Equal(t, len(users), len(foundUsers))
 
@@ -157,7 +157,7 @@ func TestFindUserListByUserIDs(t *testing.T) {
 		})
 
 		t.Run("empty list", func(t *testing.T) {
-			foundUsers, err := userRepo.FindUserListByUserIDs(ctx, []uuid.UUID{})
+			foundUsers, err := userRepo.FindUsersByIds(ctx, []uuid.UUID{})
 			require.NoError(t, err)
 			assert.Empty(t, foundUsers)
 		})
@@ -168,7 +168,7 @@ func TestFindUserListByUserIDs(t *testing.T) {
 			require.NoError(t, err)
 
 			userIDs := []uuid.UUID{insertedUser.Id, uuid.New()}
-			foundUsers, err := userRepo.FindUserListByUserIDs(ctx, userIDs)
+			foundUsers, err := userRepo.FindUsersByIds(ctx, userIDs)
 			require.NoError(t, err)
 			assert.Equal(t, 1, len(foundUsers))
 			assert.Equal(t, insertedUser.Id, foundUsers[0].Id)
@@ -196,7 +196,7 @@ func TestUpdateUser(t *testing.T) {
 			assert.Equal(t, userAfterUpdate, updatedUser)
 
 			// Verify user is updated
-			userFromDatabase, err := userRepo.FindUserByEmail(ctx, insertedUser.Email)
+			userFromDatabase, err := userRepo.FindUserByEmail(ctx, updatedUser.Email)
 			require.NoError(t, err)
 			assert.Equal(t, updatedUser, userFromDatabase)
 		})

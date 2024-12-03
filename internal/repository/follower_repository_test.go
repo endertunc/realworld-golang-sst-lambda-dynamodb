@@ -25,9 +25,9 @@ func TestFollow(t *testing.T) {
 			require.NoError(t, err)
 
 			// Verify follow relationship exists
-			isFollowing, err := followerRepo.IsFollowing(ctx, follower, followee)
+			followees, err := followerRepo.FindFollowees(ctx, follower, []uuid.UUID{followee})
 			require.NoError(t, err)
-			assert.True(t, isFollowing)
+			assert.True(t, followees.Contains(followee))
 		})
 
 		// ToDo @ender - at the moment this is fine but if we were to add createdAt,
@@ -44,9 +44,9 @@ func TestFollow(t *testing.T) {
 			require.NoError(t, err)
 
 			// Verify follow relationship still exists
-			isFollowing, err := followerRepo.IsFollowing(ctx, follower, followee)
+			followees, err := followerRepo.FindFollowees(ctx, follower, []uuid.UUID{followee})
 			require.NoError(t, err)
-			assert.True(t, isFollowing)
+			assert.True(t, followees.Contains(followee))
 		})
 	})
 }
@@ -63,18 +63,18 @@ func TestUnFollow(t *testing.T) {
 			require.NoError(t, err)
 
 			// Verify follow relationship exists
-			isFollowing, err := followerRepo.IsFollowing(ctx, follower, followee)
+			followees, err := followerRepo.FindFollowees(ctx, follower, []uuid.UUID{followee})
 			require.NoError(t, err)
-			assert.True(t, isFollowing)
+			assert.True(t, followees.Contains(followee))
 
 			// Then unfollow
 			err = followerRepo.UnFollow(ctx, follower, followee)
 			require.NoError(t, err)
 
 			// Verify follow relationship no longer exists
-			isFollowing, err = followerRepo.IsFollowing(ctx, follower, followee)
+			followees, err = followerRepo.FindFollowees(ctx, follower, []uuid.UUID{followee})
 			require.NoError(t, err)
-			assert.False(t, isFollowing)
+			assert.False(t, followees.Contains(followee))
 		})
 
 		t.Run("unfollow non-existent relationship", func(t *testing.T) {
@@ -88,33 +88,7 @@ func TestUnFollow(t *testing.T) {
 	})
 }
 
-func TestIsFollowing(t *testing.T) {
-	ctx := context.Background()
-	test.WithSetupAndTeardown(t, func() {
-		t.Run("is following", func(t *testing.T) {
-			follower := uuid.New()
-			followee := uuid.New()
-
-			err := followerRepo.Follow(ctx, follower, followee)
-			require.NoError(t, err)
-
-			isFollowing, err := followerRepo.IsFollowing(ctx, follower, followee)
-			require.NoError(t, err)
-			assert.True(t, isFollowing)
-		})
-
-		t.Run("is not following", func(t *testing.T) {
-			follower := uuid.New()
-			followee := uuid.New()
-
-			isFollowing, err := followerRepo.IsFollowing(ctx, follower, followee)
-			require.NoError(t, err)
-			assert.False(t, isFollowing)
-		})
-	})
-}
-
-func TestBatchIsFollowing(t *testing.T) {
+func TestFindFollowees(t *testing.T) {
 	ctx := context.Background()
 	test.WithSetupAndTeardown(t, func() {
 		t.Run("success", func(t *testing.T) {
@@ -129,7 +103,7 @@ func TestBatchIsFollowing(t *testing.T) {
 
 			// Check all three users
 			followees := []uuid.UUID{followee1, followee2, followee3}
-			followingSet, err := followerRepo.BatchIsFollowing(ctx, follower, followees)
+			followingSet, err := followerRepo.FindFollowees(ctx, follower, followees)
 			require.NoError(t, err)
 
 			// Should only be following two users
@@ -142,9 +116,9 @@ func TestBatchIsFollowing(t *testing.T) {
 		t.Run("empty followees list", func(t *testing.T) {
 			follower := uuid.New()
 
-			followingSet, err := followerRepo.BatchIsFollowing(ctx, follower, []uuid.UUID{})
+			followingSet, err := followerRepo.FindFollowees(ctx, follower, []uuid.UUID{})
 			require.NoError(t, err)
-			assert.Equal(t, mapset.NewSet[uuid.UUID](), followingSet)
+			assert.Equal(t, mapset.NewThreadUnsafeSet[uuid.UUID](), followingSet)
 		})
 
 		t.Run("not following any users", func(t *testing.T) {
@@ -153,7 +127,7 @@ func TestBatchIsFollowing(t *testing.T) {
 			followee2 := uuid.New()
 
 			followees := []uuid.UUID{followee1, followee2}
-			followingSet, err := followerRepo.BatchIsFollowing(ctx, follower, followees)
+			followingSet, err := followerRepo.FindFollowees(ctx, follower, followees)
 			require.NoError(t, err)
 			assert.Equal(t, 0, followingSet.Cardinality())
 		})

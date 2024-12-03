@@ -657,6 +657,64 @@ func (_c *MockArticleRepositoryInterface_UnfavoriteArticle_Call) RunAndReturn(ru
 	return _c
 }
 
+// UpdateArticle provides a mock function with given fields: ctx, article, oldSlug
+func (_m *MockArticleRepositoryInterface) UpdateArticle(ctx context.Context, article domain.Article, oldSlug string) (domain.Article, error) {
+	ret := _m.Called(ctx, article, oldSlug)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpdateArticle")
+	}
+
+	var r0 domain.Article
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, domain.Article, string) (domain.Article, error)); ok {
+		return rf(ctx, article, oldSlug)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, domain.Article, string) domain.Article); ok {
+		r0 = rf(ctx, article, oldSlug)
+	} else {
+		r0 = ret.Get(0).(domain.Article)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, domain.Article, string) error); ok {
+		r1 = rf(ctx, article, oldSlug)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockArticleRepositoryInterface_UpdateArticle_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpdateArticle'
+type MockArticleRepositoryInterface_UpdateArticle_Call struct {
+	*mock.Call
+}
+
+// UpdateArticle is a helper method to define mock.On call
+//   - ctx context.Context
+//   - article domain.Article
+//   - oldSlug string
+func (_e *MockArticleRepositoryInterface_Expecter) UpdateArticle(ctx interface{}, article interface{}, oldSlug interface{}) *MockArticleRepositoryInterface_UpdateArticle_Call {
+	return &MockArticleRepositoryInterface_UpdateArticle_Call{Call: _e.mock.On("UpdateArticle", ctx, article, oldSlug)}
+}
+
+func (_c *MockArticleRepositoryInterface_UpdateArticle_Call) Run(run func(ctx context.Context, article domain.Article, oldSlug string)) *MockArticleRepositoryInterface_UpdateArticle_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(domain.Article), args[2].(string))
+	})
+	return _c
+}
+
+func (_c *MockArticleRepositoryInterface_UpdateArticle_Call) Return(_a0 domain.Article, _a1 error) *MockArticleRepositoryInterface_UpdateArticle_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockArticleRepositoryInterface_UpdateArticle_Call) RunAndReturn(run func(context.Context, domain.Article, string) (domain.Article, error)) *MockArticleRepositoryInterface_UpdateArticle_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // NewMockArticleRepositoryInterface creates a new instance of MockArticleRepositoryInterface. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
 // The first argument is typically a *testing.T value.
 func NewMockArticleRepositoryInterface(t interface {

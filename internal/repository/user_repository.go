@@ -31,7 +31,7 @@ type UserRepositoryInterface interface {
 	FindUserByUsername(c context.Context, username string) (domain.User, error)
 	FindUserById(c context.Context, userId uuid.UUID) (domain.User, error)
 	InsertNewUser(c context.Context, newUser domain.User) (domain.User, error)
-	FindUserListByUserIDs(c context.Context, userIds []uuid.UUID) ([]domain.User, error)
+	FindUsersByIds(c context.Context, userIds []uuid.UUID) ([]domain.User, error)
 	UpdateUser(c context.Context, user domain.User, oldEmail string, oldUsername string) (domain.User, error)
 }
 
@@ -127,38 +127,28 @@ func (s dynamodbUserRepository) InsertNewUser(ctx context.Context, newUser domai
 				}
 			}
 		}
-
 		return domain.User{}, fmt.Errorf("%w: %w", errutil.ErrDynamoQuery, err)
 	}
 
 	return newUser, nil
 }
 
-func (s dynamodbUserRepository) FindUserById(c context.Context, userId uuid.UUID) (domain.User, error) {
-	response, err := s.db.Client.GetItem(c, &dynamodb.GetItemInput{
+func (s dynamodbUserRepository) FindUserById(ctx context.Context, userId uuid.UUID) (domain.User, error) {
+	input := &dynamodb.GetItemInput{
 		TableName: aws.String(userTable),
 		Key: map[string]ddbtypes.AttributeValue{
 			"pk": &ddbtypes.AttributeValueMemberS{Value: userId.String()},
 		},
-	})
+	}
 
+	user, err := GetItem(ctx, s.db.Client, input, toDomainUser)
 	if err != nil {
-		return domain.User{}, fmt.Errorf("%w: %w", errutil.ErrDynamoQuery, err)
+		if errors.Is(err, ErrDynamodbItemNotFound) {
+			return domain.User{}, errutil.ErrUserNotFound
+		}
+		return domain.User{}, err
 	}
-
-	if len(response.Item) == 0 {
-		return domain.User{}, errutil.ErrUserNotFound
-	}
-
-	var dynamodbUser DynamodbUserItem
-	err = attributevalue.UnmarshalMap(response.Item, &dynamodbUser)
-
-	if err != nil {
-		return domain.User{}, fmt.Errorf("%w: %w", errutil.ErrDynamoMapping, err)
-	}
-
-	domainUser := toDomainUser(dynamodbUser)
-	return domainUser, nil
+	return user, nil
 }
 
 func (s dynamodbUserRepository) FindUserByUsername(ctx context.Context, username string) (domain.User, error) {
@@ -171,26 +161,6 @@ func (s dynamodbUserRepository) FindUserByUsername(ctx context.Context, username
 		},
 	}
 
-	user, err := QueryOne(ctx, s.db.Client, &input, toDomainUser)
-	if err != nil {
-		if errors.Is(err, ErrDynamodbItemNotFound) {
-			return domain.User{}, errutil.ErrUserNotFound
-		}
-		return domain.User{}, err
-	}
-	return user, nil
-}
-
-func (s dynamodbUserRepository) FindUserByUsernameTBD(ctx context.Context, username string) (domain.User, error) {
-	input := dynamodb.QueryInput{
-		TableName:              aws.String(userTable),
-		IndexName:              aws.String(userUsernameGSI),
-		KeyConditionExpression: aws.String("username = :username"),
-		ExpressionAttributeValues: map[string]ddbtypes.AttributeValue{
-			":username": &ddbtypes.AttributeValueMemberS{Value: username},
-		},
-		Limit: aws.Int32(1),
-	}
 	user, err := QueryOne(ctx, s.db.Client, &input, toDomainUser)
 	if err != nil {
 		if errors.Is(err, ErrDynamodbItemNotFound) {
@@ -295,13 +265,7 @@ func (s dynamodbUserRepository) UpdateUser(ctx context.Context, user domain.User
 	return user, nil
 }
 
-// FindUserListByUserIDs
-/*
-* ToDo @ender there are fundamental issues with how "realworld application" design and you can feel it here.
-*  there is no partial fetch (like with "scrolling" with token) thus we are loading all comments.
-*  dynamodb has batch request count (max 100 item) and size (16mb) limits to be aware.
- */
-func (s dynamodbUserRepository) FindUserListByUserIDs(ctx context.Context, userIds []uuid.UUID) ([]domain.User, error) {
+func (s dynamodbUserRepository) FindUsersByIds(ctx context.Context, userIds []uuid.UUID) ([]domain.User, error) {
 	// short circuit if userIds is empty, no need to query
 	// also, dynamodb will throw a validation error if we try to query with empty keys
 	if len(userIds) == 0 {

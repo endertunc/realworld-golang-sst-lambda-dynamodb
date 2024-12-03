@@ -84,58 +84,81 @@ var DynamodbClient = sync.OnceValue(func() *dynamodb.Client {
 func truncateTable(t *testing.T, tableName string, pkName string, skName *string) {
 	ctx := context.Background()
 
-	// Scan the table to get all items. It's only used for testing purposes.
+	// Scan the table to get items. It's only used for testing purposes.
 	scanInput := &dynamodb.ScanInput{
-		TableName: aws.String(tableName),
+		TableName:       aws.String(tableName),
+		AttributesToGet: []string{pkName},
 	}
 
-	result, err := DynamodbClient().Scan(ctx, scanInput)
-	if err != nil {
-		t.Fatalf("failed to scan table: %v", err)
+	// Add sort key to attributes if it exists
+	if skName != nil {
+		scanInput.AttributesToGet = append(scanInput.AttributesToGet, *skName)
 	}
 
-	// Batch delete items
 	var writeRequests []types.WriteRequest
-	totalItemsToDelete := len(result.Items)
+	var lastEvaluatedKey map[string]types.AttributeValue
 
-	for i, item := range result.Items {
-		key := make(map[string]types.AttributeValue)
-
-		// Extract the primary key
-		if pkValue, ok := item[pkName]; ok {
-			key[pkName] = pkValue
-		} else {
-			t.Fatalf("primary key not found in item")
+	// Keep scanning and deleting until no more items are left
+	for {
+		// If there's a last evaluated key from previous scan, use it
+		if lastEvaluatedKey != nil {
+			scanInput.ExclusiveStartKey = lastEvaluatedKey
 		}
 
-		// Extract the sort key if it exists
-		if skName != nil {
-			if skValue, ok := item[*skName]; ok {
-				key[*skName] = skValue
+		result, err := DynamodbClient().Scan(ctx, scanInput)
+		if err != nil {
+			t.Fatalf("failed to scan table: %v", err)
+		}
+
+		if len(result.Items) == 0 {
+			return // No more items to delete
+		}
+
+		// Process items for deletion
+		for i, item := range result.Items {
+			key := make(map[string]types.AttributeValue)
+
+			// Extract the primary key
+			if pkValue, ok := item[pkName]; ok {
+				key[pkName] = pkValue
 			} else {
-				t.Fatalf("sort key not found in item")
+				t.Fatalf("primary key not found in item")
 			}
-		}
 
-		writeRequests = append(writeRequests, types.WriteRequest{
-			DeleteRequest: &types.DeleteRequest{
-				Key: key,
-			},
-		})
+			// Extract the sort key if it exists
+			if skName != nil {
+				if skValue, ok := item[*skName]; ok {
+					key[*skName] = skValue
+				} else {
+					t.Fatalf("sort key not found in item")
+				}
+			}
 
-		// Perform the batch delete operation with 25 items at a time
-		if len(writeRequests) == 25 || totalItemsToDelete == i+1 {
-			_, err = DynamodbClient().BatchWriteItem(ctx, &dynamodb.BatchWriteItemInput{
-				RequestItems: map[string][]types.WriteRequest{
-					tableName: writeRequests,
+			writeRequests = append(writeRequests, types.WriteRequest{
+				DeleteRequest: &types.DeleteRequest{
+					Key: key,
 				},
 			})
-			if err != nil {
-				t.Fatalf("failed to batch delete items: %v", err)
+
+			// Perform the batch delete operation when we have 25 items or it's the last item
+			if len(writeRequests) == 25 || i == len(result.Items)-1 {
+				_, err = DynamodbClient().BatchWriteItem(ctx, &dynamodb.BatchWriteItemInput{
+					RequestItems: map[string][]types.WriteRequest{
+						tableName: writeRequests,
+					},
+				})
+				if err != nil {
+					t.Fatalf("failed to batch delete items: %v", err)
+				}
+				writeRequests = make([]types.WriteRequest, 0)
 			}
-			writeRequests = make([]types.WriteRequest, 0)
 		}
 
+		// Check if we need to continue scanning
+		if result.LastEvaluatedKey == nil {
+			break // No more pages to scan
+		}
+		lastEvaluatedKey = result.LastEvaluatedKey
 	}
 }
 
@@ -175,10 +198,12 @@ func ExecuteRequest[T any](t *testing.T, method, path string, reqBody any, expec
 	if err != nil {
 		t.Fatalf("failed to marshal request body: %v", err)
 	}
+
 	req, err := http.NewRequest(method, apiUrl()+path, bytes.NewBuffer(jsonData))
 	if err != nil {
 		t.Fatalf("failed to create request: %v", err)
 	}
+
 	req.Header.Set("Content-Type", "application/json")
 	if token != nil {
 		req.Header.Set("Authorization", "Token "+*token)
@@ -198,6 +223,7 @@ func ExecuteRequest[T any](t *testing.T, method, path string, reqBody any, expec
 
 	require.Equal(t, expectedStatusCode, resp.StatusCode)
 
+	// `Nothing` type is an experimental approach that I think works very well in this use case
 	switch any(respBody).(type) {
 	case Nothing:
 		return respBody // skip parsing the response body

@@ -31,11 +31,15 @@ func NewProfileService(followerRepository repository.FollowerRepositoryInterface
 }
 
 func (p profileService) IsFollowing(ctx context.Context, follower, followee uuid.UUID) (bool, error) {
-	return p.followerRepository.IsFollowing(ctx, follower, followee)
+	following, err := p.followerRepository.FindFollowees(ctx, follower, []uuid.UUID{followee})
+	if err != nil {
+		return false, err
+	}
+	return following.Contains(followee), nil
 }
 
 func (p profileService) IsFollowingBulk(ctx context.Context, follower uuid.UUID, followee []uuid.UUID) (mapset.Set[uuid.UUID], error) {
-	return p.followerRepository.BatchIsFollowing(ctx, follower, followee)
+	return p.followerRepository.FindFollowees(ctx, follower, followee)
 }
 
 func (p profileService) Follow(ctx context.Context, follower uuid.UUID, followeeUsername string) (domain.User, error) {
@@ -82,11 +86,11 @@ func (p profileService) GetUserProfile(ctx context.Context, loggedInUserId *uuid
 		slog.DebugContext(ctx, "no logged in user. skipping isFollowing check")
 		return followedUser, false, nil
 	} else {
-		isFollowing, err := p.IsFollowing(ctx, *loggedInUserId, followedUser.Id)
+		isFollowing, err := p.IsFollowingBulk(ctx, *loggedInUserId, []uuid.UUID{followedUser.Id})
 		if err != nil {
 			return domain.User{}, false, err
 		}
 		slog.DebugContext(ctx, fmt.Sprintf("is user %s following %s: %v", loggedInUserId, followedUser.Id, isFollowing))
-		return followedUser, isFollowing, nil
+		return followedUser, !isFollowing.IsEmpty(), nil
 	}
 }

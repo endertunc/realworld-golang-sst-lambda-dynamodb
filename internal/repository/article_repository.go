@@ -120,21 +120,13 @@ func (d dynamodbArticleRepository) FindArticleById(ctx context.Context, articleI
 		},
 	}
 
-	result, err := d.db.Client.GetItem(ctx, input)
+	article, err := GetItem(ctx, d.db.Client, input, toDomainArticle)
 	if err != nil {
-		return domain.Article{}, fmt.Errorf("%w: %w", errutil.ErrDynamoQuery, err)
+		if errors.Is(err, ErrDynamodbItemNotFound) {
+			return domain.Article{}, errutil.ErrCommentNotFound
+		}
+		return domain.Article{}, err
 	}
-
-	if result.Item == nil {
-		return domain.Article{}, errutil.ErrArticleNotFound
-	}
-
-	var article domain.Article
-	err = attributevalue.UnmarshalMap(result.Item, &article)
-	if err != nil {
-		return domain.Article{}, fmt.Errorf("%w: %w", errutil.ErrDynamoMapping, err)
-	}
-
 	return article, nil
 }
 

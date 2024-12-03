@@ -1,12 +1,11 @@
 package functions
 
 import (
-	"github.com/caarlos0/env/v11"
-	"log"
 	"log/slog"
 	"os"
 	"realworld-aws-lambda-dynamodb-golang/internal/api"
 	"realworld-aws-lambda-dynamodb-golang/internal/database"
+	"realworld-aws-lambda-dynamodb-golang/internal/eventhandler"
 	"realworld-aws-lambda-dynamodb-golang/internal/repository"
 	"realworld-aws-lambda-dynamodb-golang/internal/security"
 	"realworld-aws-lambda-dynamodb-golang/internal/service"
@@ -43,20 +42,12 @@ var (
 	userFeedRepository = repository.NewUserFeedRepository(dynamodbStore)
 	UserFeedService    = service.NewUserFeedService(userFeedRepository, articleService, profileService, userService)
 	UserFeedApi        = api.NewUserFeedApi(UserFeedService, paginationConfig)
+
+	ArticleUserFeedHandler = eventhandler.NewArticleUserFeedHandler(UserFeedService)
 )
 
-type AppConfig struct {
-	JWTKeyPairSecretName string `env:"JWT_KEY_PAIR_SECRET_NAME"`
-}
-
 func init() {
-	var appConfig AppConfig
-	err := env.Parse(&appConfig)
-
-	if err != nil {
-		log.Fatalf("failed to parse config: %v", err)
-	}
-
+	// Configure slog
 	h := slogctx.NewHandler(
 		slog.NewJSONHandler(os.Stdout, nil),
 		&slogctx.HandlerOptions{
@@ -67,5 +58,6 @@ func init() {
 	)
 	slog.SetDefault(slog.New(h))
 
-	security.SetKeyProvider(security.NewAwsKeyProvider(appConfig.JWTKeyPairSecretName))
+	// Configure JWT key provider
+	security.SetKeyProvider(security.NewAwsKeyProvider())
 }

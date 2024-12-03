@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
@@ -65,7 +66,7 @@ func (c dynamodbCommentRepository) DeleteCommentByArticleIdAndCommentId(ctx cont
 }
 
 // the API specs that this project is based on using a bad design IMHO
-// therefore, I will add pagination and sort result by creation date
+// therefore, I will add pagination and sort result by creation date like we do with other entities
 func (c dynamodbCommentRepository) FindCommentsByArticleId(ctx context.Context, articleId uuid.UUID) ([]domain.Comment, error) {
 	input := &dynamodb.QueryInput{
 		TableName:              &commentTable,
@@ -108,23 +109,14 @@ func (c dynamodbCommentRepository) FindCommentByCommentIdAndArticleId(ctx contex
 			"articleId": &types.AttributeValueMemberS{Value: articleId.String()},
 		},
 	}
-
-	result, err := c.db.Client.GetItem(ctx, input)
+	comment, err := GetItem(ctx, c.db.Client, input, toDomainComment)
 	if err != nil {
-		return domain.Comment{}, fmt.Errorf("%w: %w", errutil.ErrDynamoQuery, err)
+		if errors.Is(err, ErrDynamodbItemNotFound) {
+			return domain.Comment{}, errutil.ErrCommentNotFound
+		}
+		return domain.Comment{}, err
 	}
-
-	if result.Item == nil {
-		return domain.Comment{}, errutil.ErrCommentNotFound
-	}
-
-	var dynamodbCommentItem DynamodbCommentItem
-	err = attributevalue.UnmarshalMap(result.Item, &dynamodbCommentItem)
-	if err != nil {
-		return domain.Comment{}, fmt.Errorf("%w: %w", errutil.ErrDynamoMapping, err)
-	}
-
-	return toDomainComment(dynamodbCommentItem), nil
+	return comment, nil
 }
 
 func toDynamodbCommentItem(article domain.Comment) DynamodbCommentItem {

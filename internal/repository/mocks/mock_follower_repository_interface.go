@@ -24,12 +24,12 @@ func (_m *MockFollowerRepositoryInterface) EXPECT() *MockFollowerRepositoryInter
 	return &MockFollowerRepositoryInterface_Expecter{mock: &_m.Mock}
 }
 
-// BatchIsFollowing provides a mock function with given fields: ctx, follower, followee
-func (_m *MockFollowerRepositoryInterface) BatchIsFollowing(ctx context.Context, follower uuid.UUID, followee []uuid.UUID) (mapset.Set[uuid.UUID], error) {
+// FindFollowees provides a mock function with given fields: ctx, follower, followee
+func (_m *MockFollowerRepositoryInterface) FindFollowees(ctx context.Context, follower uuid.UUID, followee []uuid.UUID) (mapset.Set[uuid.UUID], error) {
 	ret := _m.Called(ctx, follower, followee)
 
 	if len(ret) == 0 {
-		panic("no return value specified for BatchIsFollowing")
+		panic("no return value specified for FindFollowees")
 	}
 
 	var r0 mapset.Set[uuid.UUID]
@@ -54,32 +54,32 @@ func (_m *MockFollowerRepositoryInterface) BatchIsFollowing(ctx context.Context,
 	return r0, r1
 }
 
-// MockFollowerRepositoryInterface_BatchIsFollowing_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'BatchIsFollowing'
-type MockFollowerRepositoryInterface_BatchIsFollowing_Call struct {
+// MockFollowerRepositoryInterface_FindFollowees_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindFollowees'
+type MockFollowerRepositoryInterface_FindFollowees_Call struct {
 	*mock.Call
 }
 
-// BatchIsFollowing is a helper method to define mock.On call
+// FindFollowees is a helper method to define mock.On call
 //   - ctx context.Context
 //   - follower uuid.UUID
 //   - followee []uuid.UUID
-func (_e *MockFollowerRepositoryInterface_Expecter) BatchIsFollowing(ctx interface{}, follower interface{}, followee interface{}) *MockFollowerRepositoryInterface_BatchIsFollowing_Call {
-	return &MockFollowerRepositoryInterface_BatchIsFollowing_Call{Call: _e.mock.On("BatchIsFollowing", ctx, follower, followee)}
+func (_e *MockFollowerRepositoryInterface_Expecter) FindFollowees(ctx interface{}, follower interface{}, followee interface{}) *MockFollowerRepositoryInterface_FindFollowees_Call {
+	return &MockFollowerRepositoryInterface_FindFollowees_Call{Call: _e.mock.On("FindFollowees", ctx, follower, followee)}
 }
 
-func (_c *MockFollowerRepositoryInterface_BatchIsFollowing_Call) Run(run func(ctx context.Context, follower uuid.UUID, followee []uuid.UUID)) *MockFollowerRepositoryInterface_BatchIsFollowing_Call {
+func (_c *MockFollowerRepositoryInterface_FindFollowees_Call) Run(run func(ctx context.Context, follower uuid.UUID, followee []uuid.UUID)) *MockFollowerRepositoryInterface_FindFollowees_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run(args[0].(context.Context), args[1].(uuid.UUID), args[2].([]uuid.UUID))
 	})
 	return _c
 }
 
-func (_c *MockFollowerRepositoryInterface_BatchIsFollowing_Call) Return(_a0 mapset.Set[uuid.UUID], _a1 error) *MockFollowerRepositoryInterface_BatchIsFollowing_Call {
+func (_c *MockFollowerRepositoryInterface_FindFollowees_Call) Return(_a0 mapset.Set[uuid.UUID], _a1 error) *MockFollowerRepositoryInterface_FindFollowees_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *MockFollowerRepositoryInterface_BatchIsFollowing_Call) RunAndReturn(run func(context.Context, uuid.UUID, []uuid.UUID) (mapset.Set[uuid.UUID], error)) *MockFollowerRepositoryInterface_BatchIsFollowing_Call {
+func (_c *MockFollowerRepositoryInterface_FindFollowees_Call) RunAndReturn(run func(context.Context, uuid.UUID, []uuid.UUID) (mapset.Set[uuid.UUID], error)) *MockFollowerRepositoryInterface_FindFollowees_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -128,64 +128,6 @@ func (_c *MockFollowerRepositoryInterface_Follow_Call) Return(_a0 error) *MockFo
 }
 
 func (_c *MockFollowerRepositoryInterface_Follow_Call) RunAndReturn(run func(context.Context, uuid.UUID, uuid.UUID) error) *MockFollowerRepositoryInterface_Follow_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// IsFollowing provides a mock function with given fields: ctx, follower, followee
-func (_m *MockFollowerRepositoryInterface) IsFollowing(ctx context.Context, follower uuid.UUID, followee uuid.UUID) (bool, error) {
-	ret := _m.Called(ctx, follower, followee)
-
-	if len(ret) == 0 {
-		panic("no return value specified for IsFollowing")
-	}
-
-	var r0 bool
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, uuid.UUID) (bool, error)); ok {
-		return rf(ctx, follower, followee)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, uuid.UUID) bool); ok {
-		r0 = rf(ctx, follower, followee)
-	} else {
-		r0 = ret.Get(0).(bool)
-	}
-
-	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID, uuid.UUID) error); ok {
-		r1 = rf(ctx, follower, followee)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// MockFollowerRepositoryInterface_IsFollowing_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'IsFollowing'
-type MockFollowerRepositoryInterface_IsFollowing_Call struct {
-	*mock.Call
-}
-
-// IsFollowing is a helper method to define mock.On call
-//   - ctx context.Context
-//   - follower uuid.UUID
-//   - followee uuid.UUID
-func (_e *MockFollowerRepositoryInterface_Expecter) IsFollowing(ctx interface{}, follower interface{}, followee interface{}) *MockFollowerRepositoryInterface_IsFollowing_Call {
-	return &MockFollowerRepositoryInterface_IsFollowing_Call{Call: _e.mock.On("IsFollowing", ctx, follower, followee)}
-}
-
-func (_c *MockFollowerRepositoryInterface_IsFollowing_Call) Run(run func(ctx context.Context, follower uuid.UUID, followee uuid.UUID)) *MockFollowerRepositoryInterface_IsFollowing_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(uuid.UUID), args[2].(uuid.UUID))
-	})
-	return _c
-}
-
-func (_c *MockFollowerRepositoryInterface_IsFollowing_Call) Return(_a0 bool, _a1 error) *MockFollowerRepositoryInterface_IsFollowing_Call {
-	_c.Call.Return(_a0, _a1)
-	return _c
-}
-
-func (_c *MockFollowerRepositoryInterface_IsFollowing_Call) RunAndReturn(run func(context.Context, uuid.UUID, uuid.UUID) (bool, error)) *MockFollowerRepositoryInterface_IsFollowing_Call {
 	_c.Call.Return(run)
 	return _c
 }

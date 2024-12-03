@@ -120,6 +120,26 @@ func BatchGetItems[DomainType any, DynamodbType any](
 	return domainItems, nil
 }
 
+func GetItem[DomainType any, DynamodbType any](ctx context.Context, client *dynamodb.Client, input *dynamodb.GetItemInput, mapper func(input DynamodbType) DomainType) (DomainType, error) {
+	var domainItem DomainType
+	response, err := client.GetItem(ctx, input)
+	if err != nil {
+		return domainItem, fmt.Errorf("%w: %w", errutil.ErrDynamoQuery, err)
+	}
+
+	if len(response.Item) == 0 {
+		return domainItem, ErrDynamodbItemNotFound
+	}
+
+	var dynamodbItem DynamodbType
+	err = attributevalue.UnmarshalMap(response.Item, &dynamodbItem)
+	if err != nil {
+		return domainItem, fmt.Errorf("%w: %w", errutil.ErrDynamoMapping, err)
+	}
+	domainItem = mapper(dynamodbItem)
+	return domainItem, nil
+}
+
 // - - - - - - - - - - - - - - - - LastEvaluatedKey Encoder/Decoder - - - - - - - - - - - - - - - -
 func encodeLastEvaluatedKey(input map[string]types.AttributeValue) (*string, error) {
 	var inputMap map[string]interface{}

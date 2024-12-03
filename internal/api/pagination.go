@@ -5,10 +5,11 @@ import (
 	"log"
 )
 
+// not sure if we need a dependency for this but just wanted to experiment with it
 type PaginationConfig struct {
-	DefaultLimit int `env:"DEFAULT_LIMIT,notEmpty" envDefault:"10"`
-	MinLimit     int `env:"MIN_LIMIT,notEmpty" envDefault:"1"`
-	MaxLimit     int `env:"MAX_LIMIT,notEmpty" envDefault:"20"`
+	DefaultLimit int `env:"PAGINATION_DEFAULT_LIMIT,notEmpty" envDefault:"10"`
+	MinLimit     int `env:"PAGINATION_MIN_LIMIT,notEmpty" envDefault:"1"`
+	MaxLimit     int `env:"PAGINATION_MAX_LIMIT,notEmpty" envDefault:"20"`
 }
 
 // one could define an empty variable declaration and later initialize it inside init() or main()

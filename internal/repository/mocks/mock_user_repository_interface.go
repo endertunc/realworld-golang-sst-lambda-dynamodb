@@ -195,12 +195,12 @@ func (_c *MockUserRepositoryInterface_FindUserByUsername_Call) RunAndReturn(run 
 	return _c
 }
 
-// FindUserListByUserIDs provides a mock function with given fields: c, userIds
-func (_m *MockUserRepositoryInterface) FindUserListByUserIDs(c context.Context, userIds []uuid.UUID) ([]domain.User, error) {
+// FindUsersByIds provides a mock function with given fields: c, userIds
+func (_m *MockUserRepositoryInterface) FindUsersByIds(c context.Context, userIds []uuid.UUID) ([]domain.User, error) {
 	ret := _m.Called(c, userIds)
 
 	if len(ret) == 0 {
-		panic("no return value specified for FindUserListByUserIDs")
+		panic("no return value specified for FindUsersByIds")
 	}
 
 	var r0 []domain.User
@@ -225,31 +225,31 @@ func (_m *MockUserRepositoryInterface) FindUserListByUserIDs(c context.Context, 
 	return r0, r1
 }
 
-// MockUserRepositoryInterface_FindUserListByUserIDs_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindUserListByUserIDs'
-type MockUserRepositoryInterface_FindUserListByUserIDs_Call struct {
+// MockUserRepositoryInterface_FindUsersByIds_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FindUsersByIds'
+type MockUserRepositoryInterface_FindUsersByIds_Call struct {
 	*mock.Call
 }
 
-// FindUserListByUserIDs is a helper method to define mock.On call
+// FindUsersByIds is a helper method to define mock.On call
 //   - c context.Context
 //   - userIds []uuid.UUID
-func (_e *MockUserRepositoryInterface_Expecter) FindUserListByUserIDs(c interface{}, userIds interface{}) *MockUserRepositoryInterface_FindUserListByUserIDs_Call {
-	return &MockUserRepositoryInterface_FindUserListByUserIDs_Call{Call: _e.mock.On("FindUserListByUserIDs", c, userIds)}
+func (_e *MockUserRepositoryInterface_Expecter) FindUsersByIds(c interface{}, userIds interface{}) *MockUserRepositoryInterface_FindUsersByIds_Call {
+	return &MockUserRepositoryInterface_FindUsersByIds_Call{Call: _e.mock.On("FindUsersByIds", c, userIds)}
 }
 
-func (_c *MockUserRepositoryInterface_FindUserListByUserIDs_Call) Run(run func(c context.Context, userIds []uuid.UUID)) *MockUserRepositoryInterface_FindUserListByUserIDs_Call {
+func (_c *MockUserRepositoryInterface_FindUsersByIds_Call) Run(run func(c context.Context, userIds []uuid.UUID)) *MockUserRepositoryInterface_FindUsersByIds_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run(args[0].(context.Context), args[1].([]uuid.UUID))
 	})
 	return _c
 }
 
-func (_c *MockUserRepositoryInterface_FindUserListByUserIDs_Call) Return(_a0 []domain.User, _a1 error) *MockUserRepositoryInterface_FindUserListByUserIDs_Call {
+func (_c *MockUserRepositoryInterface_FindUsersByIds_Call) Return(_a0 []domain.User, _a1 error) *MockUserRepositoryInterface_FindUsersByIds_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *MockUserRepositoryInterface_FindUserListByUserIDs_Call) RunAndReturn(run func(context.Context, []uuid.UUID) ([]domain.User, error)) *MockUserRepositoryInterface_FindUserListByUserIDs_Call {
+func (_c *MockUserRepositoryInterface_FindUsersByIds_Call) RunAndReturn(run func(context.Context, []uuid.UUID) ([]domain.User, error)) *MockUserRepositoryInterface_FindUsersByIds_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -307,6 +307,65 @@ func (_c *MockUserRepositoryInterface_InsertNewUser_Call) Return(_a0 domain.User
 }
 
 func (_c *MockUserRepositoryInterface_InsertNewUser_Call) RunAndReturn(run func(context.Context, domain.User) (domain.User, error)) *MockUserRepositoryInterface_InsertNewUser_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// UpdateUser provides a mock function with given fields: c, user, oldEmail, oldUsername
+func (_m *MockUserRepositoryInterface) UpdateUser(c context.Context, user domain.User, oldEmail string, oldUsername string) (domain.User, error) {
+	ret := _m.Called(c, user, oldEmail, oldUsername)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpdateUser")
+	}
+
+	var r0 domain.User
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, domain.User, string, string) (domain.User, error)); ok {
+		return rf(c, user, oldEmail, oldUsername)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, domain.User, string, string) domain.User); ok {
+		r0 = rf(c, user, oldEmail, oldUsername)
+	} else {
+		r0 = ret.Get(0).(domain.User)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, domain.User, string, string) error); ok {
+		r1 = rf(c, user, oldEmail, oldUsername)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockUserRepositoryInterface_UpdateUser_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpdateUser'
+type MockUserRepositoryInterface_UpdateUser_Call struct {
+	*mock.Call
+}
+
+// UpdateUser is a helper method to define mock.On call
+//   - c context.Context
+//   - user domain.User
+//   - oldEmail string
+//   - oldUsername string
+func (_e *MockUserRepositoryInterface_Expecter) UpdateUser(c interface{}, user interface{}, oldEmail interface{}, oldUsername interface{}) *MockUserRepositoryInterface_UpdateUser_Call {
+	return &MockUserRepositoryInterface_UpdateUser_Call{Call: _e.mock.On("UpdateUser", c, user, oldEmail, oldUsername)}
+}
+
+func (_c *MockUserRepositoryInterface_UpdateUser_Call) Run(run func(c context.Context, user domain.User, oldEmail string, oldUsername string)) *MockUserRepositoryInterface_UpdateUser_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(domain.User), args[2].(string), args[3].(string))
+	})
+	return _c
+}
+
+func (_c *MockUserRepositoryInterface_UpdateUser_Call) Return(_a0 domain.User, _a1 error) *MockUserRepositoryInterface_UpdateUser_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockUserRepositoryInterface_UpdateUser_Call) RunAndReturn(run func(context.Context, domain.User, string, string) (domain.User, error)) *MockUserRepositoryInterface_UpdateUser_Call {
 	_c.Call.Return(run)
 	return _c
 }

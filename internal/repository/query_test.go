@@ -19,13 +19,13 @@ import (
 
 var db = database.DynamoDBStore{Client: test.DynamodbClient()}
 
-// ToDo @ender think if we can prove that internal pagination happens
+// ToDo @ender let's think if we can prove that internal pagination happens
 
-// it uses comment table as a test table
+// comment table is used as a test table
 func TestBatchGetItemsWithUnprocessedKeys(t *testing.T) {
 	test.WithSetupAndTeardown(t, func() {
 		ctx := context.Background()
-		comments := populateTableWithComments(t, ctx, 20, 350, nil)
+		comments := populateTableWithComments(t, ctx, 20, 380, nil)
 
 		// prepare keys for batch get items
 		keys := make([]map[string]types.AttributeValue, 0, len(comments))
@@ -45,18 +45,18 @@ func TestBatchGetItemsWithUnprocessedKeys(t *testing.T) {
 			}
 
 			// assert that all items are fetched
-			assert.Equal(t, len(comments), len(dynamodbCommentItems))
-		}, 5*time.Second, 1*time.Second)
+			assert.Equal(testingT, len(comments), len(dynamodbCommentItems))
+		}, 5*time.Second, 500*time.Millisecond) // most of the time it's a lot faster, but once in a while it needs a bit of time
 
 	})
 }
 
-// it uses comment table as a test table
+// comment table is used as a test table
 func TestQueryManyWithInternalPagination(t *testing.T) {
 	test.WithSetupAndTeardown(t, func() {
 		ctx := context.Background()
 		articleId := uuid.New()
-		populateTableWithComments(t, ctx, 20, 350, &articleId)
+		populateTableWithComments(t, ctx, 10, 380, &articleId)
 
 		// prepare a query to fetch comments by articleId
 		input := &dynamodb.QueryInput{
@@ -72,7 +72,7 @@ func TestQueryManyWithInternalPagination(t *testing.T) {
 		assert.EventuallyWithT(t, func(testingT *assert.CollectT) {
 			// query many with internal pagination
 			// 380 kb item size and 10 items per page proven to be enough to trigger pagination several times
-			dynamodbCommentItemsPageOne, lastEvaluatedKeyPageOne, err := QueryMany(ctx, db.Client, input, 10, nil, func(item DynamodbCommentItem) DynamodbCommentItem {
+			dynamodbCommentItemsPageOne, lastEvaluatedKeyPageOne, err := QueryMany(ctx, db.Client, input, 5, nil, func(item DynamodbCommentItem) DynamodbCommentItem {
 				return item
 			})
 			if err != nil {
@@ -80,17 +80,17 @@ func TestQueryManyWithInternalPagination(t *testing.T) {
 			}
 
 			// assert that the first page is full fetched and lastEvaluatedKey is NOT empty
-			assert.Equal(testingT, 10, len(dynamodbCommentItemsPageOne))
+			assert.Equal(testingT, 5, len(dynamodbCommentItemsPageOne))
 			assert.NotEmpty(testingT, lastEvaluatedKeyPageOne)
 
-			dynamodbCommentItemsPageTwo, lastEvaluatedKeyPageTwo, err := QueryMany(ctx, db.Client, input, 20, lastEvaluatedKeyPageOne, func(item DynamodbCommentItem) DynamodbCommentItem {
+			dynamodbCommentItemsPageTwo, lastEvaluatedKeyPageTwo, err := QueryMany(ctx, db.Client, input, 10, lastEvaluatedKeyPageOne, func(item DynamodbCommentItem) DynamodbCommentItem {
 				return item
 			})
 			// assert that the second page is full fetched and lastEvaluatedKey is empty
 			assert.NoError(testingT, err)
-			assert.Equal(testingT, 10, len(dynamodbCommentItemsPageTwo))
+			assert.Equal(testingT, 5, len(dynamodbCommentItemsPageTwo))
 			assert.Empty(testingT, lastEvaluatedKeyPageTwo)
-		}, 5*time.Second, 1*time.Second)
+		}, 15*time.Second, 1*time.Second) // most of the time it's a lot faster, but once in a while it needs a bit of time due to the eventual consistency
 	})
 }
 
@@ -109,6 +109,7 @@ func populateTableWithComments(t *testing.T, ctx context.Context, count int, ite
 	for _, comment := range comments {
 		dynamodbCommentItem := toDynamodbCommentItem(comment)
 		commentItemAttributes, err := attributevalue.MarshalMap(dynamodbCommentItem)
+
 		if err != nil {
 			t.Fatalf("failed to marshal map: %v", err)
 		}
@@ -118,15 +119,22 @@ func populateTableWithComments(t *testing.T, ctx context.Context, count int, ite
 			},
 		})
 	}
+	for {
+		response, err := db.Client.BatchWriteItem(ctx, &dynamodb.BatchWriteItemInput{
+			RequestItems: map[string][]types.WriteRequest{
+				commentTable: writeRequests,
+			},
+		})
+		if err != nil {
+			t.Fatalf("failed to batch write item: %v", err)
+		}
 
-	_, err := db.Client.BatchWriteItem(ctx, &dynamodb.BatchWriteItemInput{
-		RequestItems: map[string][]types.WriteRequest{
-			commentTable: writeRequests,
-		},
-	})
-
-	if err != nil {
-		t.Fatalf("failed to batch write item: %v", err)
+		// if there are unprocessed items, add them to the next batch
+		if unprocessedItems, ok := response.UnprocessedItems[commentTable]; ok {
+			writeRequests = unprocessedItems
+		} else {
+			break
+		}
 	}
 
 	return comments

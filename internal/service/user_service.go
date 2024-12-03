@@ -82,7 +82,7 @@ func (s userService) GetUserByUserId(c context.Context, userId uuid.UUID) (domai
 }
 
 func (s userService) GetUserListByUserIDs(c context.Context, userIds []uuid.UUID) ([]domain.User, error) {
-	users, err := s.userRepository.FindUserListByUserIDs(c, userIds)
+	users, err := s.userRepository.FindUsersByIds(c, userIds)
 	if err != nil {
 		return nil, err
 	}

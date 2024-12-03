@@ -43,15 +43,16 @@ func (as commentService) AddComment(ctx context.Context, author uuid.UUID, artic
 }
 
 // DeleteComment
-/**
- * ToDo @ender We can actually delete a comment only if the comment belongs to the user with a single query
- */
+//
+// we can actually delete a comment only if the comment belongs to the user with a single query.
+// however, we lose the ability to tell whether a comment doesn't exist or comment belongs to another user
+// in our case doesn't really matter, so I will probably change this to a single query
 func (as commentService) DeleteComment(ctx context.Context, loggedInUserId uuid.UUID, slug string, commentId uuid.UUID) error {
 	article, err := as.articleService.GetArticleBySlug(ctx, slug)
 	if err != nil {
 		return err
 	}
-	// check if the comment belongs to the article / comment exists
+	// check if the comment belongs to the article or if the comment exists
 	comment, err := as.commentRepository.FindCommentByCommentIdAndArticleId(ctx, commentId, article.Id)
 	if err != nil {
 		return err

@@ -9,6 +9,13 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestAuthenticationScenarios(t *testing.T) {
+	test.RunAuthenticationTests(t, test.SharedAuthenticationTestConfig{
+		Method: "GET",
+		Path:   "/api/articles/feed",
+	})
+}
+
 func TestGetUserFeed(t *testing.T) {
 	test.WithSetupAndTeardown(t, func() {
 		// Create viewer user

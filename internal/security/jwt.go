@@ -13,6 +13,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"log"
+	"os"
 	"realworld-aws-lambda-dynamodb-golang/internal/domain"
 	"realworld-aws-lambda-dynamodb-golang/internal/errutil"
 	"sync"
@@ -54,7 +55,13 @@ type awsKeyProvider struct {
 	SecretName string
 }
 
-func NewAwsKeyProvider(secretName string) KeyProvider {
+// NewAwsKeyProvider returns a KeyProvider that gets the keys from AWS Secrets Manager
+// requires JWT_KEY_PAIR_SECRET_NAME env variable to be set
+func NewAwsKeyProvider() KeyProvider {
+	secretName := os.Getenv("JWT_KEY_PAIR_SECRET_NAME")
+	if secretName == "" {
+		log.Fatalf("JWT_KEY_PAIR_SECRET_NAME env variable is not set")
+	}
 	return awsKeyProvider{
 		SecretName: secretName,
 	}

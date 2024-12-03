@@ -12,7 +12,7 @@ import (
 func TestAuthenticationScenarios(t *testing.T) {
 	test.RunAuthenticationTests(t, test.SharedAuthenticationTestConfig{
 		Method: "DELETE",
-		Path:   "/api/profiles/someuser/follow", // Use a dummy username as we're only testing auth
+		Path:   "/api/profiles/some-user/follow",
 	})
 }
 
