@@ -51,6 +51,10 @@ func (uf userFeedService) FetchArticlesFromFeed(ctx context.Context, userId uuid
 		return nil, nil, err
 	}
 
+	if len(articleIds) == 0 {
+		return make([]domain.ArticleAggregateView, 0), nil, nil
+	}
+
 	articles, err := uf.articleService.GetArticlesByIds(ctx, articleIds)
 	if err != nil {
 		return nil, nil, err

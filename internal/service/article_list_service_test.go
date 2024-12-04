@@ -32,17 +32,18 @@ func TestListArticleByAuthor(t *testing.T) {
 	)
 
 	t.Run("user not found", func(t *testing.T) {
-		WithTestContext(t, func(tc TestContext) {
+		WithTestContext(t, func(tc articleTestContext) {
+			// Setup test data
 			author := generator.GenerateUser()
 
 			tc.mockUserService.EXPECT().
 				GetUserByUsername(mock.Anything, author.Username).
 				Return(domain.User{}, errutil.ErrUserNotFound)
 
-			// Call the method under test
+			// Execute
 			result, _, err := tc.articleListService.GetMostRecentArticlesByAuthor(ctx, nil, author.Username, limit, nextPageTokenRequest)
 
-			// Assertions
+			// Assert
 			assert.ErrorIs(t, err, errutil.ErrUserNotFound)
 			assert.Empty(t, result)
 		})
@@ -50,8 +51,8 @@ func TestListArticleByAuthor(t *testing.T) {
 	})
 
 	t.Run("no auth", func(t *testing.T) {
-		WithTestContext(t, func(tc TestContext) {
-			// prepare test data
+		WithTestContext(t, func(tc articleTestContext) {
+			// Setup test data
 			author := generator.GenerateUser()
 
 			article1 := generator.GenerateArticle()
@@ -60,7 +61,7 @@ func TestListArticleByAuthor(t *testing.T) {
 			article2 := generator.GenerateArticle()
 			article2.AuthorId = author.Id
 
-			// setup mock expectations
+			// Setup expectations
 			tc.mockUserService.EXPECT().
 				GetUserByUsername(mock.Anything, author.Username).
 				Return(author, nil)
@@ -73,15 +74,14 @@ func TestListArticleByAuthor(t *testing.T) {
 				FindArticlesByAuthor(mock.Anything, author.Id, limit, nextPageTokenRequest).
 				Return([]domain.Article{article1, article2}, nextPageTokenResponse, nil)
 
-			// call the method under test
+			// Execute
 			result, nextToken, err := tc.articleListService.GetMostRecentArticlesByAuthor(ctx, nil, author.Username, limit, nextPageTokenRequest)
 
-			// assertions
+			// Assert
 			assert.NoError(t, err)
 			assert.Len(t, result, 2)
 			assert.Equal(t, nextPageTokenResponse, nextToken)
 
-			// verify specific feed item details
 			assert.Equal(t, article1.Id, result[0].Article.Id)
 			assert.Equal(t, author.Username, result[0].Author.Username)
 			assert.False(t, result[0].IsFavorited)
@@ -96,8 +96,8 @@ func TestListArticleByAuthor(t *testing.T) {
 	})
 
 	t.Run("viewer without following the author and favorited article", func(t *testing.T) {
-		WithTestContext(t, func(tc TestContext) {
-			// prepare test data
+		WithTestContext(t, func(tc articleTestContext) {
+			// Setup test data
 			author := generator.GenerateUser()
 			viewer := generator.GenerateUser()
 
@@ -107,7 +107,7 @@ func TestListArticleByAuthor(t *testing.T) {
 			article2 := generator.GenerateArticle()
 			article2.AuthorId = author.Id
 
-			// setup mock expectations
+			// Setup expectations
 			tc.mockUserService.EXPECT().
 				GetUserByUsername(mock.Anything, author.Username).
 				Return(author, nil)
@@ -128,10 +128,10 @@ func TestListArticleByAuthor(t *testing.T) {
 				IsFavoritedBulk(mock.Anything, viewer.Id, []uuid.UUID{article1.Id, article2.Id}).
 				Return(mapset.NewSetWithSize[uuid.UUID](0), nil)
 
-			// call the method under test
+			// Execute
 			result, _, err := tc.articleListService.GetMostRecentArticlesByAuthor(ctx, &viewer.Id, author.Username, limit, nextPageTokenRequest)
 
-			// assertions
+			// Assert
 			assert.NoError(t, err)
 			assert.Len(t, result, 2)
 
@@ -150,8 +150,8 @@ func TestListArticleByAuthor(t *testing.T) {
 	})
 
 	t.Run("viewer with following the author and favorited article", func(t *testing.T) {
-		WithTestContext(t, func(tc TestContext) {
-			// Prepare test data
+		WithTestContext(t, func(tc articleTestContext) {
+			// Setup test data
 			author := generator.GenerateUser()
 			viewer := generator.GenerateUser()
 
@@ -181,10 +181,10 @@ func TestListArticleByAuthor(t *testing.T) {
 				IsFavoritedBulk(mock.Anything, viewer.Id, []uuid.UUID{article1.Id, article2.Id}).
 				Return(mapset.NewSet[uuid.UUID](article1.Id), nil)
 
-			// call the method under test
+			// Execute
 			result, _, err := tc.articleListService.GetMostRecentArticlesByAuthor(ctx, &viewer.Id, author.Username, limit, nextPageTokenRequest)
 
-			// assertions
+			// Assert
 			assert.NoError(t, err)
 			assert.Len(t, result, 2)
 
@@ -210,25 +210,27 @@ func TestListArticleByFavorited(t *testing.T) {
 	)
 
 	t.Run("user not found", func(t *testing.T) {
-		WithTestContext(t, func(tc TestContext) {
+		WithTestContext(t, func(tc articleTestContext) {
+			// Setup test data
 			favoritedByUser := generator.GenerateUser()
-			// setup mock expectations
+
+			// Setup expectations
 			tc.mockUserService.EXPECT().
 				GetUserByUsername(mock.Anything, favoritedByUser.Username).
 				Return(domain.User{}, errutil.ErrUserNotFound)
 
-			// call the method under test
+			// Execute
 			result, _, err := tc.articleListService.GetMostRecentArticlesFavoritedByUser(ctx, nil, favoritedByUser.Username, limit, nextPageTokenRequest)
 
-			// assertions
+			// Assert
 			assert.ErrorIs(t, err, errutil.ErrUserNotFound)
 			assert.Empty(t, result)
 		})
 	})
 
 	t.Run("no auth", func(t *testing.T) {
-		WithTestContext(t, func(tc TestContext) {
-			// prepare test data
+		WithTestContext(t, func(tc articleTestContext) {
+			// Setup test data
 			author1 := generator.GenerateUser()
 			author2 := generator.GenerateUser()
 
@@ -240,7 +242,7 @@ func TestListArticleByFavorited(t *testing.T) {
 
 			favoritedByUser := generator.GenerateUser()
 
-			// setup mock expectations
+			// Setup expectations
 			tc.mockUserService.EXPECT().
 				GetUserByUsername(mock.Anything, favoritedByUser.Username).
 				Return(favoritedByUser, nil)
@@ -257,10 +259,10 @@ func TestListArticleByFavorited(t *testing.T) {
 				FindArticlesByIds(mock.Anything, []uuid.UUID{author1Article1.Id, author2Article1.Id}).
 				Return([]domain.Article{author1Article1, author2Article1}, nil)
 
-			// call the method under test
+			// Execute
 			result, nextToken, err := tc.articleListService.GetMostRecentArticlesFavoritedByUser(ctx, nil, favoritedByUser.Username, limit, nextPageTokenRequest)
 
-			// assertions
+			// Assert
 			assert.NoError(t, err)
 			assert.Len(t, result, 2)
 			assert.Equal(t, nextPageTokenResponse, nextToken)
@@ -280,8 +282,8 @@ func TestListArticleByFavorited(t *testing.T) {
 	})
 
 	t.Run("viewer without following author and favorited article", func(t *testing.T) {
-		WithTestContext(t, func(tc TestContext) {
-			// prepare test data
+		WithTestContext(t, func(tc articleTestContext) {
+			// Setup test data
 			author1 := generator.GenerateUser()
 			author2 := generator.GenerateUser()
 
@@ -294,7 +296,7 @@ func TestListArticleByFavorited(t *testing.T) {
 			favoritedByUser := generator.GenerateUser()
 			viewer := generator.GenerateUser()
 
-			// setup mock expectations
+			// Setup expectations
 			tc.mockUserService.EXPECT().
 				GetUserByUsername(mock.Anything, favoritedByUser.Username).
 				Return(favoritedByUser, nil)
@@ -319,10 +321,10 @@ func TestListArticleByFavorited(t *testing.T) {
 				IsFavoritedBulk(mock.Anything, viewer.Id, []uuid.UUID{author1Article1.Id, author2Article1.Id}).
 				Return(mapset.NewSetWithSize[uuid.UUID](0), nil)
 
-			// call the method under test
+			// Execute
 			result, _, err := tc.articleListService.GetMostRecentArticlesFavoritedByUser(ctx, &viewer.Id, favoritedByUser.Username, limit, nextPageTokenRequest)
 
-			// assertions
+			// Assert
 			assert.NoError(t, err)
 			assert.Len(t, result, 2)
 
@@ -340,8 +342,8 @@ func TestListArticleByFavorited(t *testing.T) {
 	})
 
 	t.Run("viewer with following author and favorited article", func(t *testing.T) {
-		WithTestContext(t, func(tc TestContext) {
-			// prepare test data
+		WithTestContext(t, func(tc articleTestContext) {
+			// Setup test data
 			author1 := generator.GenerateUser()
 			author2 := generator.GenerateUser()
 
@@ -354,7 +356,7 @@ func TestListArticleByFavorited(t *testing.T) {
 			favoritedByUser := generator.GenerateUser()
 			viewer := generator.GenerateUser()
 
-			// setup mock expectations
+			// Setup expectations
 			tc.mockUserService.EXPECT().
 				GetUserByUsername(mock.Anything, favoritedByUser.Username).
 				Return(favoritedByUser, nil)
@@ -379,10 +381,10 @@ func TestListArticleByFavorited(t *testing.T) {
 				IsFavoritedBulk(mock.Anything, viewer.Id, []uuid.UUID{author1Article1.Id, author2Article1.Id}).
 				Return(mapset.NewSet[uuid.UUID](author1Article1.Id), nil)
 
-			// call the method under test
+			// Execute
 			result, _, err := tc.articleListService.GetMostRecentArticlesFavoritedByUser(ctx, &viewer.Id, favoritedByUser.Username, limit, nextPageTokenRequest)
 
-			// assertions
+			// Assert
 			assert.NoError(t, err)
 			assert.Len(t, result, 2)
 
@@ -408,7 +410,7 @@ func TestListAaticleByTag(t *testing.T) {
 	)
 
 	t.Run("no auth", func(t *testing.T) {
-		WithTestContext(t, func(tc TestContext) {
+		WithTestContext(t, func(tc articleTestContext) {
 			tag := gofakeit.Word()
 
 			author1 := generator.GenerateUser()
@@ -420,7 +422,7 @@ func TestListAaticleByTag(t *testing.T) {
 			author2Article1 := generator.GenerateArticle()
 			author2Article1.AuthorId = author2.Id
 
-			// setup mock expectations
+			// Setup expectations
 			tc.mockArticleOpensearchRepo.EXPECT().
 				FindArticlesByTag(mock.Anything, tag, limit, nextPageTokenRequest).
 				Return([]domain.Article{author1Article1, author2Article1}, nextPageTokenResponse, nil)
@@ -429,15 +431,14 @@ func TestListAaticleByTag(t *testing.T) {
 				GetUserListByUserIDs(mock.Anything, []uuid.UUID{author1.Id, author2.Id}).
 				Return([]domain.User{author1, author2}, nil)
 
-			// call the method under test
+			// Execute
 			result, nextToken, err := tc.articleListService.GetMostRecentArticlesFavoritedByTag(ctx, nil, tag, limit, nextPageTokenRequest)
 
-			// assertions
+			// Assert
 			assert.NoError(t, err)
 			assert.Len(t, result, 2)
 			assert.Equal(t, nextPageTokenResponse, nextToken)
 
-			// verify specific item details
 			assert.Equal(t, author1Article1.Id, result[0].Article.Id)
 			assert.Equal(t, author1.Username, result[0].Author.Username)
 			assert.False(t, result[0].IsFavorited)
@@ -451,7 +452,7 @@ func TestListAaticleByTag(t *testing.T) {
 	})
 
 	t.Run("viewer without following author and favorited article", func(t *testing.T) {
-		WithTestContext(t, func(tc TestContext) {
+		WithTestContext(t, func(tc articleTestContext) {
 			tag := gofakeit.Word()
 
 			author1 := generator.GenerateUser()
@@ -465,7 +466,7 @@ func TestListAaticleByTag(t *testing.T) {
 
 			viewer := generator.GenerateUser()
 
-			// setup mock expectations
+			// Setup expectations
 			tc.mockArticleOpensearchRepo.EXPECT().
 				FindArticlesByTag(mock.Anything, tag, limit, nextPageTokenRequest).
 				Return([]domain.Article{author1Article1, author2Article1}, nextPageTokenResponse, nil)
@@ -482,14 +483,13 @@ func TestListAaticleByTag(t *testing.T) {
 				IsFavoritedBulk(mock.Anything, viewer.Id, []uuid.UUID{author1Article1.Id, author2Article1.Id}).
 				Return(mapset.NewSetWithSize[uuid.UUID](0), nil)
 
-			// call the method under test
+			// Execute
 			result, _, err := tc.articleListService.GetMostRecentArticlesFavoritedByTag(ctx, &viewer.Id, tag, limit, nextPageTokenRequest)
 
-			// assertions
+			// Assert
 			assert.NoError(t, err)
 			assert.Len(t, result, 2)
 
-			// verify specific item details
 			assert.Equal(t, author1Article1.Id, result[0].Article.Id)
 			assert.Equal(t, author1.Username, result[0].Author.Username)
 			assert.False(t, result[0].IsFavorited)
@@ -503,7 +503,7 @@ func TestListAaticleByTag(t *testing.T) {
 	})
 
 	t.Run("viewer with following author and favorited article", func(t *testing.T) {
-		WithTestContext(t, func(tc TestContext) {
+		WithTestContext(t, func(tc articleTestContext) {
 			tag := gofakeit.Word()
 
 			author1 := generator.GenerateUser()
@@ -517,7 +517,7 @@ func TestListAaticleByTag(t *testing.T) {
 
 			viewer := generator.GenerateUser()
 
-			// setup mock expectations
+			// Setup expectations
 			tc.mockArticleOpensearchRepo.EXPECT().
 				FindArticlesByTag(mock.Anything, tag, limit, nextPageTokenRequest).
 				Return([]domain.Article{author1Article1, author2Article1}, nextPageTokenResponse, nil)
@@ -534,14 +534,13 @@ func TestListAaticleByTag(t *testing.T) {
 				IsFavoritedBulk(mock.Anything, viewer.Id, []uuid.UUID{author1Article1.Id, author2Article1.Id}).
 				Return(mapset.NewSet[uuid.UUID](author1Article1.Id), nil)
 
-			// call the method under test
+			// Execute
 			result, _, err := tc.articleListService.GetMostRecentArticlesFavoritedByTag(ctx, &viewer.Id, tag, limit, nextPageTokenRequest)
 
-			// assertions
+			// Assert
 			assert.NoError(t, err)
 			assert.Len(t, result, 2)
 
-			// verify specific item details
 			assert.Equal(t, author1Article1.Id, result[0].Article.Id)
 			assert.Equal(t, author1.Username, result[0].Author.Username)
 			assert.True(t, result[0].IsFavorited)
@@ -556,7 +555,9 @@ func TestListAaticleByTag(t *testing.T) {
 	})
 }
 
-type TestContext struct {
+// - - - - - - - - - - - - - - - - Test Context - - - - - - - - - - - - - - - -
+
+type articleTestContext struct {
 	articleListService        ArticleListServiceInterface
 	mockArticleRepo           *rmocks.MockArticleRepositoryInterface
 	mockArticleOpensearchRepo *rmocks.MockArticleOpensearchRepositoryInterface
@@ -564,7 +565,7 @@ type TestContext struct {
 	mockUserService           *mocks.MockUserServiceInterface
 }
 
-func createTestContext(t *testing.T) TestContext {
+func createTestContext(t *testing.T) articleTestContext {
 	mockArticleRepo := rmocks.NewMockArticleRepositoryInterface(t)
 	mockArticleOpensearchRepo := rmocks.NewMockArticleOpensearchRepositoryInterface(t)
 	mockProfileService := mocks.NewMockProfileServiceInterface(t)
@@ -575,7 +576,7 @@ func createTestContext(t *testing.T) TestContext {
 		profileService:              mockProfileService,
 		userService:                 mockUserService,
 	}
-	return TestContext{
+	return articleTestContext{
 		articleListService:        articleListService,
 		mockArticleRepo:           mockArticleRepo,
 		mockArticleOpensearchRepo: mockArticleOpensearchRepo,
@@ -584,6 +585,6 @@ func createTestContext(t *testing.T) TestContext {
 	}
 }
 
-func WithTestContext(t *testing.T, testFunc func(tc TestContext)) {
+func WithTestContext(t *testing.T, testFunc func(tc articleTestContext)) {
 	testFunc(createTestContext(t))
 }
