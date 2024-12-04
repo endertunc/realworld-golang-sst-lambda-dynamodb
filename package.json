@@ -1,6 +1,6 @@
 {
-  "name": "realworld-api",
-  "version": "0.0.0",
+  "name": "realworld",
+  "version": "0.0.1",
   "private": true,
   "type": "module",
   "scripts": {

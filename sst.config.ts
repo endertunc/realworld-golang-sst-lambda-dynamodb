@@ -7,7 +7,7 @@ import type { SSTConfig } from "sst";
 export default {
   config() {
     return {
-      name: "real-world-golang-sst-lambda-dynamodb",
+      name: "realworld",
       region: "eu-west-1"
     };
   },

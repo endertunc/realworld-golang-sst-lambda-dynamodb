@@ -1,14 +1,15 @@
 import * as cdk from "aws-cdk-lib";
 import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
+import { getPrefixedResourceName } from "./helpers";
 import type { StackContext } from "sst/constructs";
 
-export function DynamoDBStack({ stack }: StackContext) {
+export function DynamoDBStack({ stack, app }: StackContext) {
   const commonTableProps = {
     billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
     removalPolicy: cdk.RemovalPolicy.DESTROY
   };
 
-  const userTable = new dynamodb.Table(stack, "user", {
+  const userTable = new dynamodb.Table(stack, getPrefixedResourceName(app, "user"), {
     ...commonTableProps,
     tableName: "user",
     partitionKey: {
@@ -35,7 +36,7 @@ export function DynamoDBStack({ stack }: StackContext) {
     }
   });
 
-  const articleTable = new dynamodb.Table(stack, "article", {
+  const articleTable = new dynamodb.Table(stack, getPrefixedResourceName(app, "article"), {
     ...commonTableProps,
     tableName: "article",
     partitionKey: {
@@ -68,7 +69,7 @@ export function DynamoDBStack({ stack }: StackContext) {
     }
   });
 
-  const feedTable = new dynamodb.Table(stack, "feed", {
+  const feedTable = new dynamodb.Table(stack, getPrefixedResourceName(app, "feed"), {
     ...commonTableProps,
     tableName: "feed",
     partitionKey: {
@@ -81,7 +82,7 @@ export function DynamoDBStack({ stack }: StackContext) {
     }
   });
 
-  const commentTable = new dynamodb.Table(stack, "comment", {
+  const commentTable = new dynamodb.Table(stack, getPrefixedResourceName(app, "comment"), {
     ...commonTableProps,
     tableName: "comment",
     partitionKey: {
@@ -103,7 +104,7 @@ export function DynamoDBStack({ stack }: StackContext) {
     }
   });
 
-  const favoritedTable = new dynamodb.Table(stack, "favorite", {
+  const favoritedTable = new dynamodb.Table(stack, getPrefixedResourceName(app, "favorite"), {
     ...commonTableProps,
     tableName: "favorite",
     partitionKey: {
@@ -129,7 +130,7 @@ export function DynamoDBStack({ stack }: StackContext) {
     }
   });
 
-  const followerTable = new dynamodb.Table(stack, "follower", {
+  const followerTable = new dynamodb.Table(stack, getPrefixedResourceName(app, "follower"), {
     ...commonTableProps,
     tableName: "follower",
     partitionKey: {
