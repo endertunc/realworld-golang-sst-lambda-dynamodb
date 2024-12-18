@@ -11,11 +11,12 @@ import (
 )
 
 func init() {
-	http.Handle("GET /api/articles/{slug}", api.StartOptionallyAuthenticatedHandlerHTTP(HandlerHTTP))
+	h := api.WithMiddlewares(api.OptionallyAuthenticatedHandler(handler), api.DefaultMiddlewares)
+	http.Handle("GET /api/articles/{slug}", h)
 }
 
-func HandlerHTTP(w http.ResponseWriter, r *http.Request, userId *uuid.UUID, token *domain.Token) {
-	functions.ArticleApi.GetArticle(r.Context(), w, r, userId)
+func handler(w http.ResponseWriter, r *http.Request, userId *uuid.UUID, _ *domain.Token) {
+	functions.ArticleApi.GetArticle(w, r, userId)
 }
 
 func main() {

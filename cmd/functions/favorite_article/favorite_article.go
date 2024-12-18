@@ -11,11 +11,12 @@ import (
 )
 
 func init() {
-	http.Handle("POST /api/articles/{slug}/favorite", api.StartAuthenticatedHandlerHTTP(handler))
+	h := api.WithMiddlewares(api.AuthenticatedHandler(handler), api.DefaultMiddlewares)
+	http.Handle("POST /api/articles/{slug}/favorite", h)
 }
 
 func handler(w http.ResponseWriter, r *http.Request, userId uuid.UUID, token domain.Token) {
-	functions.ArticleApi.FavoriteArticle(r.Context(), w, r, userId)
+	functions.ArticleApi.FavoriteArticle(w, r, userId)
 }
 
 func main() {

@@ -11,11 +11,12 @@ import (
 )
 
 func init() {
-	http.Handle("POST /api/profiles/{username}/follow", api.StartAuthenticatedHandlerHTTP(handler))
+	h := api.WithMiddlewares(api.AuthenticatedHandler(handler), api.DefaultMiddlewares)
+	http.Handle("POST /api/profiles/{username}/follow", h)
 }
 
 func handler(w http.ResponseWriter, r *http.Request, userId uuid.UUID, token domain.Token) {
-	functions.ProfileApi.FollowUserByUsername(r.Context(), w, r, userId)
+	functions.ProfileApi.FollowUserByUsername(w, r, userId)
 }
 
 func main() {

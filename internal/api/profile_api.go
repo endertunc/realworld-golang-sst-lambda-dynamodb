@@ -1,7 +1,6 @@
 package api
 
 import (
-	"context"
 	"errors"
 	"github.com/google/uuid"
 	"log/slog"
@@ -19,11 +18,14 @@ func NewProfileApi(profileService service.ProfileServiceInterface) ProfileApi {
 	return ProfileApi{ProfileService: profileService}
 }
 
-func (pa ProfileApi) UnfollowUserByUsername(ctx context.Context, w http.ResponseWriter, r *http.Request, loggedInUser uuid.UUID) {
+func (pa ProfileApi) UnfollowUserByUsername(w http.ResponseWriter, r *http.Request, loggedInUser uuid.UUID) {
+	ctx := r.Context()
+
 	followeeUsername, ok := GetPathParamHTTP(ctx, w, r, "username")
 	if !ok {
 		return
 	}
+
 	user, err := pa.ProfileService.UnFollow(ctx, loggedInUser, followeeUsername)
 	if err != nil {
 		if errors.Is(err, errutil.ErrUserNotFound) {
@@ -43,7 +45,9 @@ func (pa ProfileApi) UnfollowUserByUsername(ctx context.Context, w http.Response
 	ToSuccessHTTPResponse(w, resp)
 }
 
-func (pa ProfileApi) FollowUserByUsername(ctx context.Context, w http.ResponseWriter, r *http.Request, loggedInUser uuid.UUID) {
+func (pa ProfileApi) FollowUserByUsername(w http.ResponseWriter, r *http.Request, loggedInUser uuid.UUID) {
+	ctx := r.Context()
+
 	followeeUsername, ok := GetPathParamHTTP(ctx, w, r, "username")
 	if !ok {
 		return
@@ -68,7 +72,9 @@ func (pa ProfileApi) FollowUserByUsername(ctx context.Context, w http.ResponseWr
 	ToSuccessHTTPResponse(w, resp)
 }
 
-func (pa ProfileApi) GetUserProfile(ctx context.Context, w http.ResponseWriter, r *http.Request, loggedInUserId *uuid.UUID) {
+func (pa ProfileApi) GetUserProfile(w http.ResponseWriter, r *http.Request, loggedInUserId *uuid.UUID) {
+	ctx := r.Context()
+
 	profileUsername, ok := GetPathParamHTTP(ctx, w, r, "username")
 	if !ok {
 		return

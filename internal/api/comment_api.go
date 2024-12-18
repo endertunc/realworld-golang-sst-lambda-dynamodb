@@ -1,7 +1,6 @@
 package api
 
 import (
-	"context"
 	"errors"
 	mapset "github.com/deckarep/golang-set/v2"
 	"github.com/google/uuid"
@@ -40,7 +39,9 @@ func NewCommentApi(commentService service.CommentServiceInterface, userService s
  *
  * Regardless, one must monitor the performance of the application and optimize accordingly.
  */
-func (aa CommentApi) GetArticleComments(ctx context.Context, w http.ResponseWriter, r *http.Request, loggedInUserId *uuid.UUID) {
+func (aa CommentApi) GetArticleComments(w http.ResponseWriter, r *http.Request, loggedInUserId *uuid.UUID) {
+	ctx := r.Context()
+
 	slug, ok := GetPathParamHTTP(ctx, w, r, "slug")
 	if !ok {
 		return
@@ -103,14 +104,14 @@ func (aa CommentApi) GetArticleComments(ctx context.Context, w http.ResponseWrit
 	}
 }
 
-func (aa CommentApi) AddComment(ctx context.Context, w http.ResponseWriter, r *http.Request, loggedInUserId uuid.UUID) {
-	// Get slug from the request path
+func (aa CommentApi) AddComment(w http.ResponseWriter, r *http.Request, loggedInUserId uuid.UUID) {
+	ctx := r.Context()
+
 	slug, ok := GetPathParamHTTP(ctx, w, r, "slug")
 	if !ok {
 		return
 	}
 
-	// Parse request body
 	addCommentRequestBodyDTO, ok := ParseAndValidateBody[dto.AddCommentRequestBodyDTO](ctx, w, r)
 	if !ok {
 		return
@@ -145,7 +146,9 @@ func (aa CommentApi) AddComment(ctx context.Context, w http.ResponseWriter, r *h
 	ToSuccessHTTPResponse(w, resp)
 }
 
-func (aa CommentApi) DeleteComment(ctx context.Context, w http.ResponseWriter, r *http.Request, loggedInUserId uuid.UUID) {
+func (aa CommentApi) DeleteComment(w http.ResponseWriter, r *http.Request, loggedInUserId uuid.UUID) {
+	ctx := r.Context()
+
 	slug, ok := GetPathParamHTTP(ctx, w, r, "slug")
 	if !ok {
 		return

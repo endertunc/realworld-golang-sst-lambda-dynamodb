@@ -1,7 +1,6 @@
 package api
 
 import (
-	"context"
 	"errors"
 	"github.com/google/uuid"
 	"log/slog"
@@ -20,7 +19,8 @@ func NewUserApi(userService service.UserServiceInterface) UserApi {
 	return UserApi{UserService: userService}
 }
 
-func (ua UserApi) LoginUser(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+func (ua UserApi) LoginUser(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	loginRequestBodyDTO, ok := ParseAndValidateBody[dto.LoginRequestBodyDTO](ctx, w, r)
 
 	if !ok {
@@ -41,7 +41,9 @@ func (ua UserApi) LoginUser(ctx context.Context, w http.ResponseWriter, r *http.
 	ToSuccessHTTPResponse(w, resp)
 }
 
-func (ua UserApi) RegisterUser(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+func (ua UserApi) RegisterUser(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
 	newUserRequestBodyDTO, ok := ParseAndValidateBody[dto.NewUserRequestBodyDTO](ctx, w, r)
 	if !ok {
 		return
@@ -70,10 +72,12 @@ func (ua UserApi) RegisterUser(ctx context.Context, w http.ResponseWriter, r *ht
 	ToSuccessHTTPResponse(w, resp)
 }
 
-func (ua UserApi) GetCurrentUser(ctx context.Context, w http.ResponseWriter, r *http.Request, userID uuid.UUID, token domain.Token) {
+func (ua UserApi) GetCurrentUser(w http.ResponseWriter, r *http.Request, userID uuid.UUID, token domain.Token) {
+	ctx := r.Context()
+
 	user, err := ua.UserService.GetUserByUserId(ctx, userID)
 	if err != nil {
-		// this should not happen since user has a valid token, therefore it should exist
+		// this should not happen since user has a valid token, therefore, it should exist
 		if errors.Is(err, errutil.ErrUserNotFound) {
 			slog.WarnContext(ctx, "user not found", slog.Any("error", err))
 			ToSimpleHTTPError(w, http.StatusNotFound, "user not found")
@@ -86,7 +90,8 @@ func (ua UserApi) GetCurrentUser(ctx context.Context, w http.ResponseWriter, r *
 	ToSuccessHTTPResponse(w, resp)
 }
 
-func (ua UserApi) UpdateCurrentUser(ctx context.Context, w http.ResponseWriter, r *http.Request, userID uuid.UUID, token domain.Token) {
+func (ua UserApi) UpdateCurrentUser(w http.ResponseWriter, r *http.Request, userID uuid.UUID, token domain.Token) {
+	ctx := r.Context()
 	updateUserRequestBodyDTO, ok := ParseAndValidateBody[dto.UpdateUserRequestBodyDTO](ctx, w, r)
 	if !ok {
 		return

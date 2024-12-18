@@ -9,11 +9,12 @@ import (
 )
 
 func init() {
-	http.Handle("GET /api/tags", api.RequestLoggerMiddleware(http.HandlerFunc(handler)))
+	h := api.WithMiddlewares(http.HandlerFunc(handler), api.DefaultMiddlewares)
+	http.Handle("GET /api/tags", h)
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
-	functions.ArticleApi.GetTags(r.Context(), w)
+	functions.ArticleApi.GetTags(w, r)
 }
 
 func main() {

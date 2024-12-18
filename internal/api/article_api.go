@@ -37,7 +37,8 @@ func NewArticleApi(
 	}
 }
 
-func (aa ArticleApi) GetArticle(ctx context.Context, w http.ResponseWriter, r *http.Request, loggedInUserId *uuid.UUID) {
+func (aa ArticleApi) GetArticle(w http.ResponseWriter, r *http.Request, loggedInUserId *uuid.UUID) {
+	ctx := r.Context()
 	slug, ok := GetPathParamHTTP(ctx, w, r, "slug")
 	if !ok {
 		return
@@ -95,7 +96,8 @@ func (aa ArticleApi) GetArticle(ctx context.Context, w http.ResponseWriter, r *h
 
 }
 
-func (aa ArticleApi) CreateArticle(ctx context.Context, w http.ResponseWriter, r *http.Request, loggedInUserId uuid.UUID) {
+func (aa ArticleApi) CreateArticle(w http.ResponseWriter, r *http.Request, loggedInUserId uuid.UUID) {
+	ctx := r.Context()
 	createArticleRequestBodyDTO, ok := ParseAndValidateBody[dto.CreateArticleRequestBodyDTO](ctx, w, r)
 
 	if !ok {
@@ -132,7 +134,8 @@ func (aa ArticleApi) CreateArticle(ctx context.Context, w http.ResponseWriter, r
 	ToSuccessHTTPResponse(w, resp)
 }
 
-func (aa ArticleApi) UpdateArticle(ctx context.Context, w http.ResponseWriter, r *http.Request, loggedInUserId uuid.UUID) {
+func (aa ArticleApi) UpdateArticle(w http.ResponseWriter, r *http.Request, loggedInUserId uuid.UUID) {
+	ctx := r.Context()
 	slug, ok := GetPathParamHTTP(ctx, w, r, "slug")
 	if !ok {
 		return
@@ -186,7 +189,9 @@ func (aa ArticleApi) UpdateArticle(ctx context.Context, w http.ResponseWriter, r
 	ToSuccessHTTPResponse(w, resp)
 }
 
-func (aa ArticleApi) UnfavoriteArticle(ctx context.Context, w http.ResponseWriter, r *http.Request, loggedInUserId uuid.UUID) {
+func (aa ArticleApi) UnfavoriteArticle(w http.ResponseWriter, r *http.Request, loggedInUserId uuid.UUID) {
+	ctx := r.Context()
+
 	slug, ok := GetPathParamHTTP(ctx, w, r, "slug")
 	if !ok {
 		return
@@ -230,7 +235,8 @@ func (aa ArticleApi) UnfavoriteArticle(ctx context.Context, w http.ResponseWrite
 	ToSuccessHTTPResponse(w, resp)
 }
 
-func (aa ArticleApi) FavoriteArticle(ctx context.Context, w http.ResponseWriter, r *http.Request, loggedInUserId uuid.UUID) {
+func (aa ArticleApi) FavoriteArticle(w http.ResponseWriter, r *http.Request, loggedInUserId uuid.UUID) {
+	ctx := r.Context()
 	slug, ok := GetPathParamHTTP(ctx, w, r, "slug")
 	if !ok {
 		return
@@ -272,7 +278,9 @@ func (aa ArticleApi) FavoriteArticle(ctx context.Context, w http.ResponseWriter,
 	ToSuccessHTTPResponse(w, resp)
 }
 
-func (aa ArticleApi) DeleteArticle(ctx context.Context, w http.ResponseWriter, r *http.Request, loggedInUserId uuid.UUID) {
+func (aa ArticleApi) DeleteArticle(w http.ResponseWriter, r *http.Request, loggedInUserId uuid.UUID) {
+	ctx := r.Context()
+
 	slug, ok := GetPathParamHTTP(ctx, w, r, "slug")
 	if !ok {
 		return
@@ -302,11 +310,14 @@ type ListArticlesQueryOptions struct {
 	Tag         *string
 }
 
-func (aa ArticleApi) ListArticles(ctx context.Context, w http.ResponseWriter, r *http.Request, loggedInUserId *uuid.UUID) {
+func (aa ArticleApi) ListArticles(w http.ResponseWriter, r *http.Request, loggedInUserId *uuid.UUID) {
+	ctx := r.Context()
+
 	queryOptions, limit, nextPageToken, ok := extractArticleListRequestParameters(ctx, w, r, aa.paginationConfig)
 	if !ok {
 		return
 	}
+
 	articleAggregateViews, newNextPageToken, err := func() ([]domain.ArticleAggregateView, *string, error) {
 		if queryOptions.Author != nil {
 			return aa.articleListService.GetMostRecentArticlesByAuthor(ctx, loggedInUserId, *queryOptions.Author, limit, nextPageToken)
@@ -331,7 +342,8 @@ func (aa ArticleApi) ListArticles(ctx context.Context, w http.ResponseWriter, r 
 	ToSuccessHTTPResponse(w, dto.ToMultipleArticlesResponseBodyDTO(articleAggregateViews, newNextPageToken))
 }
 
-func (aa ArticleApi) GetTags(ctx context.Context, w http.ResponseWriter) {
+func (aa ArticleApi) GetTags(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	tags, err := aa.articleService.GetTags(ctx)
 	if err != nil {
 		ToInternalServerHTTPError(w, err)

@@ -11,11 +11,12 @@ import (
 )
 
 func init() {
-	http.Handle("GET /api/articles/feed", api.StartAuthenticatedHandlerHTTP(handler))
+	h := api.WithMiddlewares(api.AuthenticatedHandler(handler), api.DefaultMiddlewares)
+	http.Handle("GET /api/articles/feed", h)
 }
 
 func handler(w http.ResponseWriter, r *http.Request, userId uuid.UUID, token domain.Token) {
-	functions.UserFeedApi.FetchUserFeed(r.Context(), w, r, userId)
+	functions.UserFeedApi.FetchUserFeed(w, r, userId)
 }
 
 func main() {

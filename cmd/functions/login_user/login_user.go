@@ -5,14 +5,16 @@ import (
 	"github.com/awslabs/aws-lambda-go-api-proxy/httpadapter"
 	"net/http"
 	"realworld-aws-lambda-dynamodb-golang/cmd/functions"
+	"realworld-aws-lambda-dynamodb-golang/internal/api"
 )
 
 func init() {
-	http.Handle("POST /api/users/login", http.HandlerFunc(handler))
+	h := api.WithMiddlewares(http.HandlerFunc(handler), api.DefaultMiddlewares)
+	http.Handle("POST /api/users/login", h)
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
-	functions.UserApi.LoginUser(r.Context(), w, r)
+	functions.UserApi.LoginUser(w, r)
 }
 
 func main() {

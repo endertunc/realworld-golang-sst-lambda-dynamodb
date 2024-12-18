@@ -11,11 +11,12 @@ import (
 )
 
 func init() {
-	http.Handle("POST /api/articles", api.StartAuthenticatedHandlerHTTP(handler))
+	h := api.WithMiddlewares(api.AuthenticatedHandler(handler), api.DefaultMiddlewares)
+	http.Handle("POST /api/articles", h)
 }
 
 func handler(w http.ResponseWriter, r *http.Request, userId uuid.UUID, _ domain.Token) {
-	functions.ArticleApi.CreateArticle(r.Context(), w, r, userId)
+	functions.ArticleApi.CreateArticle(w, r, userId)
 }
 
 func main() {

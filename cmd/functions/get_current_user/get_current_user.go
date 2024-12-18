@@ -11,12 +11,12 @@ import (
 )
 
 func init() {
-	http.Handle("GET /api/user", api.StartAuthenticatedHandlerHTTP(handler))
+	h := api.WithMiddlewares(api.AuthenticatedHandler(handler), api.DefaultMiddlewares)
+	http.Handle("GET /api/user", h)
 }
 
 func handler(w http.ResponseWriter, r *http.Request, userId uuid.UUID, token domain.Token) {
-	ctx := r.Context()
-	functions.UserApi.GetCurrentUser(ctx, w, r, userId, token)
+	functions.UserApi.GetCurrentUser(w, r, userId, token)
 }
 
 func main() {

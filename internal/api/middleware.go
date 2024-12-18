@@ -11,37 +11,53 @@ import (
 	"github.com/google/uuid"
 )
 
-type AuthenticatedHandlerHTTP func(w http.ResponseWriter, r *http.Request, userId uuid.UUID, token domain.Token)
+type Middleware func(http.Handler) http.Handler
+type AuthenticatedHandlerFunc func(w http.ResponseWriter, r *http.Request, userId uuid.UUID, token domain.Token)
+type OptionallyAuthenticatedHandlerFunc func(w http.ResponseWriter, r *http.Request, userId *uuid.UUID, token *domain.Token)
 
-var requestLogger func(http.Handler) http.Handler = samberSlog.New(slog.Default())
-var RequestLoggerMiddleware func(http.Handler) http.Handler = func(handler http.Handler) http.Handler {
-	return veqrynslog.AttrCollection(requestLogger(handler))
+var DefaultMiddlewares []Middleware = []Middleware{
+	veqrynslog.AttrCollection,
+	samberSlog.New(slog.Default()),
+	RequestIdMiddleware,
 }
 
-func StartAuthenticatedHandlerHTTP(handlerToWrap AuthenticatedHandlerHTTP) http.Handler {
-	var handlerFunc http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
+// WithMiddlewares applies the given middlewares to the given handler in reverse order.
+// given middlewares []Middleware{m1,m2,m3}, m1(m2(m3(handler))) is returned.
+func WithMiddlewares(handler http.Handler, middlewares []Middleware) http.Handler {
+	for i := len(middlewares) - 1; i >= 0; i-- {
+		handler = middlewares[i](handler)
+	}
+	return handler
+}
+
+func AuthenticatedHandler(handler AuthenticatedHandlerFunc) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		userId, token, ok := security.GetLoggedInUser(ctx, w, r)
 		if !ok {
 			return
 		}
-		handlerToWrap(w, r, userId, token)
-	}
-	// wrap handler function with slog middleware and context middleware
-	return RequestLoggerMiddleware(handlerFunc)
+		handler(w, r, userId, token)
+	})
 }
 
-type OptionallyAuthenticatedHandlerHTTP func(w http.ResponseWriter, r *http.Request, userId *uuid.UUID, token *domain.Token)
-
-func StartOptionallyAuthenticatedHandlerHTTP(handlerToWrap OptionallyAuthenticatedHandlerHTTP) http.Handler {
-	var handlerFunc http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
+func OptionallyAuthenticatedHandler(handler OptionallyAuthenticatedHandlerFunc) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		userId, token, ok := security.GetOptionalLoggedInUser(ctx, w, r)
 		if !ok {
 			return
 		}
-		handlerToWrap(w, r, userId, token)
-	}
-	// wrap handler function with slog middleware and context middleware
-	return RequestLoggerMiddleware(handlerFunc)
+		handler(w, r, userId, token)
+	})
+}
+
+// RequestIdMiddleware must be added to the middleware chain before samber/slog-http middleware.
+// requestID is added to the veqryn/slog-context, and it will be included in all log lines.
+func RequestIdMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requestID := samberSlog.GetRequestIDFromContext(r.Context())
+		veqrynslog.With(r.Context(), "request_id", requestID)
+		next.ServeHTTP(w, r)
+	})
 }

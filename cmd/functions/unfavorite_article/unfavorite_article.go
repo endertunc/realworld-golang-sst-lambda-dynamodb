@@ -11,11 +11,12 @@ import (
 )
 
 func init() {
-	http.Handle("DELETE /api/articles/{slug}/favorite", api.StartAuthenticatedHandlerHTTP(handler))
+	h := api.WithMiddlewares(api.AuthenticatedHandler(handler), api.DefaultMiddlewares)
+	http.Handle("DELETE /api/articles/{slug}/favorite", h)
 }
 
 func handler(w http.ResponseWriter, r *http.Request, userId uuid.UUID, _ domain.Token) {
-	functions.ArticleApi.UnfavoriteArticle(r.Context(), w, r, userId)
+	functions.ArticleApi.UnfavoriteArticle(w, r, userId)
 }
 
 func main() {

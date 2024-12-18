@@ -11,11 +11,16 @@ import (
 )
 
 func init() {
-	http.Handle("POST /api/articles/{slug}/comments", api.StartAuthenticatedHandlerHTTP(HandlerHTTP))
+	handler := api.WithMiddlewares(api.AuthenticatedHandler(handler), api.DefaultMiddlewares)
+	http.Handle("POST /api/articles/{slug}/comments", handler)
 }
 
-func HandlerHTTP(w http.ResponseWriter, r *http.Request, userId uuid.UUID, _ domain.Token) {
-	functions.CommentApi.AddComment(r.Context(), w, r, userId)
+// refactor: apply middlewares explicitly
+// feat: propagate requestId to all log lines
+// refactor: don't pass ctx as a separate parameter to api level. let api level use ctx from request.
+// chore: clean up test/unused handlers
+func handler(w http.ResponseWriter, r *http.Request, userId uuid.UUID, _ domain.Token) {
+	functions.CommentApi.AddComment(w, r, userId)
 }
 
 func main() {

@@ -1,7 +1,6 @@
 package api
 
 import (
-	"context"
 	"net/http"
 	"realworld-aws-lambda-dynamodb-golang/internal/domain/dto"
 	"realworld-aws-lambda-dynamodb-golang/internal/service"
@@ -21,7 +20,9 @@ func NewUserFeedApi(feedService service.FeedServiceInterface, paginationConfig P
 	}
 }
 
-func (uf UserFeedApi) FetchUserFeed(ctx context.Context, w http.ResponseWriter, r *http.Request, userId uuid.UUID) {
+func (uf UserFeedApi) FetchUserFeed(w http.ResponseWriter, r *http.Request, userId uuid.UUID) {
+	ctx := r.Context()
+
 	limit, ok := GetIntQueryParamOrDefault(ctx, w, r, "limit", uf.paginationConfig.DefaultLimit, &uf.paginationConfig.MinLimit, &uf.paginationConfig.MaxLimit)
 	if !ok {
 		return

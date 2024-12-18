@@ -11,11 +11,12 @@ import (
 )
 
 func init() {
-	http.Handle("DELETE /api/articles/{slug}/comments/{id}", api.StartAuthenticatedHandlerHTTP(handler))
+	h := api.WithMiddlewares(api.AuthenticatedHandler(handler), api.DefaultMiddlewares)
+	http.Handle("DELETE /api/articles/{slug}/comments/{id}", h)
 }
 
 func handler(w http.ResponseWriter, r *http.Request, userId uuid.UUID, _ domain.Token) {
-	functions.CommentApi.DeleteComment(r.Context(), w, r, userId)
+	functions.CommentApi.DeleteComment(w, r, userId)
 }
 
 func main() {

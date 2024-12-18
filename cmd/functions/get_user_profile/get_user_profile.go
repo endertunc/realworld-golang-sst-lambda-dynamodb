@@ -11,11 +11,12 @@ import (
 )
 
 func init() {
-	http.Handle("GET /api/profiles/{username}", api.StartOptionallyAuthenticatedHandlerHTTP(handler))
+	h := api.WithMiddlewares(api.OptionallyAuthenticatedHandler(handler), api.DefaultMiddlewares)
+	http.Handle("GET /api/profiles/{username}", h)
 }
 
 func handler(w http.ResponseWriter, r *http.Request, userId *uuid.UUID, _ *domain.Token) {
-	functions.ProfileApi.GetUserProfile(r.Context(), w, r, userId)
+	functions.ProfileApi.GetUserProfile(w, r, userId)
 }
 
 func main() {
