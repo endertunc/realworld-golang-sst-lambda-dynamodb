@@ -69,8 +69,6 @@ func (r ArticlesWithMetadataResult) toArticleAggregateView() []domain.ArticleAgg
 	return articleAggregateViews
 }
 
-// ToDo @ender to keep things short - we better pass limit and nextPageToken struct Pagination or something like that.
-// ToDo @ender iteration #2 - finalize the code
 func (al articleListService) GetMostRecentArticlesGlobally(ctx context.Context, loggedInUser *uuid.UUID, limit int, nextPageToken *string) ([]domain.ArticleAggregateView, *string, error) {
 	var findAllArticles articleRetrievalStrategy = func() ([]domain.Article, *string, error) {
 		return al.articleOpensearchRepository.FindAllArticles(ctx, limit, nextPageToken)

@@ -53,21 +53,11 @@ export function APIStack({ stack, app }: StackContext) {
     description: `private/public key pair for JWT tokens`
   });
 
-  const dynamoPolicy = new PolicyStatement({
-    actions: ["dynamodb:*"], // ToDo @ender this should be more restrictive
-    resources: ["arn:aws:dynamodb:*:*:table/*"] // ToDo @ender this should be more restrictive but this is to make deployment faster
-  });
-
   // Grant the Lambda function access to all OpenSearch domains in the account
   const openSearchPolicy = new PolicyStatement({
-    // actions: ["es:*"],
-    // resources: ["arn:aws:es:*:*:domain/*"]
     actions: ["es:ESHttpGet", "es:ESHttpPost"],
     resources: [`${openSearchDomain.domainArn}/*`] // ToDo @ender "/*" could be "/article"
   });
-
-  const helloWorld = lambdaFunction("hello-world", "hello_world/hello_world.go");
-  [openSearchPolicy, dynamoPolicy].forEach((policy) => helloWorld.addToRolePolicy(policy));
 
   const loginUser = lambdaFunction("login-user", "login_user/login_user.go");
   dynamodbStack.userTable.grantReadData(loginUser);
@@ -160,7 +150,6 @@ export function APIStack({ stack, app }: StackContext) {
   const realWorldApi = new Api(stack, getPrefixedResourceName(app, "api"), {
     // prettier-ignore
     routes: {
-      "GET    /api/hello-world":                    helloWorld,
       "POST   /api/users/login":                    loginUser,
       "POST   /api/users":                          registerUser,
       "GET    /api/user":                           getCurrentUser,
@@ -211,7 +200,8 @@ export function APIStack({ stack, app }: StackContext) {
   );
 
   stack.addOutputs({
-    API_URL: realWorldApi.url
+    API_URL: realWorldApi.url,
+    JWT_KEY_PAIR_SECRET_NAME: jwtKeyPairSecret.secretName
   });
 
   return;

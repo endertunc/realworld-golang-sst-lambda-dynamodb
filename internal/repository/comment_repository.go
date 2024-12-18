@@ -20,7 +20,7 @@ type dynamodbCommentRepository struct {
 }
 
 type CommentRepositoryInterface interface {
-	DeleteCommentByArticleIdAndCommentId(ctx context.Context, loggedInUserId uuid.UUID, articleId uuid.UUID, commentId uuid.UUID) error
+	DeleteCommentByArticleIdAndCommentId(ctx context.Context, articleId uuid.UUID, commentId uuid.UUID) error
 	FindCommentsByArticleId(ctx context.Context, articleId uuid.UUID) ([]domain.Comment, error)
 	CreateComment(ctx context.Context, comment domain.Comment) error
 	FindCommentByCommentIdAndArticleId(ctx context.Context, commentId, articleId uuid.UUID) (domain.Comment, error)
@@ -46,9 +46,7 @@ type DynamodbCommentItem struct {
 	UpdatedAt int64        `dynamodbav:"updatedAt"`
 }
 
-// ToDo @ender delete only existing comments???
-// ToDo @ender loggedin user id is not used
-func (c dynamodbCommentRepository) DeleteCommentByArticleIdAndCommentId(ctx context.Context, loggedInUserId uuid.UUID, articleId uuid.UUID, commentId uuid.UUID) error {
+func (c dynamodbCommentRepository) DeleteCommentByArticleIdAndCommentId(ctx context.Context, articleId uuid.UUID, commentId uuid.UUID) error {
 	input := &dynamodb.DeleteItemInput{
 		TableName: &commentTable,
 		Key: map[string]types.AttributeValue{

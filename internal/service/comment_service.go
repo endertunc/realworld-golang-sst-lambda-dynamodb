@@ -63,7 +63,7 @@ func (as commentService) DeleteComment(ctx context.Context, loggedInUserId uuid.
 		return errutil.ErrCantDeleteOthersComment
 	}
 
-	err = as.commentRepository.DeleteCommentByArticleIdAndCommentId(ctx, loggedInUserId, article.Id, commentId)
+	err = as.commentRepository.DeleteCommentByArticleIdAndCommentId(ctx, article.Id, commentId)
 	if err != nil {
 		return err
 	}

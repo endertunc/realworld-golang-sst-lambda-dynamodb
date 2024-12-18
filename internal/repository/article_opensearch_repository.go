@@ -129,7 +129,7 @@ func parseSearchArticleResponse(response *opensearchapi.SearchResp, limit int) (
 		if err != nil {
 			return nil, nil, fmt.Errorf("%w: %w", errutil.ErrOpensearchMarshalling, err)
 		}
-		// ToDo @ender let's base64 encode this
+		// ToDo @ender this should be base64 encoded. Also, this should be encrypted, like dynamodb lastEvaluatedKey
 		s := string(bytes)
 		nextPageToken = &s
 	}

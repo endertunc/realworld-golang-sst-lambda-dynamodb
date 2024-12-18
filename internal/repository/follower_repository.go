@@ -31,13 +31,12 @@ func NewDynamodbFollowerRepository(db *database.DynamoDBStore) FollowerRepositor
 	return dynamodbFollowerRepository{db: db}
 }
 
-// Todo @ender there is no "use case" at the moment but we should add createdAt to this item
+// Note: there is no "use case" at the moment, but we should add createdAt to this item
 type DynamodbFollowerItem struct {
 	Follower DynamodbUUID `dynamodbav:"follower"`
 	Followee DynamodbUUID `dynamodbav:"followee"`
 }
 
-// ToDo @ender - should we use GetItem or QueryInput in this case?
 func (s dynamodbFollowerRepository) IsFollowing(ctx context.Context, follower, followee uuid.UUID) (bool, error) {
 	input := &dynamodb.QueryInput{
 		TableName:              aws.String(followerTable),
@@ -82,8 +81,6 @@ func (s dynamodbFollowerRepository) UnFollow(ctx context.Context, follower, foll
 		return fmt.Errorf("%w: %w", errutil.ErrDynamoMapping, err)
 	}
 
-	// ToDo @ender we can't tell whether something was actually deleted or not.
-	// 	It's doable, however, it doesn't seem to be relevant in our case
 	input := &dynamodb.DeleteItemInput{Key: followerAttributes, TableName: aws.String(followerTable)}
 	_, err = s.db.Client.DeleteItem(ctx, input)
 

@@ -55,9 +55,8 @@ type DynamodbArticleItem struct {
 	TagList        []string     `dynamodbav:"tagList"`
 	FavoritesCount int          `dynamodbav:"favoritesCount"`
 	AuthorId       DynamodbUUID `dynamodbav:"authorId"`
-	// ToDo @ender should we convert everything to milliseconds precision?
-	CreatedAt int64 `dynamodbav:"createdAt"`
-	UpdatedAt int64 `dynamodbav:"updatedAt"`
+	CreatedAt      int64        `dynamodbav:"createdAt"`
+	UpdatedAt      int64        `dynamodbav:"updatedAt"`
 }
 
 var articleTable = "article"

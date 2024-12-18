@@ -10,8 +10,7 @@ type LoginRequestBodyDTO struct {
 }
 
 type LoginRequestUserDto struct {
-	Email string `json:"email" validate:"required,email"`
-	// ToDo @ender there was an issue with bcrypt can handle more than 20 or smth?
+	Email    string `json:"email" validate:"required,email"`
 	Password string `json:"password" validate:"required,notblank,min=6,max=20"`
 }
 

@@ -59,8 +59,9 @@ func (as articleService) GetArticle(ctx context.Context, slug string) (domain.Ar
 }
 
 func (as articleService) CreateArticle(ctx context.Context, author uuid.UUID, title, description, body string, tagList []string) (domain.Article, error) {
+	// Note we don't seem to have any business validation in this example application,
+	// but we could add it here if needed.
 	article := domain.NewArticle(title, description, body, tagList, author)
-	// ToDo @ender do we have any business validation we should apply in service level for an article?
 	article, err := as.articleRepository.CreateArticle(ctx, article)
 	if err != nil {
 		return domain.Article{}, err
@@ -104,7 +105,7 @@ func (as articleService) UnfavoriteArticle(ctx context.Context, loggedInUserId u
 	if err != nil {
 		return domain.Article{}, err
 	}
-	// ToDo @ender check if the user already unfavorited the article
+
 	err = as.articleRepository.UnfavoriteArticle(ctx, loggedInUserId, article.Id)
 	if err != nil {
 		return domain.Article{}, err

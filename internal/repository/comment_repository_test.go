@@ -96,7 +96,7 @@ func TestDeleteCommentByArticleIdAndCommentId(t *testing.T) {
 			comment := generator.GenerateComment()
 			require.NoError(t, commentRepo.CreateComment(ctx, comment))
 
-			err := commentRepo.DeleteCommentByArticleIdAndCommentId(ctx, comment.AuthorId, comment.ArticleId, comment.Id)
+			err := commentRepo.DeleteCommentByArticleIdAndCommentId(ctx, comment.ArticleId, comment.Id)
 			require.NoError(t, err)
 
 			// Verify comment is deleted
@@ -105,7 +105,7 @@ func TestDeleteCommentByArticleIdAndCommentId(t *testing.T) {
 		})
 
 		t.Run("non-existent comment", func(t *testing.T) {
-			err := commentRepo.DeleteCommentByArticleIdAndCommentId(ctx, uuid.New(), uuid.New(), uuid.New())
+			err := commentRepo.DeleteCommentByArticleIdAndCommentId(ctx, uuid.New(), uuid.New())
 			require.NoError(t, err) // Delete is idempotent
 		})
 	})

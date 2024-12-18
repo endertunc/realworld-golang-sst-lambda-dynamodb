@@ -1,6 +1,5 @@
 import * as ec2 from "aws-cdk-lib/aws-ec2";
 import { LookupMachineImage, Peer, Port } from "aws-cdk-lib/aws-ec2";
-// import * as iam from "aws-cdk-lib/aws-iam";
 import { FckNatInstanceProvider } from "cdk-fck-nat";
 import { getPrefixedResourceName } from "./helpers";
 import type { StackContext } from "sst/constructs";

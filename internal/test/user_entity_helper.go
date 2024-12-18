@@ -6,8 +6,6 @@ import (
 	"testing"
 )
 
-// ToDo @ender I have different file name pattern... this file camelCase, auth_test_suite.go, other with kebab-case....
-
 // CreateAndLoginUser creates a new user and logs them in, returning the user data and authentication token
 func CreateAndLoginUser(t *testing.T, user dto.NewUserRequestUserDto) (dto.NewUserRequestUserDto, string) {
 	RegisterUser(t, user)

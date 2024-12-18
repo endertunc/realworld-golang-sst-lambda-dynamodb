@@ -71,17 +71,17 @@ func (_c *MockCommentRepositoryInterface_CreateComment_Call) RunAndReturn(run fu
 	return _c
 }
 
-// DeleteCommentByArticleIdAndCommentId provides a mock function with given fields: ctx, loggedInUserId, articleId, commentId
-func (_m *MockCommentRepositoryInterface) DeleteCommentByArticleIdAndCommentId(ctx context.Context, loggedInUserId uuid.UUID, articleId uuid.UUID, commentId uuid.UUID) error {
-	ret := _m.Called(ctx, loggedInUserId, articleId, commentId)
+// DeleteCommentByArticleIdAndCommentId provides a mock function with given fields: ctx, articleId, commentId
+func (_m *MockCommentRepositoryInterface) DeleteCommentByArticleIdAndCommentId(ctx context.Context, articleId uuid.UUID, commentId uuid.UUID) error {
+	ret := _m.Called(ctx, articleId, commentId)
 
 	if len(ret) == 0 {
 		panic("no return value specified for DeleteCommentByArticleIdAndCommentId")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, uuid.UUID, uuid.UUID) error); ok {
-		r0 = rf(ctx, loggedInUserId, articleId, commentId)
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, uuid.UUID) error); ok {
+		r0 = rf(ctx, articleId, commentId)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -96,16 +96,15 @@ type MockCommentRepositoryInterface_DeleteCommentByArticleIdAndCommentId_Call st
 
 // DeleteCommentByArticleIdAndCommentId is a helper method to define mock.On call
 //   - ctx context.Context
-//   - loggedInUserId uuid.UUID
 //   - articleId uuid.UUID
 //   - commentId uuid.UUID
-func (_e *MockCommentRepositoryInterface_Expecter) DeleteCommentByArticleIdAndCommentId(ctx interface{}, loggedInUserId interface{}, articleId interface{}, commentId interface{}) *MockCommentRepositoryInterface_DeleteCommentByArticleIdAndCommentId_Call {
-	return &MockCommentRepositoryInterface_DeleteCommentByArticleIdAndCommentId_Call{Call: _e.mock.On("DeleteCommentByArticleIdAndCommentId", ctx, loggedInUserId, articleId, commentId)}
+func (_e *MockCommentRepositoryInterface_Expecter) DeleteCommentByArticleIdAndCommentId(ctx interface{}, articleId interface{}, commentId interface{}) *MockCommentRepositoryInterface_DeleteCommentByArticleIdAndCommentId_Call {
+	return &MockCommentRepositoryInterface_DeleteCommentByArticleIdAndCommentId_Call{Call: _e.mock.On("DeleteCommentByArticleIdAndCommentId", ctx, articleId, commentId)}
 }
 
-func (_c *MockCommentRepositoryInterface_DeleteCommentByArticleIdAndCommentId_Call) Run(run func(ctx context.Context, loggedInUserId uuid.UUID, articleId uuid.UUID, commentId uuid.UUID)) *MockCommentRepositoryInterface_DeleteCommentByArticleIdAndCommentId_Call {
+func (_c *MockCommentRepositoryInterface_DeleteCommentByArticleIdAndCommentId_Call) Run(run func(ctx context.Context, articleId uuid.UUID, commentId uuid.UUID)) *MockCommentRepositoryInterface_DeleteCommentByArticleIdAndCommentId_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(uuid.UUID), args[2].(uuid.UUID), args[3].(uuid.UUID))
+		run(args[0].(context.Context), args[1].(uuid.UUID), args[2].(uuid.UUID))
 	})
 	return _c
 }
@@ -115,7 +114,7 @@ func (_c *MockCommentRepositoryInterface_DeleteCommentByArticleIdAndCommentId_Ca
 	return _c
 }
 
-func (_c *MockCommentRepositoryInterface_DeleteCommentByArticleIdAndCommentId_Call) RunAndReturn(run func(context.Context, uuid.UUID, uuid.UUID, uuid.UUID) error) *MockCommentRepositoryInterface_DeleteCommentByArticleIdAndCommentId_Call {
+func (_c *MockCommentRepositoryInterface_DeleteCommentByArticleIdAndCommentId_Call) RunAndReturn(run func(context.Context, uuid.UUID, uuid.UUID) error) *MockCommentRepositoryInterface_DeleteCommentByArticleIdAndCommentId_Call {
 	_c.Call.Return(run)
 	return _c
 }

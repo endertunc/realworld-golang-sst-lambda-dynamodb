@@ -75,7 +75,8 @@ func (aa ArticleApi) GetArticle(w http.ResponseWriter, r *http.Request, loggedIn
 			return
 		}
 
-		// ToDo @ender we make multiple request. We could optimize this by using BatchGetItem - isFollowing and isFavorited
+		// Note: we make multiple request to DynamoDB, but, we could optimize this by
+		// using BatchGetItem and query both favorited and following tables
 		isFollowing, err := aa.profileService.IsFollowing(ctx, loggedInUser.Id, article.AuthorId)
 		if err != nil {
 			handleError(err)
@@ -98,18 +99,14 @@ func (aa ArticleApi) GetArticle(w http.ResponseWriter, r *http.Request, loggedIn
 
 func (aa ArticleApi) CreateArticle(w http.ResponseWriter, r *http.Request, loggedInUserId uuid.UUID) {
 	ctx := r.Context()
-	createArticleRequestBodyDTO, ok := ParseAndValidateBody[dto.CreateArticleRequestBodyDTO](ctx, w, r)
 
+	createArticleRequestBodyDTO, ok := ParseAndValidateBody[dto.CreateArticleRequestBodyDTO](ctx, w, r)
 	if !ok {
 		return
 	}
 
 	articleBody := createArticleRequestBodyDTO.Article
-	// ToDo @ender do we have any business validation we should apply in service level for an article?
-	// ToDo @ender [GENERAL] - in this project we don't seem to have much complex data types to pass to services
-	//  thus I skipped creating a struct that "service accepts" and simply passed the params needed to create and article
-	//  Once this list of parameters that needs to be passed to service gets crowded,
-	//  one could introduce intermediate "CreateArticleRequest" that articleService accepts
+	// Note: one could also create CreateArticleCommand or something similar to pass the parameters
 	article, err := aa.articleService.CreateArticle(
 		ctx,
 		loggedInUserId,
@@ -224,7 +221,6 @@ func (aa ArticleApi) UnfavoriteArticle(w http.ResponseWriter, r *http.Request, l
 		return
 	}
 
-	// ToDo @ender test if the parameters passed to isFollowing are correct
 	isFollowing, err := aa.profileService.IsFollowing(ctx, loggedInUserId, article.AuthorId)
 	if err != nil {
 		handleError(err)

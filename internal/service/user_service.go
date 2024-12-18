@@ -56,9 +56,10 @@ func (s userService) RegisterUser(ctx context.Context, email, username, plainTex
 		return nil, nil, fmt.Errorf("%w: %w", errutil.ErrHashPassword, err)
 	}
 
-	// ToDo @ender - we should make sure that regardless of the casing, username and email should be unique
-	// 	dynamoDB does not support case-insensitive queries out of the box tho...
-	newUser := domain.NewUser(email, username, string(hashedPassword)) // ToDo Ender string(hashedPassword)
+	// NOTE: we should make sure that regardless of the casing, username and email should be unique,
+	// 	dynamoDB does not support case-insensitive queries out-of-the-box, so it should be handled in the application layer
+	//  I am not implementing it here because it is out of the scope of this project
+	newUser := domain.NewUser(email, username, string(hashedPassword))
 
 	user, err := s.userRepository.InsertNewUser(ctx, newUser)
 	if err != nil {

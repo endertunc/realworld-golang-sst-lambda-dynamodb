@@ -1,7 +1,4 @@
 import * as cognitoIdp from "@aws-cdk/aws-cognito-identitypool-alpha";
-// import { fromNodeProviderChain } from "@aws-sdk/credential-providers";
-// import { Client } from "@opensearch-project/opensearch/api/new";
-// import { AwsSigv4Signer } from "@opensearch-project/opensearch/lib/aws";
 import { RemovalPolicy } from "aws-cdk-lib";
 import * as cognito from "aws-cdk-lib/aws-cognito";
 import * as iam from "aws-cdk-lib/aws-iam";

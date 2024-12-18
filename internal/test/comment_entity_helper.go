@@ -56,7 +56,6 @@ func DeleteCommentWithResponse[T interface{}](t *testing.T, articleSlug string, 
 }
 
 // VerifyCommentExists verifies that a specific comment exists in an article's comments
-// ToDo @ender we are testing using API calls. Maybe we should use database in this case? It's a tricky one to choose
 func VerifyCommentExists(t *testing.T, articleSlug string, commentId string, token string) {
 	comments := GetArticleComments(t, articleSlug, &token)
 	found := false

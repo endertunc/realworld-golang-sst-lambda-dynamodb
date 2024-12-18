@@ -245,8 +245,3 @@ func TestUpdateUser(t *testing.T) {
 		})
 	})
 }
-
-// ToDo @ender this really needs to be moved to helpers/commons
-func stringPtr(s string) *string {
-	return &s
-}

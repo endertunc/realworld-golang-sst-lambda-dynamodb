@@ -30,7 +30,7 @@ func TestFollow(t *testing.T) {
 			assert.True(t, followees.Contains(followee))
 		})
 
-		// ToDo @ender - at the moment this is fine but if we were to add createdAt,
+		// Note: at the moment this is fine, but if we were to add createdAt,
 		// then we should be careful with allowing the same follower to follow the same followee
 		t.Run("follow same user twice", func(t *testing.T) {
 			follower := uuid.New()
