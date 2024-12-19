@@ -9,5 +9,11 @@ build:
 build-%:
 		cd cmd/functions/$* && GOOS=linux GOARCH=arm64 CGO_ENABLED=0 ${GO} build -o bootstrap
 
+test-e2e:
+		${GO} test ./cmd/functions/... -p 1 -v
+
+test-unit:
+		${GO} test ./internal/service/ -p 1 -v -cover
+
 clean:
 	@rm $(foreach function,${FUNCTIONS}, cmd/functions/${function}/bootstrap)

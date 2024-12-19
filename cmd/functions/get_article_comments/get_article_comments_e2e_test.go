@@ -130,7 +130,6 @@ func TestGetCommentsAsAnonymousUser(t *testing.T) {
 	})
 }
 
-// ToDo @ender check with auth as well
 func TestGetCommentsForNonExistentArticle(t *testing.T) {
 	test.WithSetupAndTeardown(t, func() {
 		respBody := test.GetArticleCommentsWithResponse[errutil.SimpleError](t, "non-existent-article", nil, http.StatusNotFound)

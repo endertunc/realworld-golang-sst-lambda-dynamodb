@@ -9,9 +9,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// ToDo @ender viewerUser should be renamed to participantUser I think.
-// ToDo @ender visitorUser should be renamed to viewerUser I think.
-// ToDo @ender we almost always have 2 author and 2 articles. We could move this to a setup function.
 func TestListArticlesFavoritedByUserWithoutAuth(t *testing.T) {
 	test.WithSetupAndTeardown(t, func() {
 		// create users
