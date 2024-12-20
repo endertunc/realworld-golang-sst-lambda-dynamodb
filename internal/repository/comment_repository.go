@@ -138,12 +138,3 @@ func toDomainComment(comment DynamodbCommentItem) domain.Comment {
 		UpdatedAt: time.UnixMilli(comment.UpdatedAt),
 	}
 }
-
-//"github.com/samber/oops"
-//veqrynslog "github.com/veqryn/slog-context/http"
-//"log/slog"
-// ToDo @ender experiment with this oops library
-//fancyError := oops.Wrap(fmt.Errorf("%w: %w", errutil.ErrDynamoMarshalling, err))
-//veqrynslog.With(ctx, "regularError", fmt.Errorf("%w: %w", errutil.ErrDynamoMarshalling, err))
-//veqrynslog.With(ctx, "fancyError", fancyError)
-//veqrynslog.With(ctx, slog.Group("errorContext", slog.String("articleId", articleId.String())))

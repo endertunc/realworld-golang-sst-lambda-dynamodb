@@ -16,7 +16,7 @@ import (
 var followerTable = "follower"
 
 type dynamodbFollowerRepository struct {
-	db *database.DynamoDBStore // ToDo @ender should this be pointer or not??? Investigate to understand what is more proper
+	db *database.DynamoDBStore
 }
 
 type FollowerRepositoryInterface interface {

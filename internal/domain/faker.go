@@ -9,7 +9,7 @@ import (
 
 // we use random seed by default, but we could also set static seed for debugging purposes
 // this package level init() makes sure that all generators use the same seed
-// ToDo @ender I might move this to somewhere else. I kind of didn't like this implicit logic here...
+// I might move this to somewhere else. I don't like this implicit logic here...
 func init() {
 	seed, ok := os.LookupEnv("GOFAKEIT_SEED")
 	if ok {

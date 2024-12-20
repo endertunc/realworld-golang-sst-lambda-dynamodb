@@ -1,7 +1,6 @@
 package openapi
 
 import (
-	"log"
 	"reflect"
 	"strings"
 
@@ -25,7 +24,7 @@ func GenerateAPISpec() *openapi3.Spec {
 
 	reflector.Spec = &openapi3.Spec{Openapi: "3.0.0"}
 	reflector.Spec.Info.WithTitle("Realworld API Specification")
-	reflector.Spec.Servers = []openapi3.Server{{}} // ToDo @ender TBD
+	reflector.Spec.Servers = []openapi3.Server{{}}
 
 	buildUser(&reflector)
 	buildProfile(&reflector)
@@ -33,13 +32,6 @@ func GenerateAPISpec() *openapi3.Spec {
 	buildComment(&reflector)
 
 	reflector.SpecEns().SetHTTPBearerTokenSecurity(BearerAuthSecurityName, "JWT", "")
-
-	// ToDo @ender this is for debugging purposes for now delete it later
-	schema, err := reflector.Spec.MarshalYAML()
-	if err != nil {
-		log.Fatal(err)
-	}
-	log.Println(string(schema))
 
 	return reflector.Spec
 }

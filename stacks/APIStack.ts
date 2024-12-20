@@ -56,7 +56,7 @@ export function APIStack({ stack, app }: StackContext) {
   // Grant the Lambda function access to all OpenSearch domains in the account
   const openSearchPolicy = new PolicyStatement({
     actions: ["es:ESHttpGet", "es:ESHttpPost"],
-    resources: [`${openSearchDomain.domainArn}/*`] // ToDo @ender "/*" could be "/article"
+    resources: [`${openSearchDomain.domainArn}/*`]
   });
 
   const loginUser = lambdaFunction("login-user", "login_user/login_user.go");
